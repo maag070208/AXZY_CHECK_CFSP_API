@@ -26,7 +26,9 @@ import { sendMaintenanceEmail } from "@src/core/utils/emailSender";
 export const createMaintenance = async (data: {
     guardId: number;
     title: string;
-    category: string;
+    categoryId?: number;
+    typeId?: number;
+    category?: string;
     description?: string;
     media?: any;
     latitude?: number;
@@ -36,6 +38,8 @@ export const createMaintenance = async (data: {
         data: {
             guardId: data.guardId,
             title: data.title,
+            categoryId: data.categoryId,
+            typeId: data.typeId,
             category: data.category,
             description: data.description,
             media: data.media,
@@ -48,7 +52,11 @@ export const createMaintenance = async (data: {
         try {
             const enrichedMaintenance = await prismaClient.maintenance.findUnique({
                 where: { id: maintenance.id },
-                include: { guard: true }
+                include: { 
+                    guard: true,
+                    categoryRel: true,
+                    type: true
+                }
             });
             if (enrichedMaintenance) {
                 await sendMaintenanceEmail(enrichedMaintenance, enrichedMaintenance.guard);

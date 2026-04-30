@@ -13,7 +13,7 @@ export const getDataTable = async (req: Request, res: Response) => {
 
 export const createMaintenance = async (req: Request, res: Response) => {
   try {
-    const { title, category, description, media, latitude, longitude } = req.body;
+    const { title, category, description, media, latitude, longitude, categoryId, typeId } = req.body;
     // @ts-ignore
     const guardId = req.user?.id;
 
@@ -27,6 +27,8 @@ export const createMaintenance = async (req: Request, res: Response) => {
     const result = await maintenanceService.createMaintenance({
       guardId: Number(guardId),
       title,
+      categoryId: categoryId ? Number(categoryId) : undefined,
+      typeId: typeId ? Number(typeId) : undefined,
       category,
       description,
       media: mediaFiles.length > 0 ? mediaFiles : undefined,

@@ -243,23 +243,25 @@ model RecurringTask {
 }
 
 model IncidentCategory {
-  id        Int            @id @default(autoincrement())
-  name      String         @unique
-  value     String
-  type      String         @default("INCIDENT") // INCIDENT or MAINTENANCE
-  color     String?
-  icon      String?
-  types     IncidentType[]
-  incidents Incident[]
+  id          Int            @id @default(autoincrement())
+  name        String         @unique
+  value       String
+  type        String         @default("INCIDENT") // INCIDENT or MAINTENANCE
+  color       String?
+  icon        String?
+  types       IncidentType[]
+  incidents   Incident[]
+  maintenances Maintenance[]
 }
 
 model IncidentType {
-  id         Int              @id @default(autoincrement())
-  categoryId Int
-  name       String           @unique
-  value      String
-  category   IncidentCategory @relation(fields: [categoryId], references: [id])
-  incidents  Incident[]
+  id           Int              @id @default(autoincrement())
+  categoryId   Int
+  name         String           @unique
+  value        String
+  category     IncidentCategory @relation(fields: [categoryId], references: [id])
+  incidents    Incident[]
+  maintenances Maintenance[]
 }
 
 model Incident {
@@ -303,7 +305,9 @@ model Maintenance {
   id           Int               @id @default(autoincrement())
   guardId      Int
   title        String
-  category     String
+  categoryId   Int?
+  typeId       Int?
+  category     String?
   description  String?
   media        Json?
   latitude     Float?
@@ -315,6 +319,8 @@ model Maintenance {
   updatedAt    DateTime          @updatedAt
   guard        User              @relation(fields: [guardId], references: [id])
   resolvedBy   User?             @relation("MaintenanceResolver", fields: [resolvedById], references: [id])
+  categoryRel  IncidentCategory? @relation(fields: [categoryId], references: [id])
+  type         IncidentType?     @relation(fields: [typeId], references: [id])
 }
 
 model ResidentContact {

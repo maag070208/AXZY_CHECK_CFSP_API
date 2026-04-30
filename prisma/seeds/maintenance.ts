@@ -6,33 +6,67 @@ export const maintenanceCatalogsSeed = async (prisma: PrismaClient) => {
 
     const categories = [
         {
-            name: 'MANTENIMIENTO_GRAL',
-            value: 'Mantenimiento General',
+            name: 'PLOMERIA',
+            value: 'Plomería',
             type: 'MAINTENANCE',
-            color: '#F59E0B',
-            icon: 'wrench',
+            color: '#0288d1',
+            icon: 'water-pump',
             types: [
                 { name: 'FUGA_AGUA', value: 'Fuga de Agua' },
-                { name: 'FALLA_ELECTRICA', value: 'Falla Eléctrica' },
-                { name: 'ELEVADOR', value: 'Elevador Atascado' },
-                { name: 'LUMINARIA', value: 'Luminaria Fundida' },
-                { name: 'PORTON', value: 'Portón Averiado' },
-                { name: 'INFRAESTRUCTURA', value: 'Baches / Grietas' }
+                { name: 'FALTA_AGUA', value: 'Falta de Agua' },
+                { name: 'DRENAJE_TAPADO', value: 'Drenaje Tapado' },
+                { name: 'HUMEDAD_GOTERAS', value: 'Humedad/Goteras' }
             ]
         },
         {
-            name: 'LIMPIEZA',
-            value: 'Limpieza y Áreas Verdes',
+            name: 'ELECTRICIDAD',
+            value: 'Electricidad',
             type: 'MAINTENANCE',
-            color: '#10B981',
-            icon: 'leaf',
+            color: '#fbc02d',
+            icon: 'lightning-bolt',
             types: [
-                { name: 'PISCINA', value: 'Limpieza de Piscina' },
-                { name: 'JARDINERIA', value: 'Poda de Árboles / Jardín' },
-                { name: 'BASURA_EXT', value: 'Recolección de Basura' },
-                { name: 'PLAGA', value: 'Control de Plagas' },
-                { name: 'PINTURA', value: 'Retoque de Pintura' },
-                { name: 'LIMPIEZA_AREA', value: 'Limpieza de Áreas Comunes' }
+                { name: 'LUMINARIA_APAGADA', value: 'Luminaria apagada' },
+                { name: 'CORTO_CIRCUITO', value: 'Corto circuito' },
+                { name: 'FALLO_PORTON', value: 'Fallo en portón' },
+                { name: 'CAMARAS_SIN_FUNCION', value: 'Cámaras sin función' }
+            ]
+        },
+        {
+            name: 'ESTRUCTURA',
+            value: 'Estructura',
+            type: 'MAINTENANCE',
+            color: '#7b1fa2',
+            icon: 'home-city',
+            types: [
+                { name: 'DAÑO_PINTURA', value: 'Daño en pintura' },
+                { name: 'CRISTAL_ROTO', value: 'Cristal roto' },
+                { name: 'FALLO_CERCO', value: 'Fallo en cerco' },
+                { name: 'BACH_PAVIMENTO', value: 'Baches/Pavimento' }
+            ]
+        },
+        {
+            name: 'JARDINERIA',
+            value: 'Jardinería',
+            type: 'MAINTENANCE',
+            color: '#388e3c',
+            icon: 'pine-tree',
+            types: [
+                { name: 'PODA_CESPED', value: 'Poda de césped' },
+                { name: 'PODA_ARBOLES', value: 'Poda de árboles' },
+                { name: 'RIEGO_FALTANTE', value: 'Riego faltante' },
+                { name: 'PLAGAS', value: 'Plagas' }
+            ]
+        },
+        {
+            name: 'GENERAL',
+            value: 'General',
+            type: 'MAINTENANCE',
+            color: '#e65100',
+            icon: 'toolbox',
+            types: [
+                { name: 'DAÑO_EQUIPAMIENTO', value: 'Daños en equipamiento' },
+                { name: 'LIMPIEZA_PROFUNDA', value: 'Limpieza profunda requerida' },
+                { name: 'OTRO_MANT', value: 'Otro' }
             ]
         }
     ];

@@ -151,7 +151,11 @@ export const sendMaintenanceEmail = async (maintenance: any, guard: any) => {
             </tr>
             <tr>
               <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold; color: #555;">Tipo:</td>
-              <td style="padding: 10px; border-bottom: 1px solid #eee; color: #333;">${maintenance.title}</td>
+              <td style="padding: 10px; border-bottom: 1px solid #eee; color: #333;">${maintenance.type?.value || maintenance.title}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold; color: #555;">Categoría:</td>
+              <td style="padding: 10px; border-bottom: 1px solid #eee; color: #333;">${maintenance.categoryRel?.value || maintenance.category || 'Mantenimiento General'}</td>
             </tr>
           </table>
 
