@@ -8,7 +8,8 @@ export const transporter = nodemailer.createTransport({
   tls: {
     ciphers: "SSLv3",
   },
-  connectionTimeout: 5000,
+  connectionTimeout: 20000,
+  greetingTimeout: 20000,
   auth: {
     user: "aamaro@axzy.dev",
     pass: "martin@M070208",

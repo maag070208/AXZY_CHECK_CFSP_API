@@ -16,7 +16,7 @@ const storageService = new StorageService();
 
 export const createIncident = async (req: Request, res: Response) => {
   try {
-    const { title, categoryId, typeId, description, media } = req.body;
+    const { title, categoryId, typeId, description, media, latitude, longitude } = req.body;
     // @ts-ignore
     const guardId = req.user?.id;
 
@@ -34,6 +34,8 @@ export const createIncident = async (req: Request, res: Response) => {
       typeId: typeId ? Number(typeId) : undefined,
       description,
       media: mediaFiles.length > 0 ? mediaFiles : undefined,
+      latitude: latitude ? Number(latitude) : undefined,
+      longitude: longitude ? Number(longitude) : undefined,
     });
 
     return res.status(201).json(createTResult(result));
