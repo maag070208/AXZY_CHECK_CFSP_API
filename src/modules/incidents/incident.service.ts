@@ -49,6 +49,8 @@ export const createIncident = async (data: {
     typeId?: number;
     description?: string;
     media?: any;
+    latitude?: number;
+    longitude?: number;
 }) => {
     const incident = await prismaClient.incident.create({
         data: {
@@ -57,7 +59,9 @@ export const createIncident = async (data: {
             categoryId: data.categoryId,
             typeId: data.typeId,
             description: data.description,
-            media: data.media
+            media: data.media,
+            latitude: data.latitude,
+            longitude: data.longitude
         },
         include: {
             guard: true,

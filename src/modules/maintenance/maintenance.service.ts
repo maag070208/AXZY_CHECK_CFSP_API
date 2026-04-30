@@ -21,12 +21,16 @@ export const getDataTableMaintenances = async (params: ITDataTableFetchParams): 
     return { rows, total };
 };
 
+import { sendMaintenanceEmail } from "@src/core/utils/emailSender";
+
 export const createMaintenance = async (data: {
     guardId: number;
     title: string;
     category: string;
     description?: string;
     media?: any;
+    latitude?: number;
+    longitude?: number;
 }) => {
     const maintenance = await prismaClient.maintenance.create({
         data: {
@@ -34,12 +38,16 @@ export const createMaintenance = async (data: {
             title: data.title,
             category: data.category,
             description: data.description,
-            media: data.media
+            media: data.media,
+            latitude: data.latitude,
+            longitude: data.longitude
         },
         include: {
             guard: true
         }
     });
+
+    sendMaintenanceEmail(maintenance, maintenance.guard);
 
     return maintenance;
 };

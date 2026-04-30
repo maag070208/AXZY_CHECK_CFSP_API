@@ -270,6 +270,8 @@ model Incident {
   typeId       Int?
   description  String?
   media        Json?
+  latitude     Float?
+  longitude    Float?
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
   resolvedAt   DateTime?
@@ -304,6 +306,8 @@ model Maintenance {
   category     String
   description  String?
   media        Json?
+  latitude     Float?
+  longitude    Float?
   status       MaintenanceStatus @default(PENDING)
   resolvedAt   DateTime?
   resolvedById Int?
