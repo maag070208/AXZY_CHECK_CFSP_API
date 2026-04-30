@@ -47,7 +47,9 @@ export const createMaintenance = async (data: {
         }
     });
 
-    sendMaintenanceEmail(maintenance, maintenance.guard);
+    setImmediate(() => {
+        sendMaintenanceEmail(maintenance, maintenance.guard).catch(console.error);
+    });
 
     return maintenance;
 };

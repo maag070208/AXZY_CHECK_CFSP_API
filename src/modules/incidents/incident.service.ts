@@ -70,8 +70,10 @@ export const createIncident = async (data: {
         }
     });
 
-    // Fire and forget email
-    sendIncidentEmail(incident, incident.guard);
+    // Fire and forget email completely decoupled from request thread
+    setImmediate(() => {
+        sendIncidentEmail(incident, incident.guard).catch(console.error);
+    });
 
     return incident;
 };

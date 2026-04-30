@@ -10,10 +10,9 @@ export const securitySeed = async (prisma: PrismaClient) => {
   const adminRole = await prisma.role.findUnique({ where: { name: "ADMIN" } });
   const guardRole = await prisma.role.findUnique({ where: { name: "GUARD" } });
   const shiftRole = await prisma.role.findUnique({ where: { name: "SHIFT" } });
-  const resdnRole = await prisma.role.findUnique({ where: { name: "RESDN" } });
   const maintRole = await prisma.role.findUnique({ where: { name: "MAINT" } });
 
-  if (!adminRole || !guardRole || !shiftRole || !resdnRole || !maintRole) {
+  if (!adminRole || !guardRole || !shiftRole  || !maintRole) {
     hackerLog.error('SECURITY', 'Roles not found, check catalogs first');
     return;
   }
@@ -101,26 +100,5 @@ export const securitySeed = async (prisma: PrismaClient) => {
     },
   });
 
-  // 5. RESIDENTS (APP USERS)
-  hackerLog.info('AUTH', 'Provisioning Resident profiles');
-  const residents = [
-    { username: "luis", name: "Luis", lastName: "Hernandez" },
-    { username: "ana", name: "Ana", lastName: "Gomez" },
-  ];
-
-  for (const r of residents) {
-    await prisma.user.upsert({
-      where: { username: r.username },
-      update: { roleId: resdnRole.id },
-      create: {
-        name: r.name,
-        lastName: r.lastName,
-        username: r.username,
-        password,
-        roleId: resdnRole.id,
-      },
-    });
-  }
-  
   hackerLog.success('SECURITY', 'Security layer deployed');
 };

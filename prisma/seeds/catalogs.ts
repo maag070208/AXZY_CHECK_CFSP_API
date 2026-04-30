@@ -9,7 +9,6 @@ export const catalogsSeed = async (prisma: PrismaClient) => {
         { name: 'ADMIN', value: 'Administrador' },
         { name: 'GUARD', value: 'Guardia' },
         { name: 'SHIFT', value: 'Jefe de Turno' },
-        { name: 'RESDN', value: 'Residente' },
         { name: 'MAINT', value: 'Mantenimiento' },
     ];
 
