@@ -62,17 +62,26 @@ export const createIncident = async (data: {
             media: data.media,
             latitude: data.latitude,
             longitude: data.longitude
-        },
-        include: {
-            guard: true,
-            category: true,
-            type: true
         }
     });
 
-    // Fire and forget email completely decoupled from request thread
-    setImmediate(() => {
-        sendIncidentEmail(incident, incident.guard).catch(console.error);
+    // Fire and forget EVERYTHING including relation fetching
+    setImmediate(async () => {
+        try {
+            const enrichedIncident = await prismaClient.incident.findUnique({
+                where: { id: incident.id },
+                include: {
+                    guard: true,
+                    category: true,
+                    type: true
+                }
+            });
+            if (enrichedIncident) {
+                await sendIncidentEmail(enrichedIncident, enrichedIncident.guard);
+            }
+        } catch (error) {
+            console.error("Background incident processing error:", error);
+        }
     });
 
     return incident;

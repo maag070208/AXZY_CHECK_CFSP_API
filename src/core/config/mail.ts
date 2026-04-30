@@ -2,8 +2,8 @@ import * as nodemailer from "nodemailer";
 
 export const transporter = nodemailer.createTransport({
   host: "smtp.hostinger.com",
-  port: 465,
-  secure: true,
+  port: 587,
+  secure: false, // TLS requires secure: false for port 587
   requireTLS: true,
   tls: {
     ciphers: "SSLv3",

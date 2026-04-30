@@ -41,14 +41,21 @@ export const createMaintenance = async (data: {
             media: data.media,
             latitude: data.latitude,
             longitude: data.longitude
-        },
-        include: {
-            guard: true
         }
     });
 
-    setImmediate(() => {
-        sendMaintenanceEmail(maintenance, maintenance.guard).catch(console.error);
+    setImmediate(async () => {
+        try {
+            const enrichedMaintenance = await prismaClient.maintenance.findUnique({
+                where: { id: maintenance.id },
+                include: { guard: true }
+            });
+            if (enrichedMaintenance) {
+                await sendMaintenanceEmail(enrichedMaintenance, enrichedMaintenance.guard);
+            }
+        } catch (error) {
+            console.error("Background maintenance processing error:", error);
+        }
     });
 
     return maintenance;
