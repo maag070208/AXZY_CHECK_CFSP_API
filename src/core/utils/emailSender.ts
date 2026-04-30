@@ -1,4 +1,4 @@
-import { transporter } from "../config/mail";
+import { transporter, resend } from "../config/mail";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
@@ -89,13 +89,28 @@ export const sendIncidentEmail = async (incident: any, guard: any) => {
       </div>
     `;
 
-    // 4. Send Email
-    await transporter.sendMail({
-      from: "aamaro@axzy.dev",
-      to: recipients,
-      subject: subject,
-      html: htmlContent,
-    });
+    // 4. Send Email  
+    console.log("Sending email using Resend", resend);
+    if (resend) {
+      const { data, error } = await resend.emails.send({
+        from: "AXZY Check <noreply@axzy.dev>",
+        to: recipients,
+        subject: subject,
+        html: htmlContent,
+      });
+      if (error) {
+        console.error("Resend Error:", error);
+      } else {
+        console.log("Resend Success:", data);
+      }
+    } else {
+      await transporter.sendMail({
+        from: "aamaro@axzy.dev",
+        to: recipients,
+        subject: subject,
+        html: htmlContent,
+      });
+    }
 
     console.log(`Incident email sent to ${recipients.join(", ")}`);
 
@@ -182,12 +197,26 @@ export const sendMaintenanceEmail = async (maintenance: any, guard: any) => {
       </div>
     `;
 
-    await transporter.sendMail({
-      from: "aamaro@axzy.dev",
-      to: recipients,
-      subject: subject,
-      html: htmlContent,
-    });
+    if (resend) {
+      const { data, error } = await resend.emails.send({
+        from: "AXZY Check <onboarding@resend.dev>",
+        to: recipients,
+        subject: subject,
+        html: htmlContent,
+      });
+      if (error) {
+        console.error("Resend Error (Maintenance):", error);
+      } else {
+        console.log("Resend Success (Maintenance):", data);
+      }
+    } else {
+      await transporter.sendMail({
+        from: "aamaro@axzy.dev",
+        to: recipients,
+        subject: subject,
+        html: htmlContent,
+      });
+    }
 
     console.log(`Maintenance email sent to ${recipients.join(", ")}`);
 
