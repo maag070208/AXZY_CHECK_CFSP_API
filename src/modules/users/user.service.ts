@@ -70,24 +70,7 @@ export const addUser = async (data: any) => {
       if (roleObj) targetRoleId = roleObj.id;
   }
 
-  // Auto-Assign Recurring Configs if Guard/Staff
-  if (targetRoleId) {
-      const role = await prismaClient.role.findUnique({ where: { id: Number(targetRoleId) } });
-      if (role && (role.name === 'GUARD' || role.name === 'SHIFT' || role.name === 'MAINT')) {
-          const allDirectives = await prismaClient.recurringConfiguration.findMany({
-              where: { active: true },
-              select: { id: true }
-          });
-          
-          const connectIds = allDirectives.map(d => ({ id: d.id }));
-          
-          if (connectIds.length > 0) {
-              userData.recurringConfigurations = {
-                  connect: connectIds
-              };
-          }
-      }
-  }
+  // Auto-Assign Recurring Configs if Guard/Staff - Logic removed since Rutas no longer exist
 
   return prismaClient.user.create({
     data: {

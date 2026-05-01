@@ -1,13 +1,14 @@
 import { Router } from "express";
-import { addLocation, getLocations, putLocation, removeLocation, getDataTable } from "./locations.controller";
+import * as locationsController from "./locations.controller";
 
 const router = Router();
 
-router.post("/datatable", getDataTable);
+router.post("/datatable", locationsController.getDataTable);
 
-router.get("/", getLocations);
-router.post("/", addLocation);
-router.put("/:id", putLocation);
-router.delete("/:id", removeLocation);
+router.get("/", locationsController.getLocations);
+router.post("/", locationsController.addLocation);
+router.post("/print-qrs", locationsController.printBulkQR);
+router.put("/:id", locationsController.putLocation);
+router.delete("/:id", locationsController.removeLocation);
 
 export default router;

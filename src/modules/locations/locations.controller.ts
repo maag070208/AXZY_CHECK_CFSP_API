@@ -1,10 +1,10 @@
 import { createTResult } from "@src/core/mappers/tresult.mapper";
 import { Request, Response } from "express";
-import { createLocation, deleteLocation, getAllLocations, getDataTableLocations, updateLocation } from "./locations.service";
+import * as locationsService from "./locations.service";
 
 export const getDataTable = async (req: Request, res: Response) => {
   try {
-    const result = await getDataTableLocations(req.body);
+    const result = await locationsService.getDataTableLocations(req.body);
     return res.status(200).json(createTResult(result));
   } catch (error: any) {
     return res.status(500).json(createTResult(null, error.message));
@@ -13,7 +13,7 @@ export const getDataTable = async (req: Request, res: Response) => {
 
 export const getLocations = async (req: Request, res: Response) => {
   try {
-    const locations = await getAllLocations();
+    const locations = await locationsService.getAllLocations();
     return res.status(200).json(createTResult(locations));
   } catch (error: any) {
     return res.status(500).json(createTResult(null, error.message));
@@ -22,16 +22,22 @@ export const getLocations = async (req: Request, res: Response) => {
 
 export const addLocation = async (req: Request, res: Response) => {
   try {
-    const { name, aisle, spot, number } = req.body;
+    const { clientId, name, zoneId, aisle, spot, number } = req.body;
     
-    // Check if we have structured data
-    const hasStructuredData = aisle !== undefined && spot !== undefined && number !== undefined;
+    if (!clientId) {
+        return res.status(400).json(createTResult(null, ["Client ID es requerido"]));
+    }
 
-    const locationData = hasStructuredData
-        ? { aisle, spot, number, name: name || `${aisle}-${spot}-${number}` } 
-        : { aisle: name, spot: '', number: '', name };
+    const locationData = { 
+        clientId: Number(clientId), 
+        zoneId: zoneId ? Number(zoneId) : undefined,
+        aisle: aisle || '', 
+        spot: spot || '', 
+        number: number || '', 
+        name 
+    };
 
-    const location = await createLocation(locationData);
+    const location = await locationsService.createLocation(locationData);
     return res.status(201).json(createTResult(location));
   } catch (error: any) {
     return res.status(500).json(createTResult(null, error.message));
@@ -41,8 +47,20 @@ export const addLocation = async (req: Request, res: Response) => {
 export const putLocation = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const { aisle, spot, number, name } = req.body;
-        const location = await updateLocation(Number(id), { aisle, spot, number, name });
+        const { clientId, zoneId, aisle, spot, number, name } = req.body;
+        
+        if (!clientId) {
+            return res.status(400).json(createTResult(null, ["Client ID is required"]));
+        }
+
+        const location = await locationsService.updateLocation(Number(id), { 
+            clientId: Number(clientId), 
+            zoneId: zoneId ? Number(zoneId) : undefined,
+            aisle, 
+            spot, 
+            number, 
+            name 
+        });
         return res.status(200).json(createTResult(location));
     } catch (error: any) {
         return res.status(500).json(createTResult(null, error.message));
@@ -52,9 +70,24 @@ export const putLocation = async (req: Request, res: Response) => {
 export const removeLocation = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const location = await deleteLocation(Number(id));
+        const location = await locationsService.deleteLocation(Number(id));
         return res.status(200).json(createTResult(location));
     } catch (error: any) {
         return res.status(500).json(createTResult(null, error.message || "Error eliminando zona"));
+    }
+};
+
+export const printBulkQR = async (req: Request, res: Response) => {
+    try {
+        const { ids } = req.body;
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json(createTResult(null, ["Debes proporcionar una lista de IDs"]));
+        }
+        const buffer: any = await locationsService.generateQRPDF(ids);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'attachment; filename=qrs.pdf');
+        return res.send(buffer);
+    } catch (error: any) {
+        return res.status(500).json(createTResult(null, [error.message]));
     }
 };

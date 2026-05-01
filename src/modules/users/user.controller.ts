@@ -134,7 +134,8 @@ export const login = async (req: Request, res: Response) => {
       name: user.name,
       lastName: user.lastName,
       username: user.username,
-      role: user.role?.name
+      role: user.role?.name,
+      clientId: user.clientId
     };
 
     return res.status(200).json(createTResult(await generateJWT(tokenPayload)));

@@ -13,5 +13,6 @@ router.get('/current', roundController.getCurrentRound);
 router.post('/datatable', roundController.getDataTable);
 router.get('/', roundController.getRounds);
 router.get('/:id', roundController.getRoundDetail);
+router.get('/:id/report', roundController.generateReport);
 
 export default router;

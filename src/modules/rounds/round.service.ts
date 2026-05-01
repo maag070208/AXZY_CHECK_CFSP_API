@@ -1,25 +1,27 @@
-
 import { prismaClient } from "@src/core/config/database";
 import { TResult } from '@src/core/dto/TResult';
 import { ITDataTableFetchParams, ITDataTableResponse } from "@src/core/dto/datatable.dto";
 import { getPrismaPaginationParams } from "@src/core/utils/prisma-pagination.utils";
+import PDFDocument from 'pdfkit';
+import fs from 'fs';
+import path from 'path';
+import axios from 'axios';
 
 const prisma = prismaClient;
 
-export const getDataTableRounds = async (params: ITDataTableFetchParams): Promise<ITDataTableResponse<any>> => {
-    // Extract custom frontend-only filters
+// Use the key found in WEB .env for static maps
+const GOOGLE_MAPS_KEY = "AIzaSyBEcey4scuaufZ6TD4oOZZKjO-CIOVXa8w";
+
+export const getDataTableRounds = async (params: ITDataTableFetchParams, user?: any): Promise<ITDataTableResponse<any>> => {
     const customFilters = params.filters || {};
-    
-    // Clean filters for generic Prisma mapping
     const cleanFilters: any = {};
     if (params.filters) {
         for (const [key, value] of Object.entries(params.filters)) {
             if (key !== 'refreshKey' && key !== 'date') {
                 if (key === 'guard') {
-                    // Map the UI column "guard" to Prisma "guardId"
                     cleanFilters['guardId'] = Number(value);
-                } else if (key === 'recurringConfiguration') {
-                    cleanFilters['recurringConfigurationId'] = Number(value);
+                } else if (key === 'client') {
+                    cleanFilters['clientId'] = Number(value);
                 } else if (key === 'search') {
                     cleanFilters.guard = {
                         OR: [
@@ -37,418 +39,397 @@ export const getDataTableRounds = async (params: ITDataTableFetchParams): Promis
 
     const prismaParams = getPrismaPaginationParams({ ...params, filters: cleanFilters });
 
-    // Map `date` to actual startTime range filter
     if (customFilters.date) {
         const dateParams = Array.isArray(customFilters.date) ? customFilters.date : [customFilters.date, customFilters.date];
         const start = new Date(dateParams[0]);
         const end = new Date(dateParams[1] || dateParams[0]);
         
         if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
-            prismaParams.where.startTime = {
-                gte: start,
-                lte: end
-            };
+            prismaParams.where.startTime = { gte: start, lte: end };
         }
+    }
+
+    if (user?.role === 'RESDN' && user.clientId) {
+        prismaParams.where.clientId = user.clientId;
     }
 
     const [rows, total] = await Promise.all([
         prisma.round.findMany({
             ...prismaParams,
             include: {
-                guard: {
-                    select: { id: true, name: true, lastName: true }
-                },
-                recurringConfiguration: true
-            },
-            orderBy: prismaParams.orderBy || { startTime: 'desc' }
+                guard: true,
+                client: true,
+                recurringConfiguration: {
+                    include: { client: true }
+                }
+            }
         }),
-        prisma.round.count({
-            where: prismaParams.where
-        })
+        prisma.round.count({ where: prismaParams.where })
     ]);
 
     return { rows, total };
 };
 
-export const startRound = async (guardId: number, recurringConfigId?: number): Promise<TResult<any>> => {
-  try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    // 0. Get Guard info
-    const guard = await prisma.user.findUnique({
-        where: { id: guardId },
-        include: { recurringConfigurations: true }
-    });
-
-    if (!guard) {
-        return { success: false, data: null, messages: ['Guardia no encontrado'] };
-    }
-
-    // 1. STRICT REQUIREMENT: Only 1 active round per guard
-    let activeRound = await prisma.round.findFirst({
-        where: {
-            guardId,
-            status: 'IN_PROGRESS'
-        },
-        include: { guard: true, recurringConfiguration: true }
-    });
-
-    if (activeRound) {
-        // Validation: Check if the active round is "stale" or from a previous shift/schedule
-        // Heuristic 1: Duration > 14 hours (Safe max shift length)
-        const now = new Date();
-        const durationHours = (now.getTime() - activeRound.startTime.getTime()) / (1000 * 60 * 60);
-        
-        // Heuristic 2: Switching Routes (If user explicitly selected a DIFFERENT route)
-        // If we have an active round for Route A, and are starting Route B, we should probably close A.
-        const isDifferentRoute = recurringConfigId && activeRound.recurringConfigurationId !== recurringConfigId;
-
-        if (durationHours > 14 || isDifferentRoute) {
-            // Auto-Close Stale/Different Round
-            await prisma.round.update({
-                where: { id: activeRound.id },
-                data: { 
-                    status: 'COMPLETED', 
-                    endTime: new Date() 
-                }
-            });
-            // Reset activeRound so we can create a new one below
-            activeRound = null; 
-        } else {
-             // It's a recent, same-route round. Block creation.
-             return {
-                success: false,
-                messages: [`Ya tienes una ronda activa: ${activeRound.recurringConfiguration?.title || 'Sin Ruta'}. Termínala antes de iniciar otra.`],
-                data: activeRound,
-            };
-        }
-    }
-
-    // 2. Validate Recurring Config (Route)
-    // If recurringConfigId is provided, check if it's assigned to the guard
-    if (recurringConfigId) {
-        const isAssigned = guard.recurringConfigurations.some(rc => rc.id === recurringConfigId);
-        if (!isAssigned) {
-             // Fallback: check if it's assigned via global query just in case, but usually user.recurringConfigurations is enough if loaded
-             // Actually `include: { recurringConfigurations: true }` fetches the relation.
-             return { success: false, messages: ['No tienes asignada esta ruta o no existe.'], data: null };
-        }
-    } else {
-        // If NO config provided, we have a dilemma as per user request.
-        // "Ningun guardia puede tener mas de 1 RUTA activa. Al darle al boton... mostrarle cual ruta quiere iniciar"
-        // This implies they MUST select a route if they have options.
-        // If they have only 1 assignment, maybe auto-select?
-        // If they have 0, maybe allow generic round?
-        
-        if (guard.recurringConfigurations.length === 1) {
-            recurringConfigId = guard.recurringConfigurations[0].id;
-        } else if (guard.recurringConfigurations.length > 1) {
-             return { success: false, messages: ['Debes especificar qué ruta deseas iniciar.'], data: null }; // Frontend handles selection
-        }
-        // If 0, proceed as generic round (legacy support)
-    }
-
-    // 4. CHECK RE-ENTRY Rule (Cooldown)
-    // "Guard finishes round -> Wait 2 hours -> Can start again"
-    // AND "Provided it is not taken by another guard" (This is handled by logic that might need to be added if rounds are shared, 
-    // but assuming for now specific assignments just need cooldown).
-    
-    // Check if THIS route (recurringConfigId) is currently Active by ANYONE else
-    if (recurringConfigId) {
-        const routeActiveByOther = await prisma.round.findFirst({
-            where: {
-                recurringConfigurationId: recurringConfigId,
+export const startRound = async (guardId: number, clientId?: number, recurringConfigurationId?: number): Promise<TResult<any>> => {
+    try {
+        const round = await prisma.round.create({
+            data: {
+                guardId, clientId, recurringConfigurationId,
                 status: 'IN_PROGRESS',
-                guardId: { not: guardId } // Someone else
-            },
-            include: { guard: true }
+                startTime: new Date()
+            }
         });
-        
-        if (routeActiveByOther) {
-             return {
-                success: false,
-                messages: [`Esta ruta ya está siendo recorrida por ${routeActiveByOther.guard.name}.`],
-                data: null
-            };
-        }
+        return { success: true, data: round, messages: [] };
+    } catch (error: any) {
+        return { success: false, data: null, messages: [error.message] };
     }
-
-    // 4. CHECK RE-ENTRY Rule (Cooldown) - REMOVED AS PER REQUEST
-
-    // 3. Create new Round (Existing logic matches)
-    const newRound = await prisma.round.create({
-      data: {
-        guardId,
-        status: 'IN_PROGRESS',
-        startTime: new Date(),
-        recurringConfigurationId: recurringConfigId
-      },
-      include: { guard: true, recurringConfiguration: true }
-    });
-
-    return {
-      success: true,
-      messages: ['Ronda iniciada correctamente'],
-      data: newRound,
-    };
-  } catch (error: any) {
-    return {
-      success: false,
-      data: null,
-      messages: ['Error al iniciar la ronda: ' + error.message],
-    };
-  }
 };
 
-export const endRound = async (roundId: number): Promise<TResult<any>> => {
-  try {
-    const round = await prisma.round.findUnique({
-      where: { id: roundId },
-    });
-
-    if (!round) {
-      return { success: false, data: null, messages: ['Ronda no encontrada'] };
+export const endRound = async (id: number): Promise<TResult<any>> => {
+    try {
+        const round = await prisma.round.update({
+            where: { id },
+            data: { status: 'COMPLETED', endTime: new Date() }
+        });
+        return { success: true, data: round, messages: [] };
+    } catch (error: any) {
+        return { success: false, data: null, messages: [error.message] };
     }
-
-    if (round.status === 'COMPLETED') {
-        return { success: false, data: null, messages: ['Esta ronda ya ha finalizado'] };
-    }
-
-    const updatedRound = await prisma.round.update({
-      where: { id: roundId },
-      data: {
-        status: 'COMPLETED',
-        endTime: new Date(),
-      },
-    });
-
-    return {
-      success: true,
-      messages: ['Ronda finalizada correctamente'],
-      data: updatedRound,
-    };
-  } catch (error: any) {
-    return {
-      success: false,
-      data: null,
-      messages: ['Error al finalizar la ronda: ' + error.message],
-    };
-  }
 };
 
 export const getCurrentRound = async (guardId: number): Promise<TResult<any>> => {
     try {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        const tomorrow = new Date(today);
-        tomorrow.setDate(tomorrow.getDate() + 1);
-
-        // Fetch the LATEST round for THIS GUARD for TODAY (Active OR Completed)
-        let round = await prisma.round.findFirst({
-            where: {
-                guardId, // Added filter
-                startTime: {
-                    gte: today, // Only from today? 
-                    // Actually, if we want to catch "stale" rounds from Yesterday that are still active,
-                    // we should probably NOT filter by 'today' strictly for the "IN_PROGRESS" check.
-                    // But legacy logic filters today. 
-                    // Let's widen the search for IN_PROGRESS items to catch stale ones.
-                },
-            },
+        const round = await prisma.round.findFirst({
+            where: { guardId, status: 'IN_PROGRESS' },
             include: {
-                guard: true,
-                recurringConfiguration: true
-            },
-            orderBy: {
-                startTime: 'desc'
-            }
-        });
-        
-        // If we didn't find one today, let's check if there is ANY active round (even yesterday's) to auto-close
-        if (!round) {
-             const anyActive = await prisma.round.findFirst({
-                 where: { guardId, status: 'IN_PROGRESS' },
-                 include: { guard: true, recurringConfiguration: true },
-                 orderBy: { startTime: 'desc' }
-             });
-             if (anyActive) round = anyActive;
-        }
-
-        if (!round) {
-            return { success: true, data: null, messages: ['No hay ronda activa hoy'] };
-        }
-        
-        // Check Stale in getCurrentRound too
-        if (round.status === 'IN_PROGRESS') {
-             const now = new Date();
-             const durationHours = (now.getTime() - round.startTime.getTime()) / (1000 * 60 * 60);
-             if (durationHours > 14) {
-                 // Auto-close logic
-                 await prisma.round.update({
-                    where: { id: round.id },
-                    data: { status: 'COMPLETED', endTime: new Date() }
-                 });
-                 // Return null as if no round is active
-                 return { success: true, data: null, messages: ['Ronda anterior cerrada por tiempo'] };
-             }
-        }
-
-        return { success: true, data: round, messages: [] };
-    } catch (error: any) {
-        return { success: false, data: null, messages: ['Error al obtener la ronda actual: ' + error.message] };
-    }
-};
-
-export const getRounds = async (dateStr?: string, guardId?: number): Promise<TResult<any>> => {
-    try {
-        let dateFilter: any = {};
-        if (dateStr) {
-            const start = new Date(dateStr);
-            start.setHours(0, 0, 0, 0);
-            
-            // Extend window to cover timezone differences (e.g. UTC-6 late rounds are "next day" in UTC)
-            // We search from [Selected Day 00:00 UTC] to [Next Day 12:00 UTC]
-            // This ensures we catch late shifts that are technically "tomorrow" in UTC but "today" locally.
-            const end = new Date(start);
-            end.setDate(end.getDate() + 1);
-            end.setHours(12, 0, 0, 0); 
-
-            dateFilter = {
-                startTime: {
-                    gte: start,
-                    lt: end
-                }
-            };
-        }
-
-        const where: any = { ...dateFilter };
-        if (guardId) {
-            where.guardId = guardId;
-        }
-
-        const rounds = await prisma.round.findMany({
-            where,
-            include: {
-                guard: {
-                    select: { id: true, name: true, lastName: true }
-                },
-                recurringConfiguration: true
-            },
-            orderBy: {
-                startTime: 'desc'
-            }
-        });
-
-        return { success: true, data: rounds, messages: [] };
-
-    } catch (error: any) {
-        return { success: false, data: null, messages: ['Error al obtener Historial de recorridos: ' + error.message] };
-    }
-};
-
-export const getRoundDetail = async (roundId: number): Promise<TResult<any>> => {
-    try {
-        const round = await prisma.round.findUnique({
-            where: { id: roundId },
-            include: {
-                guard: {
-                    select: { id: true, name: true, lastName: true }
-                },
                 recurringConfiguration: {
                     include: {
                         recurringLocations: {
-                            include: {
-                                location: true
-                            }
+                            include: { location: { include: { zone: true } } },
+                            orderBy: { order: 'asc' }
                         }
                     }
                 }
             }
         });
+        return { success: true, data: round, messages: [] };
+    } catch (error: any) {
+        return { success: false, data: null, messages: [error.message] };
+    }
+};
 
-        if (!round) {
-            return { success: false, data: null, messages: ['Ronda no encontrada'] };
+export const getRounds = async (date?: string, guardId?: number, user?: any): Promise<TResult<any>> => {
+    try {
+        const where: any = {};
+        if (date) {
+            const start = new Date(date);
+            const end = new Date(date);
+            end.setHours(23, 59, 59, 999);
+            where.startTime = { gte: start, lte: end };
+        }
+        if (guardId) where.guardId = guardId;
+        if (user?.role === 'RESDN' && user.clientId) where.clientId = user.clientId;
+
+        const rounds = await prisma.round.findMany({
+            where,
+            include: { guard: true, recurringConfiguration: true, client: true },
+            orderBy: { startTime: 'desc' }
+        });
+        return { success: true, data: rounds, messages: [] };
+    } catch (error: any) {
+        return { success: false, data: null, messages: [error.message] };
+    }
+};
+
+export interface IRoundDetail {
+    round: any;
+    timeline: Array<{
+        type: 'START' | 'END' | 'SCAN' | 'INCIDENT';
+        timestamp: Date;
+        description: string;
+        data: any;
+    }>;
+}
+
+export const getRoundDetail = async (id: number, user?: any): Promise<TResult<IRoundDetail | null>> => {
+    try {
+        const round = await prisma.round.findUnique({
+            where: { id },
+            include: {
+                guard: true,
+                client: { include: { locations: true } },
+                recurringConfiguration: {
+                    include: {
+                        recurringLocations: {
+                            include: { location: true },
+                            orderBy: { order: 'asc' }
+                        },
+                        client: true
+                    }
+                }
+            }
+        });
+
+        if (!round) return { success: false, data: null, messages: ['Ronda no encontrada'] };
+        if (user?.role === 'RESDN' && user.clientId && round.clientId !== user.clientId) {
+            return { success: false, data: null, messages: ['No tienes permiso para ver los detalles de esta ronda.'] };
         }
 
         const start = round.startTime;
         const end = round.endTime || new Date();
 
-        // 1. Fetch Scans (Kardex) in range AND by this Guard
         const scans = await prisma.kardex.findMany({
-            where: {
-                timestamp: { gte: start, lte: end },
-                userId: round.guardId
-            },
-            include: {
-                location: true,
-                user: { select: { id: true, name: true, lastName: true } },
-                assignment: {
-                    include: {
-                        tasks: true
-                    }
-                }
-            },
+            where: { timestamp: { gte: start, lte: end }, userId: round.guardId },
+            include: { location: true, assignment: { include: { tasks: true } } },
             orderBy: { timestamp: 'asc' }
         });
 
-        // 2. Fetch Incidents logic removed: Incidents and Maintenances are separate from Rounds.
+        const incidents = await prisma.incident.findMany({
+            where: { createdAt: { gte: start, lte: end }, guardId: round.guardId },
+            include: { category: true },
+            orderBy: { createdAt: 'asc' }
+        });
 
-        // 3. Construct Timeline
         const timeline: any[] = [];
-
-        // Add Start Event
-        timeline.push({
-            type: 'START',
-            timestamp: round.startTime,
-            description: 'Inicio de Ronda',
-            guard: round.guard,
-            data: round
-        });
-
-        // Add Scans
-        scans.forEach(scan => {
+        timeline.push({ type: 'START', timestamp: round.startTime, description: 'Inicio de Ronda', data: null });
+        scans.forEach(s => {
             timeline.push({
-                type: 'SCAN',
-                timestamp: scan.timestamp,
-                description: `Escaneo: ${scan.location.name}`,
-                guard: scan.user,
-                data: scan
+                type: 'SCAN', timestamp: s.timestamp,
+                description: `Escaneo: ${(s as any).location?.name || 'Punto desconocido'}`,
+                data: s
             });
         });
-
-        // Incidents insertion logic removed
-
-        // Add End Event if completed
-        if (round.endTime) {
+        incidents.forEach(i => {
             timeline.push({
-                type: 'END',
-                timestamp: round.endTime,
-                description: 'Fin de Ronda',
-                guard: round.guard, // Or whoever ended it? Round schema only has one guardId (initiator). 
-                // Ideally we'd capture who ended it, but schema doesn't seem to have 'endedBy'. 
-                // We'll assume the initiator for now or leaving guard undefined.
-                data: round
+                type: 'INCIDENT', timestamp: i.createdAt,
+                description: `Incidente: ${(i as any).category?.name || 'Sin categoría'}`,
+                data: i
             });
+        });
+        if (round.status === 'COMPLETED' && round.endTime) {
+            timeline.push({ type: 'END', timestamp: round.endTime, description: 'Cierre de Ronda', data: null });
         }
+        timeline.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
-        // Sort by timestamp
-        timeline.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-        return {
-            success: true,
-            data: {
-                round,
-                timeline
-            },
-            messages: []
-        };
-
+        return { success: true, data: { round, timeline }, messages: [] };
     } catch (error: any) {
-        return { success: false, data: null, messages: ['Error al obtener detalle de ronda: ' + error.message] };
+        return { success: false, data: null, messages: [error.message] };
     }
+};
+
+const fetchImageAsBuffer = async (url: string): Promise<Buffer | null> => {
+    try {
+        if (url.startsWith('data:image')) {
+            const base64Data = url.split(',')[1];
+            return Buffer.from(base64Data, 'base64');
+        }
+        const response = await axios.get(url, { responseType: 'arraybuffer', timeout: 10000 });
+        return Buffer.from(response.data);
+    } catch (error) {
+        return null;
+    }
+};
+
+export const generateRoundPDF = async (id: number, user?: any): Promise<Buffer> => {
+    const detailRes = await getRoundDetail(id, user);
+    if (!detailRes.success || !detailRes.data) {
+        throw new Error(detailRes.messages?.[0] || 'Ronda no encontrada');
+    }
+
+    const { round, timeline } = detailRes.data;
+
+    const doc = new PDFDocument({ margin: 40, size: 'LETTER', bufferPages: true });
+    const buffers: any[] = [];
+    doc.on('data', buffers.push.bind(buffers));
+
+    const primaryColor = '#1e293b';     
+    const greenColor = '#10b981';      
+    const blueColor = '#3b82f6';       
+    const purpleColor = '#a855f7';     
+    const orangeColor = '#f97316';     
+    const grayColor = '#64748b';       
+    const borderColor = '#f1f5f9';     
+    const cardBgColor = '#ffffff';
+
+    // Header
+    doc.rect(0, 0, 612, 110).fillColor('#f8fafc').fill();
+    const logoPath = path.join(process.cwd(), 'src/assets/logo_fansal.png');
+    if (fs.existsSync(logoPath)) doc.image(logoPath, 40, 25, { width: 70 });
+
+    doc.fillColor(primaryColor).font('Helvetica-Bold').fontSize(22)
+       .text(round.recurringConfiguration?.title?.toUpperCase() || `RONDA #${round.id}`, 120, 35);
+
+    const infoY = 70;
+    doc.fontSize(8).fillColor(grayColor).font('Helvetica-Bold').text('GUARDIA', 120, infoY);
+    doc.fontSize(9).fillColor(primaryColor).font('Helvetica').text(`${round.guard.name} ${round.guard.lastName}`, 120, infoY + 12);
+    doc.fontSize(8).fillColor(grayColor).font('Helvetica-Bold').text('CLIENTE', 270, infoY);
+    doc.fontSize(9).fillColor(primaryColor).font('Helvetica').text(round.client?.name || 'Sin Cliente', 270, infoY + 12);
+    doc.fontSize(8).fillColor(grayColor).font('Helvetica-Bold').text('FECHA DE INICIO', 420, infoY);
+    doc.fontSize(9).fillColor(primaryColor).font('Helvetica').text(new Date(round.startTime).toLocaleString(), 420, infoY + 12);
+
+    // Metrics
+    const metricsY = 125;
+    const boxW = 170;
+    const boxH = 80;
+
+    const start = new Date(round.startTime);
+    const end = round.endTime ? new Date(round.endTime) : new Date();
+    const durationMs = end.getTime() - start.getTime();
+    const durationStr = `${Math.floor(durationMs / 60000)}m ${Math.floor((durationMs % 60000) / 1000)}s`;
+    const scans = timeline.filter((e: any) => e.type === 'SCAN');
+    const avgMs = scans.length > 0 ? durationMs / scans.length : 0;
+    const avgStr = `${Math.floor(avgMs / 60000)}m ${Math.floor((avgMs % 60000) / 1000)}s`;
+
+    doc.roundedRect(40, metricsY, boxW, boxH, 12).fillColor(cardBgColor).lineWidth(1).strokeColor(borderColor).stroke();
+    doc.fillColor(blueColor).circle(65, metricsY + 25, 12).fill();
+    doc.save().translate(59, metricsY + 19).scale(0.4).fillColor('white').path('M12,2C6.48,2,2,6.48,2,12s4.48,10,10,10,10-4.48,10-10S17.52,2,12,2zm0,18c-4.41,0-8-3.59-8-8s3.59-8,8-8,8,3.59,8,8-3.59,8-8,8zm.5-13H11v6l5.25,3.15.75-1.23-4.5-2.67V7z').fill().restore();
+    doc.fillColor(grayColor).font('Helvetica-Bold').fontSize(7).text('DURACIÓN TOTAL', 85, metricsY + 22);
+    doc.fillColor(primaryColor).font('Helvetica-Bold').fontSize(16).text(durationStr, 60, metricsY + 45);
+
+    doc.roundedRect(220, metricsY, boxW, boxH, 12).fillColor(cardBgColor).strokeColor(borderColor).stroke();
+    doc.fillColor(purpleColor).circle(245, metricsY + 25, 12).fill();
+    doc.save().translate(239, metricsY + 19).scale(0.4).fillColor('white').path('M12,2C8.13,2,5,5.13,5,9c0,5.25,7,13,7,13s7-7.75,7-13C19,5.13,15.87,2,12,2z M12,11.5c-1.38,0-2.5-1.12-2.5-2.5s1.12-2.5,2.5-2.5s2.5,1.12,2.5,2.5S13.38,11.5,12,11.5z').fill().restore();
+    doc.fillColor(grayColor).font('Helvetica-Bold').fontSize(7).text('PUNTOS CUBIERTOS', 265, metricsY + 22);
+    doc.fillColor(primaryColor).font('Helvetica-Bold').fontSize(16).text(`${scans.length}`, 240, metricsY + 45);
+    doc.fillColor(grayColor).fontSize(8).text(`/ ${round.recurringConfiguration?.recurringLocations?.length || scans.length}`, 265, metricsY + 48);
+
+    doc.roundedRect(400, metricsY, boxW, boxH, 12).fillColor(cardBgColor).strokeColor(borderColor).stroke();
+    doc.fillColor(orangeColor).circle(425, metricsY + 25, 12).fill();
+    doc.save().translate(419, metricsY + 19).scale(0.4).fillColor('white').path('M10,20h4V4h-4V20z M4,20h4v-7H4V20z M16,9v11h4V9H16z').fill().restore();
+    doc.fillColor(grayColor).font('Helvetica-Bold').fontSize(7).text('PROMEDIO POR TRAMO', 445, metricsY + 22);
+    doc.fillColor(primaryColor).font('Helvetica-Bold').fontSize(16).text(avgStr, 420, metricsY + 45);
+
+    // Route Map
+    doc.fillColor(primaryColor).font('Helvetica-Bold').fontSize(12).text('RUTA RECORRIDA', 40, 230);
+    const mapNodes: any[] = [];
+    const visitedLocations = new Set<string>();
+    mapNodes.push({ label: 'Inicio', status: 'START' });
+    scans.forEach((scan: any) => {
+        const locId = String(scan.data?.location?.id);
+        const hasMedia = scan.data?.media && Array.isArray(scan.data.media) && scan.data.media.length > 0;
+        let status = hasMedia ? 'SUCCESS' : 'INCOMPLETE';
+        if (visitedLocations.has(locId) && hasMedia) {
+             const alreadySuccess = mapNodes.some(n => n.label === scan.data?.location?.name && n.status === 'SUCCESS');
+             if (alreadySuccess) status = 'DUPLICATE';
+        }
+        visitedLocations.add(locId);
+        mapNodes.push({ label: scan.data?.location?.name || 'Punto', status });
+    });
+    const expectedLocs = round.recurringConfiguration?.recurringLocations || [];
+    expectedLocs.forEach((rl: any) => {
+        if (!visitedLocations.has(String(rl.locationId))) mapNodes.push({ label: rl.location?.name || 'Punto', status: 'MISSING' });
+    });
+    if (round.status === 'COMPLETED') mapNodes.push({ label: 'Fin', status: 'END' });
+
+    let routeY = 260;
+    const ptsPerRow = 8;
+    const rowH = 60;
+    const gap = 532 / (ptsPerRow - 1);
+    mapNodes.forEach((node, idx) => {
+        const r = Math.floor(idx / ptsPerRow);
+        const cIdx = idx % ptsPerRow;
+        const x = 40 + (cIdx * gap);
+        const y = routeY + (r * rowH);
+        if (cIdx > 0) doc.moveTo(x - gap + 7, y).lineTo(x - 7, y).strokeColor(borderColor).lineWidth(1.5).stroke();
+        let c = '#cbd5e1'; 
+        if (node.status === 'START') c = blueColor;
+        if (node.status === 'END') c = primaryColor;
+        if (node.status === 'SUCCESS') c = greenColor;
+        if (node.status === 'INCOMPLETE') c = orangeColor;
+        if (node.status === 'DUPLICATE') c = '#ef4444'; 
+        doc.circle(x, y, 7).fillColor(c).fill();
+        doc.circle(x, y, 3).fillColor('white').fill();
+        doc.fontSize(5.5).fillColor(grayColor).font('Helvetica').text(node.label, x - 20, y + 10, { width: 40, align: 'center' });
+    });
+
+    const timelineStartY = routeY + (Math.ceil(mapNodes.length / ptsPerRow) * rowH) + 10;
+    doc.fillColor(primaryColor).font('Helvetica-Bold').fontSize(12).text('LÍNEA DE TIEMPO', 40, timelineStartY);
+    let currentY = timelineStartY + 30;
+
+    for (const event of timeline) {
+        if (event.type === 'INCIDENT') continue;
+        const hasNotes = !!event.data?.notes;
+        const hasImages = event.data?.media && Array.isArray(event.data.media) && event.data.media.length > 0;
+        const hasGPS = event.data?.latitude && event.data?.longitude;
+        
+        let cardH = 85; 
+        if (hasNotes) cardH += 35;
+        if (hasImages) cardH += 180;
+        if (hasGPS) cardH += 220; // Room for map and coordinates
+
+        if (currentY + cardH > 740) { doc.addPage(); currentY = 40; }
+
+        doc.moveTo(55, currentY).lineTo(55, currentY + cardH).strokeColor(borderColor).lineWidth(2).stroke();
+        doc.circle(55, currentY + 20, 6).fillColor('white').strokeColor(blueColor).lineWidth(1.5).stroke();
+
+        doc.roundedRect(80, currentY, 492, cardH - 15, 10).fillColor(cardBgColor).strokeColor(borderColor).lineWidth(1).stroke();
+        
+        const timeStr = new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        doc.fillColor(grayColor).font('Helvetica-Bold').fontSize(8).text(timeStr, 95, currentY + 15);
+        doc.fillColor(primaryColor).font('Helvetica-Bold').fontSize(10).text(event.description.toUpperCase(), 170, currentY + 14);
+
+        let subY = currentY + 35;
+
+        if (event.type === 'SCAN' && event.data) {
+            doc.roundedRect(95, subY, 462, 35, 8).fillColor('#f5f3ff').fill();
+            doc.fillColor('#6d28d9').font('Helvetica-Bold').fontSize(8).text('UBICACIÓN', 110, subY + 14);
+            doc.fillColor(primaryColor).font('Helvetica-Bold').fontSize(10).text(event.data.location?.name || 'N/A', 170, subY + 13);
+            subY += 45;
+
+            doc.fillColor(grayColor).font('Helvetica-Bold').fontSize(8).text('NOTAS:', 95, subY);
+            doc.fillColor(primaryColor).font('Helvetica-Oblique').fontSize(9).text(`"${event.data.notes || 'Check completado'}"`, 95, subY + 12, { width: 440 });
+            subY += 35;
+
+            if (hasGPS) {
+                // GPS Section Header
+                doc.fillColor(grayColor).font('Helvetica-Bold').fontSize(8).text('UBICACIÓN GPS', 95, subY);
+                doc.fontSize(7).fillColor(grayColor).text('Coordenadas exactas del punto de control', 95, subY + 10);
+                subY += 25;
+
+                // Static Map Image
+                const lat = event.data.latitude;
+                const lng = event.data.longitude;
+                const mapUrl = `https://maps.googleapis.com/maps/api/staticmap?center=${lat},${lng}&zoom=15&size=400x200&markers=color:green%7C${lat},${lng}&key=${GOOGLE_MAPS_KEY}`;
+                
+                const mapBuffer = await fetchImageAsBuffer(mapUrl);
+                if (mapBuffer) {
+                    doc.image(mapBuffer, 95, subY, { width: 300, height: 150 });
+                    subY += 160;
+                }
+
+                // Coordinates detail box
+                doc.roundedRect(95, subY, 300, 30, 5).fillColor('#f8fafc').lineWidth(0.5).strokeColor(borderColor).stroke();
+                doc.fillColor(grayColor).fontSize(7).text('Latitud', 105, subY + 5);
+                doc.fillColor(primaryColor).fontSize(9).text(`${lat}`, 105, subY + 15);
+                doc.fillColor(grayColor).fontSize(7).text('Longitud', 205, subY + 5);
+                doc.fillColor(primaryColor).fontSize(9).text(`${lng}`, 205, subY + 15);
+                subY += 40;
+            }
+
+            if (hasImages) {
+                doc.fillColor(grayColor).font('Helvetica-Bold').fontSize(8).text('EVIDENCIA FOTOGRÁFICA', 95, subY);
+                subY += 15;
+                const media = event.data.media[0];
+                const url = typeof media === 'string' ? media : (media.url || media.key);
+                if (url) {
+                    const imgBuffer = await fetchImageAsBuffer(url);
+                    if (imgBuffer) doc.image(imgBuffer, 95, subY, { fit: [200, 150] });
+                }
+            }
+        } else {
+            doc.fillColor(grayColor).font('Helvetica-Oblique').fontSize(9).text(event.type === 'START' ? 'Punto de partida' : 'Punto de llegada', 95, subY + 10);
+        }
+        currentY += cardH;
+    }
+
+    const totalPages = doc.bufferedPageRange().count;
+    for (let i = 0; i < totalPages; i++) {
+        doc.switchToPage(i);
+        doc.fillColor(grayColor).fontSize(8).text(`Página ${i + 1} de ${totalPages}`, 0, 760, { align: 'center', width: 612 });
+    }
+    doc.end();
+
+    return new Promise<Buffer>((resolve) => {
+        doc.on('end', () => resolve(Buffer.concat(buffers)));
+    });
 };

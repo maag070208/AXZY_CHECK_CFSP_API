@@ -4,7 +4,8 @@ import { createTResult } from "@src/core/mappers/tresult.mapper";
 
 export const getDataTable = async (req: Request, res: Response) => {
   try {
-    const result = await roundService.getDataTableRounds(req.body);
+    const user = (req as any).user;
+    const result = await roundService.getDataTableRounds(req.body, user);
     return res.status(200).json(createTResult(result));
   } catch (error: any) {
     return res.status(500).json(createTResult(null, error.message));
@@ -12,16 +13,17 @@ export const getDataTable = async (req: Request, res: Response) => {
 };
 
 export const startRound = async (req: Request, res: Response) => {
-  const { guardId, recurringConfigId } = req.body;
-  // If coming from middleware, we might use req.user.id, but let's support body for flexibility or confirm middleware usage later.
-  // Assuming req.user exists if authenticated.
-  const userId = (req as any).user?.id || guardId;
+  const { guardId, clientId, recurringConfigurationId } = req.body;
+  const user = (req as any).user;
+  const targetGuardId = user?.id || guardId;
 
-  const configId = recurringConfigId ? Number(recurringConfigId) : undefined;
+  const parsedClientId = clientId ? Number(clientId) : undefined;
+  const parsedConfigId = recurringConfigurationId ? Number(recurringConfigurationId) : undefined;
 
-  const result = await roundService.startRound(Number(userId), configId);
+  const result = await roundService.startRound(Number(targetGuardId), parsedClientId, parsedConfigId);
   return res.status(result.success ? 200 : 400).json(result);
 };
+
 
 export const endRound = async (req: Request, res: Response) => {
   const { id } = req.params;
@@ -41,15 +43,32 @@ export const getCurrentRound = async (req: Request, res: Response) => {
 export const getRounds = async (req: Request, res: Response) => {
     // Optional filters like date, or guardId
     const { date, guardId } = req.query;
+    const user = (req as any).user;
     const result = await roundService.getRounds(
         date ? String(date) : undefined, 
-        guardId ? Number(guardId) : undefined
+        guardId ? Number(guardId) : undefined,
+        user
     );
     return res.status(result.success ? 200 : 500).json(result);
 };
 
 export const getRoundDetail = async (req: Request, res: Response) => {
     const { id } = req.params;
-    const result = await roundService.getRoundDetail(Number(id));
+    const user = (req as any).user;
+    const result = await roundService.getRoundDetail(Number(id), user);
     return res.status(result.success ? 200 : 404).json(result);
+};
+
+export const generateReport = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const user = (req as any).user;
+        const buffer = await roundService.generateRoundPDF(Number(id), user);
+        
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=Ronda_${id}.pdf`);
+        return res.send(buffer);
+    } catch (error: any) {
+        return res.status(500).json(createTResult(null, error.message));
+    }
 };

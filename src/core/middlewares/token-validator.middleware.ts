@@ -7,7 +7,7 @@ export default async function (
   next: express.NextFunction
 ) {
   try {
-    let token = req.header('Authorization');
+    let token = req.header('Authorization') || (req.query.token as string);
 
     if (!token) return res.status(401).json({ msg: 'No token provided' });
 

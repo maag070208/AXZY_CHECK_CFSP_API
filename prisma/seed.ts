@@ -6,6 +6,8 @@ import { maintenanceCatalogsSeed } from "./seeds/maintenance";
 import { schedulesSeed } from "./seeds/schedules";
 import { securitySeed } from "./seeds/security";
 import { sysConfigSeed } from "./seeds/sysconfig";
+import { plaza2000Seed } from "./seeds/plaza2000";
+import { vinasDelMarSeed } from "./seeds/vinas";
 
 import { hackerLog } from "./seeds/logger";
 
@@ -19,7 +21,9 @@ async function main() {
   await maintenanceCatalogsSeed(prisma);
   await schedulesSeed(prisma);
   await securitySeed(prisma);
-  await locationsSeed(prisma);
+  // await locationsSeed(prisma); // Commented out old generic locations
+  await plaza2000Seed(prisma);
+  await vinasDelMarSeed(prisma);
   await sysConfigSeed(prisma);
 
   hackerLog.divider();

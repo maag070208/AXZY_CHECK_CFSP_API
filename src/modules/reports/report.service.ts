@@ -8,18 +8,21 @@ export interface IGuardReportFilters {
     startDate: string;
     endDate: string;
     guardId?: number;
+    clientId?: number;
+    userRole?: string;
 }
 
 // Operational role names
 const OPERATIONAL_ROLES = ['GUARD', 'SHIFT', 'MAINT'];
 
-const getGuards = (guardId?: number) => {
+const getGuards = (guardId?: number, clientId?: number) => {
     return prisma.user.findMany({
         where: {
             role: { name: { in: OPERATIONAL_ROLES } },
             active: true,
             softDelete: false,
-            ...(guardId ? { id: guardId } : {})
+            ...(guardId ? { id: guardId } : {}),
+            ...(clientId ? { rounds: { some: { clientId } } } : {})
         },
         select: { id: true, name: true, lastName: true, role: true }
     });
@@ -27,7 +30,7 @@ const getGuards = (guardId?: number) => {
 
 export const getGuardGeneralStats = async (filters: IGuardReportFilters): Promise<TResult<any>> => {
     try {
-        const { startDate, endDate, guardId } = filters;
+        const { startDate, endDate, guardId, clientId } = filters;
         const start = new Date(startDate);
         start.setHours(0, 0, 0, 0);
         const end = new Date(endDate);
@@ -37,29 +40,33 @@ export const getGuardGeneralStats = async (filters: IGuardReportFilters): Promis
             prisma.incident.count({
                 where: {
                     ...(guardId ? { guardId } : {}),
+                    ...(clientId ? { location: { clientId } } : {}),
                     createdAt: { gte: start, lte: end }
                 }
             }),
             prisma.maintenance.count({
                 where: {
                     ...(guardId ? { guardId } : {}),
+                    ...(clientId ? { location: { clientId } } : {}),
                     createdAt: { gte: start, lte: end }
                 }
             }),
             prisma.kardex.count({
                 where: {
                     ...(guardId ? { userId: guardId } : {}),
+                    ...(clientId ? { location: { clientId } } : {}),
                     timestamp: { gte: start, lte: end }
                 }
             }),
             prisma.round.findMany({
                 where: {
                     ...(guardId ? { guardId } : {}),
+                    ...(clientId ? { clientId } : {}),
                     startTime: { gte: start, lte: end }
                 },
                 include: {
-                    recurringConfiguration: {
-                        include: { recurringLocations: true }
+                    client: {
+                        include: { locations: true }
                     }
                 }
             })
@@ -68,6 +75,7 @@ export const getGuardGeneralStats = async (filters: IGuardReportFilters): Promis
         const allKardex = await prisma.kardex.findMany({
             where: {
                 ...(guardId ? { userId: guardId } : {}),
+                ...(clientId ? { location: { clientId } } : {}),
                 timestamp: { gte: start, lte: end }
             },
             select: { userId: true, timestamp: true, locationId: true }
@@ -77,9 +85,9 @@ export const getGuardGeneralStats = async (filters: IGuardReportFilters): Promis
         let incompleteRoundsCount = 0;
 
         for (const round of rounds) {
-            if (round.recurringConfiguration) {
+            if (round.client) {
                 const roundEnd = round.endTime || new Date();
-                const configLocationIds = round.recurringConfiguration.recurringLocations.map(rl => rl.locationId);
+                const configLocationIds = round.client.locations.map(l => l.id);
                 
                 const scannedCount = allKardex.filter(k => 
                     k.userId === round.guardId && 
@@ -115,7 +123,7 @@ export const getGuardGeneralStats = async (filters: IGuardReportFilters): Promis
 
 export const getTopPerformanceGuards = async (filters: IGuardReportFilters): Promise<TResult<any>> => {
     try {
-        const { startDate, endDate } = filters;
+        const { startDate, endDate, clientId } = filters;
         const start = new Date(startDate);
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
@@ -124,7 +132,8 @@ export const getTopPerformanceGuards = async (filters: IGuardReportFilters): Pro
             by: ['userId'],
             where: {
                 timestamp: { gte: start, lte: end },
-                user: { role: { name: { in: OPERATIONAL_ROLES } } }
+                user: { role: { name: { in: OPERATIONAL_ROLES } } },
+                ...(clientId ? { location: { clientId } } : {})
             },
             _count: { _all: true },
             orderBy: { _count: { userId: 'desc' } },
@@ -155,33 +164,49 @@ export const getTopPerformanceGuards = async (filters: IGuardReportFilters): Pro
 
 export const getWorkloadComparison = async (filters: IGuardReportFilters): Promise<TResult<any>> => {
     try {
-        const { startDate, endDate } = filters;
+        const { startDate, endDate, clientId } = filters;
         const start = new Date(startDate);
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
 
-        const guards = await getGuards();
+        const guards = await getGuards(undefined, clientId);
         const guardIds = guards.map(g => g.id);
 
         const [scans, incidents, maintenances, rounds] = await Promise.all([
             prisma.kardex.groupBy({
                 by: ['userId'],
-                where: { userId: { in: guardIds }, timestamp: { gte: start, lte: end } },
+                where: { 
+                    userId: { in: guardIds }, 
+                    timestamp: { gte: start, lte: end },
+                    ...(clientId ? { location: { clientId } } : {})
+                },
                 _count: { _all: true }
             }),
             prisma.incident.groupBy({
                 by: ['guardId'],
-                where: { guardId: { in: guardIds }, createdAt: { gte: start, lte: end } },
+                where: { 
+                    guardId: { in: guardIds }, 
+                    createdAt: { gte: start, lte: end },
+                    ...(clientId ? { location: { clientId } } : {})
+                },
                 _count: { _all: true }
             }),
             prisma.maintenance.groupBy({
                 by: ['guardId'],
-                where: { guardId: { in: guardIds }, createdAt: { gte: start, lte: end } },
+                where: { 
+                    guardId: { in: guardIds }, 
+                    createdAt: { gte: start, lte: end },
+                    ...(clientId ? { location: { clientId } } : {})
+                },
                 _count: { _all: true }
             }),
             prisma.round.groupBy({
                 by: ['guardId'],
-                where: { guardId: { in: guardIds }, startTime: { gte: start, lte: end } },
+                where: { 
+                    guardId: { in: guardIds }, 
+                    startTime: { gte: start, lte: end },
+                    ...(clientId ? { clientId } : {})
+                },
                 _count: { _all: true }
             })
         ]);
@@ -217,26 +242,38 @@ export const getActivityDistribution = async (filters: IGuardReportFilters): Pro
 
 export const getGuardDetailedReport = async (filters: IGuardReportFilters): Promise<TResult<any>> => {
     try {
-        const { startDate, endDate, guardId } = filters;
+        const { startDate, endDate, guardId, clientId } = filters;
         const start = new Date(startDate);
         const end = new Date(endDate);
         end.setHours(23, 59, 59, 999);
 
-        const guards = await getGuards(guardId);
+        const guards = await getGuards(guardId, clientId);
         const guardIds = guards.map(g => g.id);
 
         const [scansGroupBy, allRounds, allKardex] = await Promise.all([
             prisma.kardex.groupBy({
                 by: ['userId'],
-                where: { userId: { in: guardIds }, timestamp: { gte: start, lte: end } },
+                where: { 
+                    userId: { in: guardIds }, 
+                    timestamp: { gte: start, lte: end },
+                    ...(clientId ? { location: { clientId } } : {})
+                },
                 _count: { _all: true }
             }),
             prisma.round.findMany({
-                where: { guardId: { in: guardIds }, startTime: { gte: start, lte: end } },
-                include: { recurringConfiguration: { include: { recurringLocations: true } } }
+                where: { 
+                    guardId: { in: guardIds }, 
+                    startTime: { gte: start, lte: end },
+                    ...(clientId ? { clientId } : {})
+                },
+                include: { client: { include: { locations: true } } }
             }),
             prisma.kardex.findMany({
-                where: { userId: { in: guardIds }, timestamp: { gte: start, lte: end } },
+                where: { 
+                    userId: { in: guardIds }, 
+                    timestamp: { gte: start, lte: end },
+                    ...(clientId ? { location: { clientId } } : {})
+                },
                 select: { userId: true, timestamp: true, locationId: true }
             })
         ]);
@@ -257,9 +294,9 @@ export const getGuardDetailedReport = async (filters: IGuardReportFilters): Prom
                     completedRoundsCount++;
                 }
 
-                if (round.recurringConfiguration) {
+                if (round.client) {
                     const roundEnd = round.endTime || new Date();
-                    const configIds = round.recurringConfiguration.recurringLocations.map(rl => rl.locationId);
+                    const configIds = round.client.locations.map(l => l.id);
                     
                     const scannedInRound = guardKardex.filter(k => 
                         k.timestamp >= round.startTime && 
@@ -302,7 +339,7 @@ export const getGuardDetailedReport = async (filters: IGuardReportFilters): Prom
 
 export const getGuardDetailBreakdown = async (filters: IGuardReportFilters): Promise<TResult<any>> => {
     try {
-        const { startDate, endDate, guardId } = filters;
+        const { startDate, endDate, guardId, clientId } = filters;
         if (!guardId) throw new Error("GuardId is required");
 
         const start = new Date(startDate);
@@ -312,11 +349,19 @@ export const getGuardDetailBreakdown = async (filters: IGuardReportFilters): Pro
 
         const [rounds, allKardex] = await Promise.all([
             prisma.round.findMany({
-                where: { guardId, startTime: { gte: start, lte: end } },
-                include: { recurringConfiguration: { include: { recurringLocations: { include: { location: true } } } } }
+                where: { 
+                    guardId, 
+                    startTime: { gte: start, lte: end },
+                    ...(clientId ? { clientId } : {})
+                },
+                include: { client: { include: { locations: true } } }
             }),
             prisma.kardex.findMany({
-                where: { userId: guardId, timestamp: { gte: start, lte: end } },
+                where: { 
+                    userId: guardId, 
+                    timestamp: { gte: start, lte: end },
+                    ...(clientId ? { location: { clientId } } : {})
+                },
                 select: { locationId: true, timestamp: true }
             })
         ]);
@@ -325,7 +370,7 @@ export const getGuardDetailBreakdown = async (filters: IGuardReportFilters): Pro
         const incompleteRounds: any[] = [];
 
         for (const round of rounds) {
-            if (!round.recurringConfiguration) continue;
+            if (!round.client) continue;
 
             const roundEnd = round.endTime || new Date();
             const scannedIds = new Set(
@@ -334,7 +379,7 @@ export const getGuardDetailBreakdown = async (filters: IGuardReportFilters): Pro
                     .map(k => k.locationId)
             );
 
-            const roundMissed = round.recurringConfiguration.recurringLocations.filter(rl => !scannedIds.has(rl.locationId));
+            const roundMissed = round.client.locations.filter(l => !scannedIds.has(l.id));
 
             if (roundMissed.length > 0) {
                 if (round.status === 'COMPLETED') {
@@ -343,17 +388,17 @@ export const getGuardDetailBreakdown = async (filters: IGuardReportFilters): Pro
                         startTime: round.startTime,
                         endTime: round.endTime,
                         missedCount: roundMissed.length,
-                        totalLocations: round.recurringConfiguration.recurringLocations.length
+                        totalLocations: round.client.locations.length
                     });
                 }
 
-                roundMissed.forEach(rl => {
+                roundMissed.forEach(l => {
                     missedPoints.push({
                         roundId: round.id,
                         startTime: round.startTime,
-                        locationId: rl.locationId,
-                        locationName: rl.location.name,
-                        aisle: rl.location.aisle
+                        locationId: l.id,
+                        locationName: l.name,
+                        aisle: l.aisle
                     });
                 });
             }
