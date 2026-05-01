@@ -168,7 +168,7 @@ export const generateQRPDF = async (ids: number[]) => {
     const gapX = 0;
     const gapY = 0;
 
-    const logoPath = '/Users/maag/DEV/AXZY/CFSP/API/src/assets/logo_fansal.png';
+    const logoPath = 'src/assets/logo_fansal.png';
     const hasLogo = fs.existsSync(logoPath);
 
     for (let i = 0; i < locations.length; i++) {
