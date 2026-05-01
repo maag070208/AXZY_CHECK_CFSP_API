@@ -32,7 +32,12 @@ async function main() {
     for (const locName of locations) {
         const fullName = `Plaza 2000-BAJA-${locName}`;
         await prisma.location.upsert({
-            where: { name: fullName },
+            where: { 
+                name_zoneId: {
+                    name: fullName,
+                    zoneId: zone.id
+                }
+            },
             update: {
                 clientId: client.id,
                 zoneId: zone.id,
