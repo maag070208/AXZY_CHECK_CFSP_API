@@ -2,6 +2,7 @@ import { prismaClient } from "@src/core/config/database";
 import { ITDataTableFetchParams, ITDataTableResponse } from "@src/core/dto/datatable.dto";
 import { getPrismaPaginationParams } from "@src/core/utils/prisma-pagination.utils";
 import fs from 'fs';
+import path from 'path';
 
 const prisma = prismaClient;
 
@@ -168,8 +169,9 @@ export const generateQRPDF = async (ids: number[]) => {
     const gapX = 0;
     const gapY = 0;
 
-    const logoPath = 'src/assets/logo_fansal.png';
+    const logoPath = path.join(process.cwd(), 'src/assets/logo_fansal.png');
     const hasLogo = fs.existsSync(logoPath);
+    console.log(`[QR GEN] Logo path: ${logoPath}, found: ${hasLogo}`);
 
     for (let i = 0; i < locations.length; i++) {
         if (i > 0 && i % qrsPerPage === 0) {
