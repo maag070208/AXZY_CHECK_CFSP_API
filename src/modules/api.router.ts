@@ -15,6 +15,7 @@ import catalogRoute from "./catalog/catalog.routes";
 import clientsRoute from "./clients/clients.routes";
 import zonesRoute from "./zones/zones.routes";
 import recurringRoute from "./recurring/recurring.routes";
+import settingsRoute from "./settings/settings.routes";
 
 
 const apiRouter = Router();
@@ -34,6 +35,7 @@ apiRouter.use("/catalog", catalogRoute);
 apiRouter.use("/clients", clientsRoute);
 apiRouter.use("/zones", zonesRoute);
 apiRouter.use("/recurring", recurringRoute);
+apiRouter.use("/settings", settingsRoute);
 
 
 export default apiRouter;
