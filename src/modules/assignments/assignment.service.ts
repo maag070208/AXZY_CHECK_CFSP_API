@@ -28,8 +28,8 @@ export const getDataTableAssignments = async (params: ITDataTableFetchParams): P
 
 // Create a new assignment
 export const createAssignment = async (data: {
-  guardId: number;
-  locationId: number;
+  guardId: string;
+  locationId: string;
   assignedBy: number;
   notes?: string;
   tasks?: { description: string; reqPhoto: boolean }[];
@@ -92,7 +92,7 @@ export const createAssignment = async (data: {
 };
 
 // Get assignments for a specific guard (My Assignments)
-export const getAssignmentsByGuard = async (guardId: number) => {
+export const getAssignmentsByGuard = async (guardId: string) => {
   return prisma.assignment.findMany({
     where: { 
       guardId,
@@ -109,7 +109,7 @@ export const getAssignmentsByGuard = async (guardId: number) => {
 };
 
 // Get all assignments (filtering optional)
-export const getAllAssignments = async (filters: { guardId?: number; status?: AssignmentStatus; id?: number }) => {
+export const getAllAssignments = async (filters: { guardId?: string; status?: AssignmentStatus; id?: string }) => {
   const where: any = {};
   if (filters.id) where.id = filters.id;
   if (filters.guardId) where.guardId = filters.guardId;
@@ -134,7 +134,7 @@ export const getAllAssignments = async (filters: { guardId?: number; status?: As
 };
 
 // Update status
-export const updateAssignmentStatus = async (id: number, status: AssignmentStatus) => {
+export const updateAssignmentStatus = async (id: string, status: AssignmentStatus) => {
     return prisma.assignment.update({
         where: { id },
         data: { status }
@@ -142,7 +142,7 @@ export const updateAssignmentStatus = async (id: number, status: AssignmentStatu
 }
 
 // Toggle task completion
-export const toggleAssignmentTask = async (taskId: number) => {
+export const toggleAssignmentTask = async (taskId: string) => {
     const task = await prisma.assignmentTask.findUnique({ where: { id: taskId } });
     if (!task) throw new Error("Task not found");
 

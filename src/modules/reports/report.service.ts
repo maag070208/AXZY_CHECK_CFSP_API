@@ -1,21 +1,20 @@
 
 import { prismaClient } from "@src/core/config/database";
 import { TResult } from '@src/core/dto/TResult';
+import { OPERATIONAL_ROLES, ROUND_STATUS_COMPLETED } from "@src/core/config/constants";
 
 const prisma = prismaClient;
 
 export interface IGuardReportFilters {
     startDate: string;
     endDate: string;
-    guardId?: number;
-    clientId?: number;
+    guardId?: string;
+    clientId?: string;
     userRole?: string;
 }
 
-// Operational role names
-const OPERATIONAL_ROLES = ['GUARD', 'SHIFT', 'MAINT'];
 
-const getGuards = (guardId?: number, clientId?: number) => {
+const getGuards = (guardId?: string, clientId?: string) => {
     return prisma.user.findMany({
         where: {
             role: { name: { in: OPERATIONAL_ROLES } },
@@ -100,7 +99,7 @@ export const getGuardGeneralStats = async (filters: IGuardReportFilters): Promis
                 const missedInThisRound = Math.max(0, required - scannedCount);
                 missedScansCount += missedInThisRound;
 
-                if (missedInThisRound > 0 && round.status === 'COMPLETED') {
+                if (missedInThisRound > 0 && round.status === ROUND_STATUS_COMPLETED) {
                     incompleteRoundsCount++;
                 }
             }
@@ -152,7 +151,7 @@ export const getTopPerformanceGuards = async (filters: IGuardReportFilters): Pro
                 guardId: g.userId,
                 name: guard?.name || 'Unknown',
                 lastName: guard?.lastName || '',
-                totalScans: (g as any)._count._all || (g as any)._count.userId || 0
+                totalScans: (g as any)._count?._all || (g as any)._count?.userId || 0
             };
         });
 
@@ -280,7 +279,7 @@ export const getGuardDetailedReport = async (filters: IGuardReportFilters): Prom
 
         const reportData = guards.map(guard => {
             const guardRounds = allRounds.filter(r => r.guardId === guard.id);
-            const guardScansCount = scansGroupBy.find(s => s.userId === guard.id)?._count?._all || 0;
+            const guardScansCount = (scansGroupBy.find(s => s.userId === guard.id) as any)?._count?._all || 0;
             const guardKardex = allKardex.filter(k => k.userId === guard.id);
 
             let totalRoundDurationMs = 0;
@@ -289,14 +288,14 @@ export const getGuardDetailedReport = async (filters: IGuardReportFilters): Prom
             let incompleteRoundsCount = 0;
 
             for (const round of guardRounds) {
-                if (round.status === 'COMPLETED' && round.endTime) {
+                if (round.status === ROUND_STATUS_COMPLETED && round.endTime) {
                     totalRoundDurationMs += (round.endTime.getTime() - round.startTime.getTime());
                     completedRoundsCount++;
                 }
 
-                if (round.client) {
+                if ((round as any).client) {
                     const roundEnd = round.endTime || new Date();
-                    const configIds = round.client.locations.map(l => l.id);
+                    const configIds = (round as any).client.locations.map((l: any) => l.id);
                     
                     const scannedInRound = guardKardex.filter(k => 
                         k.timestamp >= round.startTime && 
@@ -308,7 +307,7 @@ export const getGuardDetailedReport = async (filters: IGuardReportFilters): Prom
                     const missedInRound = Math.max(0, required - scannedInRound);
                     missedScansCount += missedInRound;
 
-                    if (missedInRound > 0 && round.status === 'COMPLETED') {
+                    if (missedInRound > 0 && round.status === ROUND_STATUS_COMPLETED) {
                         incompleteRoundsCount++;
                     }
                 }
@@ -370,7 +369,7 @@ export const getGuardDetailBreakdown = async (filters: IGuardReportFilters): Pro
         const incompleteRounds: any[] = [];
 
         for (const round of rounds) {
-            if (!round.client) continue;
+            if (!(round as any).client) continue;
 
             const roundEnd = round.endTime || new Date();
             const scannedIds = new Set(
@@ -379,20 +378,20 @@ export const getGuardDetailBreakdown = async (filters: IGuardReportFilters): Pro
                     .map(k => k.locationId)
             );
 
-            const roundMissed = round.client.locations.filter(l => !scannedIds.has(l.id));
+            const roundMissed = (round as any).client.locations.filter((l: any) => !scannedIds.has(l.id));
 
             if (roundMissed.length > 0) {
-                if (round.status === 'COMPLETED') {
+                if (round.status === ROUND_STATUS_COMPLETED) {
                     incompleteRounds.push({
                         roundId: round.id,
                         startTime: round.startTime,
                         endTime: round.endTime,
                         missedCount: roundMissed.length,
-                        totalLocations: round.client.locations.length
+                        totalLocations: (round as any).client.locations.length
                     });
                 }
 
-                roundMissed.forEach(l => {
+                roundMissed.forEach((l: any) => {
                     missedPoints.push({
                         roundId: round.id,
                         startTime: round.startTime,

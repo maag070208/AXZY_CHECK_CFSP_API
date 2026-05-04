@@ -1,5 +1,6 @@
 import { prismaClient as prisma } from "@src/core/config/database";
 import { Prisma } from "@prisma/client";
+import { ROLE_CLIENT } from "@src/core/config/constants";
 
 export const getDataTableClients = async (body: any) => {
     const { page = 1, limit = 10, filters } = body;
@@ -15,11 +16,11 @@ export const getDataTableClients = async (body: any) => {
             where,
             skip: (page - 1) * limit,
             take: limit,
-            orderBy: { id: "desc" },
+            orderBy: { createdAt: "desc" },
             include: { 
                 _count: { select: { locations: true } },
                 users: {
-                    where: { role: { name: 'RESDN' } },
+                    where: { role: { name: ROLE_CLIENT } },
                     select: { id: true, username: true }
                 }
             }
@@ -48,7 +49,7 @@ export const createClient = async (data: any) => {
         });
 
         if (appUsername && appPassword) {
-            const role = await tx.role.findUnique({ where: { name: 'RESDN' } });
+            const role = await tx.role.findUnique({ where: { name: ROLE_CLIENT } });
             if (role) {
                 const hashed = await hashPassword(appPassword);
                 await tx.user.create({
@@ -68,7 +69,7 @@ export const createClient = async (data: any) => {
     });
 };
 
-export const updateClient = async (id: number, data: any) => {
+export const updateClient = async (id: string, data: any) => {
     const { appUsername, appPassword, ...clientData } = data;
 
     return prisma.$transaction(async (tx) => {
@@ -77,8 +78,16 @@ export const updateClient = async (id: number, data: any) => {
             data: clientData
         });
 
+        // Cascade active status to all users of this client
+        if (typeof clientData.active === 'boolean') {
+            await tx.user.updateMany({
+                where: { clientId: id },
+                data: { active: clientData.active }
+            });
+        }
+
         if (appUsername || appPassword) {
-            const role = await tx.role.findUnique({ where: { name: 'RESDN' } });
+            const role = await tx.role.findUnique({ where: { name: ROLE_CLIENT } });
             if (role) {
                 const user = await tx.user.findFirst({
                     where: { clientId: id, roleId: role.id }
@@ -112,9 +121,17 @@ export const updateClient = async (id: number, data: any) => {
     });
 };
 
-export const deleteClient = async (id: number) => {
-    return prisma.client.update({
-        where: { id },
-        data: { softDelete: true, active: false }
+export const deleteClient = async (id: string) => {
+    return prisma.$transaction(async (tx) => {
+        // Deactivate all users of this client
+        await tx.user.updateMany({
+            where: { clientId: id },
+            data: { active: false }
+        });
+
+        return tx.client.update({
+            where: { id },
+            data: { softDelete: true, active: false }
+        });
     });
 };

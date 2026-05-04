@@ -9,6 +9,8 @@ export const sysConfigSeed = async (prisma: PrismaClient) => {
         { key: 'MAINTENANCE_MODE', value: 'false' },
         { key: 'INCIDENT_EMAIL', value: 'maag070208@gmail.com|asael070208@gmail.com' },
         { key: 'MAINTENANCE_EMAIL', value: 'maag070208@gmail.com|asael070208@gmail.com' },
+        { key: 'INCIDENT_WHATSAPP', value: '526645102632' },
+        { key: 'MAINTENANCE_WHATSAPP', value: '526645102632' },
     ];
 
     for (const config of configs) {

@@ -1,10 +1,10 @@
-import { prismaClient } from "@src/core/config/database"; 
+import { prismaClient as prisma } from "@src/core/config/database";
+import { PDF_COLOR_BLACK, PDF_COLOR_SUCCESS, PDF_COLOR_WHITE } from "@src/core/config/constants";
 import { ITDataTableFetchParams, ITDataTableResponse } from "@src/core/dto/datatable.dto";
 import { getPrismaPaginationParams } from "@src/core/utils/prisma-pagination.utils";
 import fs from 'fs';
 import path from 'path';
 
-const prisma = prismaClient;
 
 export const getDataTableLocations = async (params: ITDataTableFetchParams): Promise<ITDataTableResponse<any>> => {
   try {
@@ -16,11 +16,11 @@ export const getDataTableLocations = async (params: ITDataTableFetchParams): Pro
     // Add clientId filter if provided
     let clientIdFilter = undefined;
     if (filters?.clientId) {
-        clientIdFilter = Number(filters.clientId);
+        clientIdFilter = filters.clientId;
     }
     let zoneIdFilter = undefined;
     if (filters?.zoneId) {
-        zoneIdFilter = Number(filters.zoneId);
+        zoneIdFilter = filters.zoneId;
     }
 
     if (searchTerm) {
@@ -38,12 +38,12 @@ export const getDataTableLocations = async (params: ITDataTableFetchParams): Pro
                 )
             `;
             if (clientIdFilter) {
-               query += ` AND l."clientId" = ${clientIdFilter}`;
+               query += ` AND l."clientId" = '${clientIdFilter}'`;
             }
             if (zoneIdFilter) {
-                query += ` AND l."zoneId" = ${zoneIdFilter}`;
+                query += ` AND l."zoneId" = '${zoneIdFilter}'`;
             }
-            query += ` ORDER BY l."id" DESC LIMIT ${take} OFFSET ${skip}`;
+            query += ` ORDER BY l."createdAt" DESC LIMIT ${take} OFFSET ${skip}`;
             
             const rows: any = await prisma.$queryRawUnsafe(query);
             
@@ -56,10 +56,10 @@ export const getDataTableLocations = async (params: ITDataTableFetchParams): Pro
                 )
             `;
             if (clientIdFilter) {
-               countQuery += ` AND l."clientId" = ${clientIdFilter}`;
+               countQuery += ` AND l."clientId" = '${clientIdFilter}'`;
             }
             if (zoneIdFilter) {
-                countQuery += ` AND l."zoneId" = ${zoneIdFilter}`;
+                countQuery += ` AND l."zoneId" = '${zoneIdFilter}'`;
             }
 
             const totalRes: any = await prisma.$queryRawUnsafe(countQuery);
@@ -86,7 +86,7 @@ export const getDataTableLocations = async (params: ITDataTableFetchParams): Pro
         ...prismaParams,
         where: whereClause,
         include: { client: { select: { name: true } }, zone: { select: { name: true } }, _count: { select: { tasks: true } } },
-        orderBy: prismaParams.orderBy || { id: 'desc' }
+        orderBy: prismaParams.orderBy || { createdAt: 'desc' }
       }),
       prisma.location.count({
         where: whereClause
@@ -103,14 +103,14 @@ export const getDataTableLocations = async (params: ITDataTableFetchParams): Pro
 export const getAllLocations = async () => {
   return await prisma.location.findMany({
     where: { softDelete: false },
-    orderBy: { id: "desc" },
+    orderBy: { createdAt: "desc" },
     include: { client: { select: { name: true } }, tasks: true },
   });
 };
 
 export const createLocation = async (data: {
-  clientId: number;
-  zoneId?: number;
+  clientId: string;
+  zoneId?: string;
   name: string;
   reference?: string;
   aisle?: string;
@@ -122,14 +122,14 @@ export const createLocation = async (data: {
   });
 };
 
-export const updateLocation = async (id: number, data: any) => {
+export const updateLocation = async (id: string, data: any) => {
     return await prisma.location.update({
         where: { id },
         data
     });
 };
 
-export const deleteLocation = async (id: number) => {
+export const deleteLocation = async (id: string) => {
     const location = await prisma.location.findUnique({
         where: { id },
     });
@@ -151,7 +151,7 @@ export const getAvailableLocation = async () => {
 import PDFDocument from 'pdfkit';
 import QRCode from 'qrcode';
 
-export const generateQRPDF = async (ids: number[]) => {
+export const generateQRPDF = async (ids: string[]) => {
     const locations = await prisma.location.findMany({
         where: { id: { in: ids } },
         include: { client: true, zone: true }
@@ -189,19 +189,19 @@ export const generateQRPDF = async (ids: number[]) => {
         // Card Border/Background (White with Emerald Border - No border radius for easier cutting)
         doc.rect(x, y, cardW, cardH)
            .lineWidth(1)
-           .strokeColor('#10b981')
-           .fillColor('#FFFFFF')
+           .strokeColor(PDF_COLOR_SUCCESS)
+           .fillColor(PDF_COLOR_WHITE)
            .fillAndStroke();
 
         // Logo or Text Brand (Emerald)
         if (hasLogo) {
             doc.image(logoPath, x + (cardW / 2) - 42.5, y + 15, { width: 85 });
         } else {
-            doc.fillColor('#10b981').font('Helvetica-Bold').fontSize(24).text('AXZY', x, y + 40, { width: cardW, align: 'center' });
+            doc.fillColor(PDF_COLOR_SUCCESS).font('Helvetica-Bold').fontSize(24).text('AXZY', x, y + 40, { width: cardW, align: 'center' });
         }
 
         // Location Name (Black, size 8)
-        doc.fillColor('#000000')
+        doc.fillColor(PDF_COLOR_BLACK)
            .font('Helvetica-Bold')
            .fontSize(8)
            .text(loc.name.toUpperCase(), x + 20, y + 100, {
@@ -217,8 +217,8 @@ export const generateQRPDF = async (ids: number[]) => {
         }), {
             margin: 1,
             color: {
-                dark: '#000000',
-                light: '#FFFFFF'
+                dark: PDF_COLOR_BLACK,
+                light: PDF_COLOR_WHITE
             }
         });
 

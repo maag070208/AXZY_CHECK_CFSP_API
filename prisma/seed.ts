@@ -20,10 +20,10 @@ async function main() {
   await incidentCatalogsSeed(prisma);
   await maintenanceCatalogsSeed(prisma);
   await schedulesSeed(prisma);
-  await securitySeed(prisma);
   // await locationsSeed(prisma); // Commented out old generic locations
   await plaza2000Seed(prisma);
   await vinasDelMarSeed(prisma);
+  await securitySeed(prisma);
   await sysConfigSeed(prisma);
 
   hackerLog.divider();

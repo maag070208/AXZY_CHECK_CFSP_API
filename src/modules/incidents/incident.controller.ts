@@ -16,7 +16,7 @@ const storageService = new StorageService();
 
 export const createIncident = async (req: Request, res: Response) => {
   try {
-    const { title, categoryId, typeId, description, media, latitude, longitude } = req.body;
+    const { title, categoryId, typeId, description, media, latitude, longitude, clientId } = req.body;
     // @ts-ignore
     const guardId = req.user?.id;
 
@@ -28,14 +28,15 @@ export const createIncident = async (req: Request, res: Response) => {
     const mediaFiles = media || [];
 
     const result = await incidentService.createIncident({
-      guardId: Number(guardId),
+      guardId: guardId as string,
       title,
-      categoryId: categoryId ? Number(categoryId) : undefined,
-      typeId: typeId ? Number(typeId) : undefined,
+      categoryId: categoryId as string,
+      typeId: typeId as string,
       description,
       media: mediaFiles.length > 0 ? mediaFiles : undefined,
       latitude: latitude ? Number(latitude) : undefined,
       longitude: longitude ? Number(longitude) : undefined,
+      clientId: clientId as string
     });
 
     return res.status(201).json(createTResult(result));
@@ -51,7 +52,7 @@ export const getIncidents = async (req: Request, res: Response) => {
         const filters: any = {};
         if (startDate) filters.startDate = new Date(String(startDate));
         if (endDate) filters.endDate = new Date(String(endDate));
-        if (guardId) filters.guardId = Number(guardId);
+        if (guardId) filters.guardId = guardId as string;
         if (category) filters.category = String(category);
         if (title) filters.title = String(title);
 
@@ -72,7 +73,7 @@ export const resolveIncident = async (req: Request, res: Response) => {
             return res.status(401).json(createTResult(null, ["Usuario no autenticado"]));
         }
 
-        const result = await incidentService.resolveIncident(Number(id), Number(userId));
+        const result = await incidentService.resolveIncident(id, userId as string);
         return res.status(200).json(createTResult(result));
     } catch (error: any) {
         return res.status(500).json(createTResult(null, error.message));
@@ -91,7 +92,7 @@ export const getPendingCount = async (req: Request, res: Response) => {
 export const deleteIncident = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const incident = await incidentService.getIncidentById(Number(id));
+        const incident = await incidentService.getIncidentById(id);
         if (!incident) {
             return res.status(404).json(createTResult(null, ["Incidencia no encontrada"]));
         }
@@ -101,7 +102,7 @@ export const deleteIncident = async (req: Request, res: Response) => {
         Files are only deleted via deleteMedia (individual deletion).
         */
 
-        await incidentService.deleteIncident(Number(id));
+        await incidentService.deleteIncident(id);
         return res.status(200).json(createTResult(true));
     } catch (error: any) {
         return res.status(500).json(createTResult(null, error.message));
@@ -117,7 +118,7 @@ export const deleteMedia = async (req: Request, res: Response) => {
             return res.status(400).json(createTResult(null, ["Falta el key del archivo"]));
         }
 
-        const incident = await incidentService.getIncidentById(Number(id));
+        const incident = await incidentService.getIncidentById(id);
         if (!incident || !incident.media) {
             return res.status(404).json(createTResult(null, ["Incidencia o media no encontrada"]));
         }
@@ -139,7 +140,7 @@ export const deleteMedia = async (req: Request, res: Response) => {
             const mKey = m.key || (typeof m.url === 'string' ? m.url.split('/').pop() : null);
             return mKey !== String(key);
         });
-        await incidentService.updateIncidentMedia(Number(id), updatedMedia);
+        await incidentService.updateIncidentMedia(id, updatedMedia);
 
         return res.status(200).json(createTResult(true));
     } catch (error: any) {

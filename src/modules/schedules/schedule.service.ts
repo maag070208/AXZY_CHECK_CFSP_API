@@ -34,7 +34,7 @@ export const createSchedule = async (data: {
     });
 };
 
-export const updateSchedule = async (id: number, data: {
+export const updateSchedule = async (id: string, data: {
     name?: string;
     startTime?: string;
     endTime?: string;
@@ -46,7 +46,7 @@ export const updateSchedule = async (id: number, data: {
     });
 };
 
-export const deleteSchedule = async (id: number) => {
+export const deleteSchedule = async (id: string) => {
     return prismaClient.schedule.delete({
         where: { id }
     });

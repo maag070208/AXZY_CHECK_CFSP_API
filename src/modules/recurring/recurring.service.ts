@@ -12,8 +12,8 @@ export const getRecurringDataTable = async (body: any) => {
 
     if (clientId) {
         where.OR = [
-            { clientId: Number(clientId) },
-            { recurringLocations: { some: { location: { clientId: Number(clientId) } } } }
+            { clientId: clientId },
+            { recurringLocations: { some: { location: { clientId: clientId } } } }
         ];
     }
 
@@ -22,7 +22,7 @@ export const getRecurringDataTable = async (body: any) => {
             where,
             skip: (page - 1) * limit,
             take: limit,
-            orderBy: { id: "desc" },
+            orderBy: { createdAt: "desc" },
             include: {
                 client: true,
                 recurringLocations: {
@@ -49,9 +49,9 @@ export const createRecurring = async (data: any) => {
         const config = await tx.recurringConfiguration.create({
             data: {
                 title,
-                clientId: clientId ? Number(clientId) : undefined,
+                clientId: clientId as string,
                 guards: {
-                    connect: (guardIds || []).map((id: number) => ({ id }))
+                    connect: (guardIds || []).map((id: string) => ({ id }))
                 }
             }
         });
@@ -60,7 +60,7 @@ export const createRecurring = async (data: any) => {
         const createdLocs = await (tx.recurringLocation as any).createManyAndReturn({
             data: locations.map((loc: any) => ({
                 recurringConfigurationId: config.id,
-                locationId: Number(loc.locationId),
+                locationId: loc.locationId as string,
             }))
         });
 
@@ -69,7 +69,7 @@ export const createRecurring = async (data: any) => {
         locations.forEach((loc: any) => {
             if (loc.tasks && loc.tasks.length > 0) {
                 // Find the corresponding created recurring location to get its ID
-                const rLoc = createdLocs.find((rl: any) => rl.locationId === Number(loc.locationId));
+                const rLoc = createdLocs.find((rl: any) => rl.locationId === (loc.locationId as string));
                 if (rLoc) {
                     loc.tasks.forEach((t: any) => {
                         tasksData.push({
@@ -93,7 +93,7 @@ export const createRecurring = async (data: any) => {
     });
 };
 
-export const updateRecurring = async (id: number, data: any) => {
+export const updateRecurring = async (id: string, data: any) => {
     const { title, locations, guardIds, clientId } = data;
 
     return prisma.$transaction(async (tx) => {
@@ -112,9 +112,9 @@ export const updateRecurring = async (id: number, data: any) => {
             where: { id },
             data: {
                 title,
-                clientId: clientId ? Number(clientId) : undefined,
+                clientId: clientId as string,
                 guards: {
-                    set: (guardIds || []).map((id: number) => ({ id }))
+                    set: (guardIds || []).map((id: string) => ({ id }))
                 }
             }
         });
@@ -123,14 +123,14 @@ export const updateRecurring = async (id: number, data: any) => {
         const createdLocs = await (tx.recurringLocation as any).createManyAndReturn({
             data: locations.map((loc: any) => ({
                 recurringConfigurationId: config.id,
-                locationId: Number(loc.locationId),
+                locationId: loc.locationId as string,
             }))
         });
 
         const tasksData: any[] = [];
         locations.forEach((loc: any) => {
             if (loc.tasks && loc.tasks.length > 0) {
-                const rLoc = createdLocs.find((rl: any) => rl.locationId === Number(loc.locationId));
+                const rLoc = createdLocs.find((rl: any) => rl.locationId === (loc.locationId as string));
                 if (rLoc) {
                     loc.tasks.forEach((t: any) => {
                         tasksData.push({
@@ -154,14 +154,14 @@ export const updateRecurring = async (id: number, data: any) => {
     });
 };
 
-export const deleteRecurring = async (id: number) => {
+export const deleteRecurring = async (id: string) => {
     return prisma.recurringConfiguration.update({
         where: { id },
         data: { softDelete: true, active: false }
     });
 };
 
-export const getRecurringById = async (id: number) => {
+export const getRecurringById = async (id: string) => {
     return prisma.recurringConfiguration.findUnique({
         where: { id },
         include: {
@@ -178,7 +178,7 @@ export const getRecurringById = async (id: number) => {
     });
 };
 
-export const getRecurringByGuard = async (guardId: number) => {
+export const getRecurringByGuard = async (guardId: string) => {
     return prisma.recurringConfiguration.findMany({
         where: {
             softDelete: false,

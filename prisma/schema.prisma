@@ -9,46 +9,53 @@ datasource db {
 }
 
 model Role {
-  id    Int    @id @default(autoincrement())
-  name  String @unique
-  value String
-  users User[]
+  id        String    @id @default(uuid())
+  name      String    @unique
+  value     String
+  users     User[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 }
 
 model Client {
-  id           Int        @id @default(autoincrement())
-  name         String     @unique
+  id           String    @id @default(uuid())
+  name         String    @unique
   address      String?
   rfc          String?
   contactName  String?
   contactPhone String?
-  active       Boolean    @default(true)
-  softDelete   Boolean    @default(false)
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  active       Boolean   @default(true)
+  softDelete   Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
   locations    Location[]
   rounds       Round[]
   users        User[]
   zones        Zone[]
+  incidents    Incident[]
+  maintenances Maintenance[]
   recurringConfigurations RecurringConfiguration[]
 }
 
 model Zone {
-  id         Int        @id @default(autoincrement())
-  clientId   Int
+  id         String    @id @default(uuid())
+  clientId   String
   name       String
-  active     Boolean    @default(true)
-  softDelete Boolean    @default(false)
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
-  client     Client     @relation(fields: [clientId], references: [id])
+  active     Boolean   @default(true)
+  softDelete Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+  client     Client    @relation(fields: [clientId], references: [id])
   locations  Location[]
 
   @@unique([name, clientId])
 }
 
 model User {
-  id                       Int                      @id @default(autoincrement())
+  id                       String                   @id @default(uuid())
   name                     String
   lastName                 String?
   username                 String                   @unique
@@ -59,10 +66,11 @@ model User {
   shiftEnd                 String?
   createdAt                DateTime                 @default(now())
   updatedAt                DateTime                 @updatedAt
+  deletedAt                DateTime?
   isLoggedIn               Boolean                  @default(false)
-  scheduleId               Int?
-  clientId                 Int?
-  roleId                   Int
+  scheduleId               String?
+  clientId                 String?
+  roleId                   String
   assignments              Assignment[]             @relation("GuardAssignments")
   incidents                Incident[]
   resolvedIncidents        Incident[]               @relation("IncidentResolver")
@@ -77,20 +85,21 @@ model User {
 }
 
 model Schedule {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
+  id        String    @id @default(uuid())
+  name      String    @unique
   startTime String
   endTime   String
-  active    Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
   users     User[]
 }
 
 model Location {
-  id                 Int                 @id @default(autoincrement())
-  clientId           Int?
-  zoneId             Int?
+  id                 String              @id @default(uuid())
+  clientId           String?
+  zoneId             String?
   aisle              String?
   spot               String?
   number             String?
@@ -101,6 +110,7 @@ model Location {
   softDelete         Boolean             @default(false)
   createdAt          DateTime            @default(now())
   updatedAt          DateTime            @updatedAt
+  deletedAt          DateTime?
   client             Client?             @relation(fields: [clientId], references: [id])
   zone               Zone?               @relation(fields: [zoneId], references: [id])
   tasks              LocationTask[]
@@ -112,24 +122,30 @@ model Location {
 }
 
 model LocationTask {
-  id          Int      @id @default(autoincrement())
-  locationId  Int
+  id          String    @id @default(uuid())
+  locationId  String
   description String
-  reqPhoto    Boolean  @default(false)
-  location    Location @relation(fields: [locationId], references: [id])
+  reqPhoto    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+  location    Location  @relation(fields: [locationId], references: [id])
 }
 
 model Kardex {
-  id           Int         @id @default(autoincrement())
-  userId       Int
-  locationId   Int
+  id           String      @id @default(uuid())
+  userId       String
+  locationId   String
   timestamp    DateTime    @default(now())
   notes        String?
   media        Json?
   latitude     Float?
   longitude    Float?
-  assignmentId Int?
+  assignmentId String?
   scanType     ScanType    @default(FREE)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  deletedAt    DateTime?
   assignment   Assignment? @relation(fields: [assignmentId], references: [id])
   location     Location    @relation(fields: [locationId], references: [id])
   user         User        @relation(fields: [userId], references: [id])
@@ -140,14 +156,15 @@ model Kardex {
 }
 
 model Assignment {
-  id         Int              @id @default(autoincrement())
-  guardId    Int
-  locationId Int
+  id         String           @id @default(uuid())
+  guardId    String
+  locationId String
   status     AssignmentStatus @default(PENDING)
-  assignedBy Int
+  assignedBy Int // Keeping Int if this is an external reference or just user ID (wait, should be String)
   notes      String?
   createdAt  DateTime         @default(now())
   updatedAt  DateTime         @updatedAt
+  deletedAt  DateTime?
   guard      User             @relation("GuardAssignments", fields: [guardId], references: [id])
   location   Location         @relation(fields: [locationId], references: [id])
   tasks      AssignmentTask[]
@@ -158,54 +175,66 @@ model Assignment {
 }
 
 model AssignmentTask {
-  id           Int        @id @default(autoincrement())
-  assignmentId Int
+  id           String     @id @default(uuid())
+  assignmentId String
   description  String
   reqPhoto     Boolean    @default(false)
   completed    Boolean    @default(false)
   completedAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  deletedAt    DateTime?
   assignment   Assignment @relation(fields: [assignmentId], references: [id])
 
   @@index([assignmentId])
 }
 
 model IncidentCategory {
-  id           Int            @id @default(autoincrement())
+  id           String         @id @default(uuid())
   name         String         @unique
   value        String
   type         String         @default("INCIDENT") // INCIDENT or MAINTENANCE
   color        String?
   icon         String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  deletedAt    DateTime?
   types        IncidentType[]
   incidents    Incident[]
   maintenances Maintenance[]
 }
 
 model IncidentType {
-  id           Int              @id @default(autoincrement())
-  categoryId   Int
+  id           String           @id @default(uuid())
+  categoryId   String
   name         String           @unique
   value        String
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  deletedAt    DateTime?
   category     IncidentCategory @relation(fields: [categoryId], references: [id])
   incidents    Incident[]
   maintenances Maintenance[]
 }
 
 model Incident {
-  id           Int               @id @default(autoincrement())
-  guardId      Int
+  id           String            @id @default(uuid())
+  guardId      String
   title        String
-  categoryId   Int?
-  typeId       Int?
+  categoryId   String?
+  typeId       String?
   description  String?
   media        Json?
   latitude     Float?
   longitude    Float?
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
+  deletedAt    DateTime?
   resolvedAt   DateTime?
-  resolvedById Int?
+  resolvedById String?
   status       IncidentStatus    @default(PENDING)
+  clientId     String?
+  client       Client?           @relation(fields: [clientId], references: [id])
   category     IncidentCategory? @relation(fields: [categoryId], references: [id])
   type         IncidentType?     @relation(fields: [typeId], references: [id])
   guard        User              @relation(fields: [guardId], references: [id])
@@ -213,31 +242,36 @@ model Incident {
 }
 
 model Round {
-  id                       Int                     @id @default(autoincrement())
-  guardId                  Int
-  clientId                 Int?
+  id                       String                  @id @default(uuid())
+  guardId                  String
+  clientId                 String?
   startTime                DateTime                @default(now())
   endTime                  DateTime?
   status                   RoundStatus             @default(IN_PROGRESS)
-  recurringConfigurationId Int?
+  recurringConfigurationId String?
+  createdAt                DateTime                @default(now())
+  updatedAt                DateTime                @updatedAt
+  deletedAt                DateTime?
   guard                    User                    @relation("GuardRounds", fields: [guardId], references: [id])
   client                   Client?                 @relation(fields: [clientId], references: [id])
   recurringConfiguration   RecurringConfiguration? @relation(fields: [recurringConfigurationId], references: [id])
 }
 
 model SysConfig {
-  key   String @id
-  value String
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }
 
 model RecurringConfiguration {
-  id        Int      @id @default(autoincrement())
-  title     String
-  clientId  Int?
-  active    Boolean  @default(true)
-  softDelete Boolean @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String    @id @default(uuid())
+  title      String
+  clientId   String?
+  active     Boolean   @default(true)
+  softDelete Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
   
   client             Client?             @relation(fields: [clientId], references: [id])
   recurringLocations RecurringLocation[]
@@ -246,29 +280,35 @@ model RecurringConfiguration {
 }
 
 model RecurringLocation {
-  id                       Int                    @id @default(autoincrement())
-  recurringConfigurationId Int
-  locationId               Int
+  id                       String                 @id @default(uuid())
+  recurringConfigurationId String
+  locationId               String
   order                    Int                    @default(0)
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  deletedAt                DateTime?
   recurringConfiguration   RecurringConfiguration @relation(fields: [recurringConfigurationId], references: [id])
   location                 Location               @relation(fields: [locationId], references: [id])
   tasks                    RecurringTask[]
 }
 
 model RecurringTask {
-  id                  Int               @id @default(autoincrement())
-  recurringLocationId Int
+  id                  String            @id @default(uuid())
+  recurringLocationId String
   description         String
   reqPhoto            Boolean           @default(false)
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  deletedAt           DateTime?
   recurringLocation   RecurringLocation @relation(fields: [recurringLocationId], references: [id])
 }
 
 model Maintenance {
-  id           Int               @id @default(autoincrement())
-  guardId      Int
+  id           String            @id @default(uuid())
+  guardId      String
   title        String
-  categoryId   Int?
-  typeId       Int?
+  categoryId   String?
+  typeId       String?
   category     String?
   description  String?
   media        Json?
@@ -276,13 +316,16 @@ model Maintenance {
   longitude    Float?
   status       MaintenanceStatus @default(PENDING)
   resolvedAt   DateTime?
-  resolvedById Int?
+  resolvedById String?
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
+  deletedAt    DateTime?
   guard        User              @relation(fields: [guardId], references: [id])
   resolvedBy   User?             @relation("MaintenanceResolver", fields: [resolvedById], references: [id])
   categoryRel  IncidentCategory? @relation(fields: [categoryId], references: [id])
   type         IncidentType?     @relation(fields: [typeId], references: [id])
+  clientId     String?
+  client       Client?           @relation(fields: [clientId], references: [id])
 }
 
 enum AssignmentStatus {

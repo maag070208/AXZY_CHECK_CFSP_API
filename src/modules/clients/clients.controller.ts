@@ -32,7 +32,7 @@ export const addClient = async (req: Request, res: Response) => {
 export const putClient = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const client = await updateClient(Number(id), req.body);
+        const client = await updateClient(id, req.body);
         return res.status(200).json(createTResult(client));
     } catch (error: any) {
         return res.status(500).json(createTResult(null, error.message));
@@ -42,7 +42,7 @@ export const putClient = async (req: Request, res: Response) => {
 export const removeClient = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const client = await deleteClient(Number(id));
+        const client = await deleteClient(id);
         return res.status(200).json(createTResult(client));
     } catch (error: any) {
         return res.status(500).json(createTResult(null, error.message || "Error eliminando cliente"));

@@ -1,4 +1,5 @@
 import { prismaClient } from "@src/core/config/database";
+import { ROLE_GUARD } from "@src/core/config/constants";
 
 export enum CatalogKey {
     ROLE = 'role',
@@ -41,7 +42,7 @@ export const getCatalog = async (key: string) => {
         case CatalogKey.GUARD:
             const guards = await prismaClient.user.findMany({
                 where: { 
-                    role: { name: 'GUARD' }, 
+                    role: { name: ROLE_GUARD }, 
                     softDelete: false,
                     active: true
                 },

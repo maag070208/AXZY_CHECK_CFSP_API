@@ -7,8 +7,8 @@ export const getGuardStats = async (req: Request, res: Response) => {
     const filters = {
         startDate: req.query.startDate as string,
         endDate: req.query.endDate as string,
-        guardId: req.query.guardId ? parseInt(req.query.guardId as string) : undefined,
-        clientId: user.clientId,
+        guardId: req.query.guardId as string,
+        clientId: user.clientId as string,
         userRole: user.role
     };
     const result = await ReportService.getGuardGeneralStats(filters);
@@ -20,7 +20,7 @@ export const getTopPerformance = async (req: Request, res: Response) => {
     const filters = {
         startDate: req.query.startDate as string,
         endDate: req.query.endDate as string,
-        clientId: user.clientId,
+        clientId: user.clientId as string,
         userRole: user.role
     };
     const result = await ReportService.getTopPerformanceGuards(filters);
@@ -32,8 +32,8 @@ export const getActivityDistribution = async (req: Request, res: Response) => {
     const filters = {
         startDate: req.query.startDate as string,
         endDate: req.query.endDate as string,
-        guardId: req.query.guardId ? parseInt(req.query.guardId as string) : undefined,
-        clientId: user.clientId,
+        guardId: req.query.guardId as string,
+        clientId: user.clientId as string,
         userRole: user.role
     };
     const result = await ReportService.getActivityDistribution(filters);
@@ -45,8 +45,8 @@ export const getGuardDetailedReport = async (req: Request, res: Response) => {
     const filters = {
         startDate: req.query.startDate as string,
         endDate: req.query.endDate as string,
-        guardId: req.query.guardId ? parseInt(req.query.guardId as string) : undefined,
-        clientId: user.clientId,
+        guardId: req.query.guardId as string,
+        clientId: user.clientId as string,
         userRole: user.role
     };
     const result = await ReportService.getGuardDetailedReport(filters);
@@ -58,8 +58,8 @@ export const getGuardDetailBreakdown = async (req: Request, res: Response) => {
     const filters = {
         startDate: req.query.startDate as string,
         endDate: req.query.endDate as string,
-        guardId: parseInt(req.params.id),
-        clientId: user.clientId,
+        guardId: req.params.id as string,
+        clientId: user.clientId as string,
         userRole: user.role
     };
     const result = await ReportService.getGuardDetailBreakdown(filters);
@@ -71,7 +71,7 @@ export const getWorkloadComparison = async (req: Request, res: Response) => {
     const filters = {
         startDate: req.query.startDate as string,
         endDate: req.query.endDate as string,
-        clientId: user.clientId,
+        clientId: user.clientId as string,
         userRole: user.role
     };
     const result = await ReportService.getWorkloadComparison(filters);

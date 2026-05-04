@@ -1,5 +1,5 @@
-import { transporter, resend } from "../config/mail";
 import { PrismaClient } from "@prisma/client";
+import { resend, transporter } from "../config/mail";
 
 const prisma = new PrismaClient();
 
@@ -20,15 +20,19 @@ export const sendIncidentEmail = async (incident: any, guard: any) => {
     const subject = `⚠️ Nuevo Incidente Reportado: ${incident.title}`;
 
     // 2. Prepare Media Links
-    let mediaLinks = '<p><em>No hay evidencia adjunta.</em></p>';
-    if (incident.media && Array.isArray(incident.media) && incident.media.length > 0) {
-        mediaLinks = '<ul>';
-        incident.media.forEach((m: any) => {
-            const url = m.url;
-            const type = m.type === 'VIDEO' ? 'Video' : 'Foto';
-            mediaLinks += `<li><a href="${url}" target="_blank">${type} - Ver evidencia</a></li>`;
-        });
-        mediaLinks += '</ul>';
+    let mediaLinks = "<p><em>No hay evidencia adjunta.</em></p>";
+    if (
+      incident.media &&
+      Array.isArray(incident.media) &&
+      incident.media.length > 0
+    ) {
+      mediaLinks = "<ul>";
+      incident.media.forEach((m: any) => {
+        const url = m.url;
+        const type = m.type === "VIDEO" ? "Video" : "Foto";
+        mediaLinks += `<li><a href="${url}" target="_blank">${type} - Ver evidencia</a></li>`;
+      });
+      mediaLinks += "</ul>";
     }
 
     // 3. Prepare Email Content with improved design
@@ -46,7 +50,7 @@ export const sendIncidentEmail = async (incident: any, guard: any) => {
           <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
             <tr>
               <td style="padding: 10px; border-bottom: 1px solid #eee; width: 30%; font-weight: bold; color: #555;">Guardia:</td>
-              <td style="padding: 10px; border-bottom: 1px solid #eee; color: #333;">${guard.name} ${guard.lastName || ''}</td>
+              <td style="padding: 10px; border-bottom: 1px solid #eee; color: #333;">${guard.name} ${guard.lastName || ""}</td>
             </tr>
             <tr>
               <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold; color: #555;">Fecha:</td>
@@ -60,7 +64,7 @@ export const sendIncidentEmail = async (incident: any, guard: any) => {
               <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold; color: #555;">Categoría:</td>
               <td style="padding: 10px; border-bottom: 1px solid #eee; color: #333;">
                 <span style="background-color: #fce4ec; color: #c2185b; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">
-                  ${incident.category?.value || 'Sin categoría'}
+                  ${incident.category?.value || "Sin categoría"}
                 </span>
               </td>
             </tr>
@@ -69,7 +73,7 @@ export const sendIncidentEmail = async (incident: any, guard: any) => {
           <div style="margin-bottom: 25px;">
             <h3 style="color: #d9534f; border-bottom: 2px solid #d9534f; padding-bottom: 5px; margin-bottom: 15px;">Descripción</h3>
             <blockquote style="background: #f9f9f9; padding: 15px; border-left: 5px solid #d9534f; margin: 0; font-style: italic; color: #555;">
-              ${incident.description || 'Sin descripción'}
+              ${incident.description || "Sin descripción"}
             </blockquote>
           </div>
 
@@ -79,7 +83,7 @@ export const sendIncidentEmail = async (incident: any, guard: any) => {
           </div>
 
           <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
-             <a href="${process.env.SYSTEM_URL || 'https://axzycheckui-production.up.railway.app/#/home'}" style="background-color: #333; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 5px; font-weight: bold;">Ir al Panel de Control</a>
+             <a href="${process.env.SYSTEM_URL || "https://axzycheckui-production.up.railway.app/#/home"}" style="background-color: #333; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 5px; font-weight: bold;">Ir al Panel de Control</a>
           </div>
         </div>
         
@@ -89,7 +93,7 @@ export const sendIncidentEmail = async (incident: any, guard: any) => {
       </div>
     `;
 
-    // 4. Send Email  
+    // 4. Send Email
     console.log("Sending email using Resend", resend);
     if (resend) {
       const { data, error } = await resend.emails.send({
@@ -113,7 +117,6 @@ export const sendIncidentEmail = async (incident: any, guard: any) => {
     }
 
     console.log(`Incident email sent to ${recipients.join(", ")}`);
-
   } catch (error) {
     console.error("Error sending incident email:", error);
   }
@@ -133,15 +136,19 @@ export const sendMaintenanceEmail = async (maintenance: any, guard: any) => {
     const recipients = config.value.split("|");
     const subject = `🔧 Nuevo Reporte de Mantenimiento: ${maintenance.title}`;
 
-    let mediaLinks = '<p><em>No hay evidencia adjunta.</em></p>';
-    if (maintenance.media && Array.isArray(maintenance.media) && maintenance.media.length > 0) {
-        mediaLinks = '<ul>';
-        maintenance.media.forEach((m: any) => {
-            const url = m.url;
-            const type = m.type === 'VIDEO' ? 'Video' : 'Foto';
-            mediaLinks += `<li><a href="${url}" target="_blank">${type} - Ver evidencia</a></li>`;
-        });
-        mediaLinks += '</ul>';
+    let mediaLinks = "<p><em>No hay evidencia adjunta.</em></p>";
+    if (
+      maintenance.media &&
+      Array.isArray(maintenance.media) &&
+      maintenance.media.length > 0
+    ) {
+      mediaLinks = "<ul>";
+      maintenance.media.forEach((m: any) => {
+        const url = m.url;
+        const type = m.type === "VIDEO" ? "Video" : "Foto";
+        mediaLinks += `<li><a href="${url}" target="_blank">${type} - Ver evidencia</a></li>`;
+      });
+      mediaLinks += "</ul>";
     }
 
     const htmlContent = `
@@ -158,7 +165,7 @@ export const sendMaintenanceEmail = async (maintenance: any, guard: any) => {
           <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
             <tr>
               <td style="padding: 10px; border-bottom: 1px solid #eee; width: 30%; font-weight: bold; color: #555;">Reporta:</td>
-              <td style="padding: 10px; border-bottom: 1px solid #eee; color: #333;">${guard.name} ${guard.lastName || ''}</td>
+              <td style="padding: 10px; border-bottom: 1px solid #eee; color: #333;">${guard.name} ${guard.lastName || ""}</td>
             </tr>
             <tr>
               <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold; color: #555;">Fecha:</td>
@@ -170,14 +177,14 @@ export const sendMaintenanceEmail = async (maintenance: any, guard: any) => {
             </tr>
             <tr>
               <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold; color: #555;">Categoría:</td>
-              <td style="padding: 10px; border-bottom: 1px solid #eee; color: #333;">${maintenance.categoryRel?.value || maintenance.category || 'Mantenimiento General'}</td>
+              <td style="padding: 10px; border-bottom: 1px solid #eee; color: #333;">${maintenance.categoryRel?.value || maintenance.category || "Mantenimiento General"}</td>
             </tr>
           </table>
 
           <div style="margin-bottom: 25px;">
             <h3 style="color: #f0ad4e; border-bottom: 2px solid #f0ad4e; padding-bottom: 5px; margin-bottom: 15px;">Descripción</h3>
             <blockquote style="background: #f9f9f9; padding: 15px; border-left: 5px solid #f0ad4e; margin: 0; font-style: italic; color: #555;">
-              ${maintenance.description || 'Sin descripción'}
+              ${maintenance.description || "Sin descripción"}
             </blockquote>
           </div>
 
@@ -187,7 +194,7 @@ export const sendMaintenanceEmail = async (maintenance: any, guard: any) => {
           </div>
 
           <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee;">
-             <a href="${process.env.SYSTEM_URL || 'https://axzycheckui-production.up.railway.app/#/home'}" style="background-color: #333; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 5px; font-weight: bold;">Ir al Panel de Control</a>
+             <a href="${process.env.SYSTEM_URL || "https://axzycheckui-production.up.railway.app/#/home"}" style="background-color: #333; color: #fff; text-decoration: none; padding: 10px 20px; border-radius: 5px; font-weight: bold;">Ir al Panel de Control</a>
           </div>
         </div>
         
@@ -219,8 +226,48 @@ export const sendMaintenanceEmail = async (maintenance: any, guard: any) => {
     }
 
     console.log(`Maintenance email sent to ${recipients.join(", ")}`);
-
   } catch (error) {
     console.error("Error sending maintenance email:", error);
+  }
+};
+
+export const sendIncidentWhatsApp = async (incident: any, guard: any) => {
+  try {
+    const config = await prisma.sysConfig.findUnique({
+      where: { key: "INCIDENT_WHATSAPP" },
+    });
+
+    if (!config || !config.value) {
+      console.warn("No Recipients found for INCIDENT_WHATSAPP");
+      return;
+    }
+
+    const recipients = config.value.split("|");
+    const incidentUrl = `${process.env.SYSTEM_URL || "https://axzycheckui-production.up.railway.app"}/#/incidents/${incident.id}`;
+  } catch (error) {
+    console.error("Error sending incident WhatsApp:", error);
+  }
+};
+
+export const sendMaintenanceWhatsApp = async (maintenance: any, guard: any) => {
+  try {
+    const config = await prisma.sysConfig.findUnique({
+      where: { key: "MAINTENANCE_WHATSAPP" },
+    });
+
+    if (!config || !config.value) {
+      console.warn("No Recipients found for MAINTENANCE_WHATSAPP");
+      return;
+    }
+
+    const recipients = config.value.split("|");
+
+    for (const to of recipients) {
+      // Note: Using a generic approach for maintenance if no specific template exists yet
+      console.log(`Sending maintenance WhatsApp to ${to} (Infobip)`);
+      // await WhatsAppService.sendTemplateMessage(to, MaintenanceReportTemplate, ...);
+    }
+  } catch (error) {
+    console.error("Error sending maintenance WhatsApp:", error);
   }
 };

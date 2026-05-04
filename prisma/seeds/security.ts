@@ -22,6 +22,10 @@ export const securitySeed = async (prisma: PrismaClient) => {
   const vespertino = await prisma.schedule.findUnique({ where: { name: "Vespertino" } });
   const nocturno = await prisma.schedule.findUnique({ where: { name: "Nocturno" } });
 
+  // Get Clients
+  const plaza2000 = await prisma.client.findUnique({ where: { name: "Plaza 2000" } });
+  const vinas = await prisma.client.findUnique({ where: { name: "Vinas del Mar" } });
+
   // 1. ADMINS
   hackerLog.info('AUTH', 'Deploying Admin accounts');
   await prisma.user.upsert({
@@ -51,16 +55,16 @@ export const securitySeed = async (prisma: PrismaClient) => {
   // 2. GUARDS
   hackerLog.info('AUTH', 'Deploying Guard infrastructure');
   const guardUsers = [
-    { username: "victor", name: "Victor", lastName: "Guardia", scheduleId: matutino?.id },
-    { username: "martin", name: "Martin", lastName: "Guardia", scheduleId: matutino?.id },
-    { username: "marco", name: "Marco", lastName: "Guardia", scheduleId: vespertino?.id },
-    { username: "asael", name: "Asael", lastName: "Guardia", scheduleId: nocturno?.id },
+    { username: "victor", name: "Victor", lastName: "Guardia", scheduleId: matutino?.id, clientId: plaza2000?.id },
+    { username: "martin", name: "Martin", lastName: "Guardia", scheduleId: matutino?.id, clientId: plaza2000?.id },
+    { username: "marco", name: "Marco", lastName: "Guardia", scheduleId: vespertino?.id, clientId: vinas?.id },
+    { username: "asael", name: "Asael", lastName: "Guardia", scheduleId: nocturno?.id, clientId: vinas?.id },
   ];
 
   for (const u of guardUsers) {
     await prisma.user.upsert({
       where: { username: u.username },
-      update: { scheduleId: u.scheduleId, roleId: guardRole.id },
+      update: { scheduleId: u.scheduleId, roleId: guardRole.id, clientId: u.clientId },
       create: {
         name: u.name,
         lastName: u.lastName,
@@ -68,6 +72,7 @@ export const securitySeed = async (prisma: PrismaClient) => {
         password,
         roleId: guardRole.id,
         scheduleId: u.scheduleId,
+        clientId: u.clientId,
       },
     });
   }
@@ -75,7 +80,7 @@ export const securitySeed = async (prisma: PrismaClient) => {
   // 3. SHIFT GUARDS
   await prisma.user.upsert({
     where: { username: "ricardo" },
-    update: { scheduleId: vespertino?.id, roleId: shiftRole.id },
+    update: { scheduleId: vespertino?.id, roleId: shiftRole.id, clientId: plaza2000?.id },
     create: {
       name: "Ricardo",
       lastName: "Shift",
@@ -83,6 +88,7 @@ export const securitySeed = async (prisma: PrismaClient) => {
       password,
       roleId: shiftRole.id,
       scheduleId: vespertino?.id,
+      clientId: plaza2000?.id,
     },
   });
 
@@ -90,13 +96,14 @@ export const securitySeed = async (prisma: PrismaClient) => {
   hackerLog.info('AUTH', 'Deploying Maintenance personnel');
   await prisma.user.upsert({
     where: { username: "mario" },
-    update: { roleId: maintRole.id },
+    update: { roleId: maintRole.id, clientId: plaza2000?.id },
     create: {
       name: "Mario",
       lastName: "Mantenimiento",
       username: "mario",
       password,
       roleId: maintRole.id,
+      clientId: plaza2000?.id,
     },
   });
 

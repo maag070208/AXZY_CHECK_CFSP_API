@@ -1,16 +1,24 @@
 import { prismaClient } from "@src/core/config/database";
 import { ITDataTableFetchParams, ITDataTableResponse } from "@src/core/dto/datatable.dto";
 import { getPrismaPaginationParams } from "@src/core/utils/prisma-pagination.utils";
+import { MAINTENANCE_STATUS_ATTENDED, MAINTENANCE_STATUS_PENDING } from "@src/core/config/constants";
 
 export const getDataTableMaintenances = async (params: ITDataTableFetchParams): Promise<ITDataTableResponse<any>> => {
     const prismaParams = getPrismaPaginationParams(params);
+    
+    if (params.filters.clientId && params.filters.clientId !== 'ALL') {
+        prismaParams.where.clientId = params.filters.clientId;
+    }
 
     const [rows, total] = await Promise.all([
         prismaClient.maintenance.findMany({
             ...prismaParams,
             include: { 
                 guard: true,
-                resolvedBy: true
+                resolvedBy: true,
+                client: true,
+                categoryRel: true,
+                type: true
             },
         }),
         prismaClient.maintenance.count({
@@ -21,19 +29,26 @@ export const getDataTableMaintenances = async (params: ITDataTableFetchParams): 
     return { rows, total };
 };
 
-import { sendMaintenanceEmail } from "@src/core/utils/emailSender";
+import { sendMaintenanceEmail, sendMaintenanceWhatsApp } from "@src/core/utils/emailSender";
 
 export const createMaintenance = async (data: {
-    guardId: number;
+    guardId: string;
     title: string;
-    categoryId?: number;
-    typeId?: number;
+    categoryId?: string;
+    typeId?: string;
     category?: string;
     description?: string;
     media?: any;
     latitude?: number;
     longitude?: number;
+    clientId?: string;
 }) => {
+    let clientId = data.clientId;
+    if (!clientId) {
+        const guard = await prismaClient.user.findUnique({ where: { id: data.guardId } });
+        clientId = guard?.clientId || undefined;
+    }
+
     const maintenance = await prismaClient.maintenance.create({
         data: {
             guardId: data.guardId,
@@ -44,7 +59,8 @@ export const createMaintenance = async (data: {
             description: data.description,
             media: data.media,
             latitude: data.latitude,
-            longitude: data.longitude
+            longitude: data.longitude,
+            clientId: clientId
         }
     });
 
@@ -60,6 +76,7 @@ export const createMaintenance = async (data: {
             });
             if (enrichedMaintenance) {
                 await sendMaintenanceEmail(enrichedMaintenance, enrichedMaintenance.guard);
+                await sendMaintenanceWhatsApp(enrichedMaintenance, enrichedMaintenance.guard);
             }
         } catch (error) {
             console.error("Background maintenance processing error:", error);
@@ -69,7 +86,7 @@ export const createMaintenance = async (data: {
     return maintenance;
 };
 
-export const getMaintenancesByGuard = async (guardId: number) => {
+export const getMaintenancesByGuard = async (guardId: string) => {
     return prismaClient.maintenance.findMany({
         where: { guardId },
         orderBy: { createdAt: 'desc' }
@@ -79,9 +96,10 @@ export const getMaintenancesByGuard = async (guardId: number) => {
 export const getMaintenances = async (filters: {
     startDate?: Date;
     endDate?: Date;
-    guardId?: number;
+    guardId?: string;
     category?: string;
     title?: string;
+    clientId?: string;
 }) => {
     const whereClause: any = {};
 
@@ -97,6 +115,7 @@ export const getMaintenances = async (filters: {
     if (filters.guardId) whereClause.guardId = filters.guardId;
     if (filters.category) whereClause.category = filters.category;
     if (filters.title) whereClause.title = { contains: filters.title, mode: 'insensitive' };
+    if (filters.clientId) whereClause.clientId = filters.clientId;
 
     return prismaClient.maintenance.findMany({
         where: whereClause,
@@ -108,11 +127,11 @@ export const getMaintenances = async (filters: {
     });
 };
 
-export const resolveMaintenance = async (id: number, userId: number) => {
+export const resolveMaintenance = async (id: string, userId: string) => {
     return prismaClient.maintenance.update({
         where: { id },
         data: {
-            status: 'ATTENDED',
+            status: MAINTENANCE_STATUS_ATTENDED,
             resolvedAt: new Date(),
             resolvedById: userId
         },
@@ -126,12 +145,12 @@ export const resolveMaintenance = async (id: number, userId: number) => {
 export const getPendingMaintenancesCount = async () => {
     return prismaClient.maintenance.count({
         where: {
-            status: 'PENDING'
+            status: MAINTENANCE_STATUS_PENDING
         }
     });
 };
 
-export const getMaintenanceById = async (id: number) => {
+export const getMaintenanceById = async (id: string) => {
     return prismaClient.maintenance.findUnique({
         where: { id },
         include: {
@@ -141,13 +160,13 @@ export const getMaintenanceById = async (id: number) => {
     });
 };
 
-export const deleteMaintenance = async (id: number) => {
+export const deleteMaintenance = async (id: string) => {
     return prismaClient.maintenance.delete({
         where: { id }
     });
 };
 
-export const updateMaintenanceMedia = async (id: number, media: any) => {
+export const updateMaintenanceMedia = async (id: string, media: any) => {
     return prismaClient.maintenance.update({
         where: { id },
         data: { media }

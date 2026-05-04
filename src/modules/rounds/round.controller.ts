@@ -17,17 +17,14 @@ export const startRound = async (req: Request, res: Response) => {
   const user = (req as any).user;
   const targetGuardId = user?.id || guardId;
 
-  const parsedClientId = clientId ? Number(clientId) : undefined;
-  const parsedConfigId = recurringConfigurationId ? Number(recurringConfigurationId) : undefined;
-
-  const result = await roundService.startRound(Number(targetGuardId), parsedClientId, parsedConfigId);
+  const result = await roundService.startRound(String(targetGuardId), clientId as string, recurringConfigurationId as string);
   return res.status(result.success ? 200 : 400).json(result);
 };
 
 
 export const endRound = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const result = await roundService.endRound(Number(id));
+  const result = await roundService.endRound(id);
   return res.status(result.success ? 200 : 400).json(result);
 };
 
@@ -36,7 +33,7 @@ export const getCurrentRound = async (req: Request, res: Response) => {
   if (!userId) {
       return res.status(401).json({ success: false, message: 'No autorizado' });
   }
-  const result = await roundService.getCurrentRound(Number(userId));
+  const result = await roundService.getCurrentRound(String(userId));
   return res.status(result.success ? 200 : 400).json(result);
 };
 
@@ -46,7 +43,7 @@ export const getRounds = async (req: Request, res: Response) => {
     const user = (req as any).user;
     const result = await roundService.getRounds(
         date ? String(date) : undefined, 
-        guardId ? Number(guardId) : undefined,
+        guardId as string,
         user
     );
     return res.status(result.success ? 200 : 500).json(result);
@@ -55,7 +52,7 @@ export const getRounds = async (req: Request, res: Response) => {
 export const getRoundDetail = async (req: Request, res: Response) => {
     const { id } = req.params;
     const user = (req as any).user;
-    const result = await roundService.getRoundDetail(Number(id), user);
+    const result = await roundService.getRoundDetail(id, user);
     return res.status(result.success ? 200 : 404).json(result);
 };
 
@@ -63,7 +60,7 @@ export const generateReport = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const user = (req as any).user;
-        const buffer = await roundService.generateRoundPDF(Number(id), user);
+        const buffer = await roundService.generateRoundPDF(id, user);
         
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename=Ronda_${id}.pdf`);

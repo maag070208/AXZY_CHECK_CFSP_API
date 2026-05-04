@@ -1,6 +1,17 @@
 import { Request, Response } from "express";
 import { createTResult } from "@src/core/mappers/tresult.mapper";
-import { addUser, getUserByUsername, getUsers, getDataTableUsers } from "./user.service";
+import {
+  addUser,
+  getUserByUsername,
+  getUsers,
+  getDataTableUsers,
+} from "./user.service";
+import {
+  ROLE_GUARD,
+  ROLE_SHIFT,
+  ROLE_MAINTENANCE,
+  OPERATIONAL_ROLES,
+} from "@src/core/config/constants";
 
 export const getDataTable = async (req: Request, res: Response) => {
   try {
@@ -30,25 +41,53 @@ export const login = async (req: Request, res: Response) => {
     if (!isPasswordValid) {
       return res.status(401).json(createTResult("", ["Contraseña invalida"]));
     }
+    console.log(user);
+    // Verificar que el usuario esté activo
+    if (!user.active) {
+      return res
+        .status(403)
+        .json(
+          createTResult("", [
+            "Tu cuenta no está activa. Por favor contacta al administrador.",
+          ]),
+        );
+    }
 
-    console.log("------------------------ USER ------------------------------")
-    console.log("NAME", user.name)
-    console.log("LASTNAME", user.lastName)
-    console.log("USERNAME", user.username)
-    console.log("ROLE", user.role?.name)
-    console.log("------------------------ USER ------------------------------")
+    // Verificar que el cliente asociado esté activo (aplica para rol RESDN/CLIENT)
+    if (user.client && !user.client.active) {
+      return res
+        .status(403)
+        .json(
+          createTResult("", [
+            "Tu empresa no está activa en el sistema. Por favor contacta al administrador.",
+          ]),
+        );
+    }
 
-    console.log("------------------------ SCHEDULE ------------------------------")
-    console.log("START", user?.schedule?.startTime)
-    console.log("END", user?.schedule?.endTime)
-    console.log("------------------------ SCHEDULE ------------------------------")
+    console.log("------------------------ USER ------------------------------");
+    console.log("NAME", user.name);
+    console.log("LASTNAME", user.lastName);
+    console.log("USERNAME", user.username);
+    console.log("ROLE", user.role?.name);
+    console.log("------------------------ USER ------------------------------");
+
+    console.log(
+      "------------------------ SCHEDULE ------------------------------",
+    );
+    console.log("START", user?.schedule?.startTime);
+    console.log("END", user?.schedule?.endTime);
+    console.log(
+      "------------------------ SCHEDULE ------------------------------",
+    );
 
     // SHIFT CHECK - Validar por horario del schedule
     // Aplicar a GUARD, SHIFT, MAINT
-    if (user.role?.name === 'GUARD' || user.role?.name === 'SHIFT' || user.role?.name === 'MAINT') {
+    if (OPERATIONAL_ROLES.includes(user.role?.name as string)) {
       // Verificar que el usuario tenga un schedule asignado
       if (!user.schedule) {
-        return res.status(403).json(createTResult("", ["No tiene un horario asignado"]));
+        return res
+          .status(403)
+          .json(createTResult("", ["No tiene un horario asignado"]));
       }
 
       const shiftStart = user.schedule.startTime;
@@ -56,63 +95,83 @@ export const login = async (req: Request, res: Response) => {
 
       // Validar que los horarios existan
       if (!shiftStart || !shiftEnd) {
-        return res.status(403).json(createTResult("", ["Horario no configurado correctamente"]));
+        return res
+          .status(403)
+          .json(createTResult("", ["Horario no configurado correctamente"]));
       }
 
       // Obtener hora actual en Tijuana (America/Tijuana)
       const now = new Date();
-      
+
       // También podemos usar Intl.DateTimeFormat para más control
-      const tijuanaFormatter = new Intl.DateTimeFormat('en-US', {
-        timeZone: 'America/Tijuana',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
+      const tijuanaFormatter = new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/Tijuana",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
       });
-      
+
       const tijuanaTimeParts = tijuanaFormatter.formatToParts(now);
-      const tijuanaHour = parseInt(tijuanaTimeParts.find(part => part.type === 'hour')?.value || '0');
-      const tijuanaMinute = parseInt(tijuanaTimeParts.find(part => part.type === 'minute')?.value || '0');
-      
+      const tijuanaHour = parseInt(
+        tijuanaTimeParts.find((part) => part.type === "hour")?.value || "0",
+      );
+      const tijuanaMinute = parseInt(
+        tijuanaTimeParts.find((part) => part.type === "minute")?.value || "0",
+      );
+
       // Formato HH:mm para Tijuana
-      const currentHourStr = tijuanaHour.toString().padStart(2, '0');
-      const currentMinuteStr = tijuanaMinute.toString().padStart(2, '0');
+      const currentHourStr = tijuanaHour.toString().padStart(2, "0");
+      const currentMinuteStr = tijuanaMinute.toString().padStart(2, "0");
       const currentTime = `${currentHourStr}:${currentMinuteStr}`;
-      
+
       // Minutos totales en Tijuana
       const currentTotalMinutes = tijuanaHour * 60 + tijuanaMinute;
-      
+
       // Otra opción: usar getHours/minutes del objeto Date ajustado
-      const tijuanaDate = new Date(now.toLocaleString('en-US', { timeZone: 'America/Tijuana' }));
+      const tijuanaDate = new Date(
+        now.toLocaleString("en-US", { timeZone: "America/Tijuana" }),
+      );
       const altTijuanaHour = tijuanaDate.getHours();
       const altTijuanaMinute = tijuanaDate.getMinutes();
-      
+
       // Convertir horarios del schedule a minutos
-      const [startHour, startMinute] = shiftStart.split(':').map(Number);
-      const [endHour, endMinute] = shiftEnd.split(':').map(Number);
+      const [startHour, startMinute] = shiftStart.split(":").map(Number);
+      const [endHour, endMinute] = shiftEnd.split(":").map(Number);
       const startTotalMinutes = startHour * 60 + startMinute;
       const endTotalMinutes = endHour * 60 + endMinute;
-      
+
       let isInShift = false;
-      
+
       // Lógica para turnos nocturnos (que cruzan la medianoche)
       if (endTotalMinutes < startTotalMinutes) {
         // Turno nocturno (ej. 23:00 a 07:00)
         // Válido si la hora actual es >= inicio O <= fin
-        isInShift = currentTotalMinutes >= startTotalMinutes || 
-                    currentTotalMinutes <= endTotalMinutes;
+        isInShift =
+          currentTotalMinutes >= startTotalMinutes ||
+          currentTotalMinutes <= endTotalMinutes;
       } else {
         // Turno normal (ej. 15:00 a 23:00)
         // Válido si la hora actual está entre inicio y fin
-        isInShift = currentTotalMinutes >= startTotalMinutes && 
-                    currentTotalMinutes <= endTotalMinutes;
+        isInShift =
+          currentTotalMinutes >= startTotalMinutes &&
+          currentTotalMinutes <= endTotalMinutes;
       }
 
       // Logs para depuración
       console.log("DEBUG - Validación de horario:");
-      console.log("Hora UTC:", now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0'));
+      console.log(
+        "Hora UTC:",
+        now.getHours().toString().padStart(2, "0") +
+          ":" +
+          now.getMinutes().toString().padStart(2, "0"),
+      );
       console.log("Hora Tijuana:", currentTime);
-      console.log("Hora Tijuana (alternativa):", altTijuanaHour.toString().padStart(2, '0') + ':' + altTijuanaMinute.toString().padStart(2, '0'));
+      console.log(
+        "Hora Tijuana (alternativa):",
+        altTijuanaHour.toString().padStart(2, "0") +
+          ":" +
+          altTijuanaMinute.toString().padStart(2, "0"),
+      );
       console.log("Turno asignado:", `${shiftStart} - ${shiftEnd}`);
       console.log("Minutos actual en Tijuana:", currentTotalMinutes);
       console.log("Minutos inicio:", startTotalMinutes);
@@ -121,12 +180,14 @@ export const login = async (req: Request, res: Response) => {
       console.log("¿Dentro del horario?:", isInShift);
 
       if (!isInShift) {
-        return res.status(403).json(createTResult("", ["Fuera de horario de turno"]));
+        return res
+          .status(403)
+          .json(createTResult("", ["Fuera de horario de turno"]));
       }
     }
 
     // Update logged in status
-    const { updateUser } = require('./user.service');
+    const { updateUser } = require("./user.service");
     await updateUser(user.id, { isLoggedIn: true });
 
     const tokenPayload = {
@@ -135,7 +196,7 @@ export const login = async (req: Request, res: Response) => {
       lastName: user.lastName,
       username: user.username,
       role: user.role?.name,
-      clientId: user.clientId
+      clientId: user.clientId,
     };
 
     return res.status(200).json(createTResult(await generateJWT(tokenPayload)));
@@ -146,42 +207,42 @@ export const login = async (req: Request, res: Response) => {
 
 export const logout = async (req: Request, res: Response) => {
   try {
-     // Assuming user id is in req.body or derived from token if passed?
-     // Actually logout is often just client-side, but we need to update DB.
-     // If we use middleware, we have user in res.locals.user
-     // But if token is expired? We might still want to clear DB.
-     // Typically logout endpoint requires auth.
-     
-     // Let's assume passed in body or strictly from auth middleware.
-     // If we use auth middleware, we can access user id.
-     const { id } = req.body; // Or from token
-     // If we use middleware, 'req.user' or 'res.locals.user'
-     // Let's rely on body for simplicity if middleware not used, or better user attached.
-     // I'll check if user attached.
-     
-     // Actually, let's use the ID from the token if available. 
-     // But if token invalid, we can't identify user easily to logout.
-     // Let's accept ID in body for force logout, or rely on token.
-     // User requirement: "si se sale de app, no cerrarle sesion". 
-     // "cerrarle la sesion en automatico" if active out of shift.
-     
-     // For explicit logout (button click):
-     if (res.locals.user) {
-         const { updateUser } = require('./user.service');
-         await updateUser(res.locals.user.id, { isLoggedIn: false });
-         return res.status(200).json(createTResult(true));
-     } else {
-         // Maybe passed in body?
-         if (req.body.userId) {
-             const { updateUser } = require('./user.service');
-             await updateUser(req.body.userId, { isLoggedIn: false });
-             return res.status(200).json(createTResult(true));
-         }
-     }
-     
-     return res.status(200).json(createTResult(true)); // Just return specific success even if no-op
+    // Assuming user id is in req.body or derived from token if passed?
+    // Actually logout is often just client-side, but we need to update DB.
+    // If we use middleware, we have user in res.locals.user
+    // But if token is expired? We might still want to clear DB.
+    // Typically logout endpoint requires auth.
+
+    // Let's assume passed in body or strictly from auth middleware.
+    // If we use auth middleware, we can access user id.
+    const { id } = req.body; // Or from token
+    // If we use middleware, 'req.user' or 'res.locals.user'
+    // Let's rely on body for simplicity if middleware not used, or better user attached.
+    // I'll check if user attached.
+
+    // Actually, let's use the ID from the token if available.
+    // But if token invalid, we can't identify user easily to logout.
+    // Let's accept ID in body for force logout, or rely on token.
+    // User requirement: "si se sale de app, no cerrarle sesion".
+    // "cerrarle la sesion en automatico" if active out of shift.
+
+    // For explicit logout (button click):
+    if (res.locals.user) {
+      const { updateUser } = require("./user.service");
+      await updateUser(res.locals.user.id, { isLoggedIn: false });
+      return res.status(200).json(createTResult(true));
+    } else {
+      // Maybe passed in body?
+      if (req.body.userId) {
+        const { updateUser } = require("./user.service");
+        await updateUser(req.body.userId, { isLoggedIn: false });
+        return res.status(200).json(createTResult(true));
+      }
+    }
+
+    return res.status(200).json(createTResult(true)); // Just return specific success even if no-op
   } catch (error: any) {
-      return res.status(500).json(createTResult("", error.message));
+    return res.status(500).json(createTResult("", error.message));
   }
 };
 
@@ -198,8 +259,18 @@ export const getAllUsers = async (req: Request, res: Response) => {
 
 export const createUser = async (req: Request, res: Response) => {
   try {
-    const { name, lastName, username, password, roleId, role, shiftStart, shiftEnd, scheduleId } =
-      req.body;
+    const {
+      name,
+      lastName,
+      username,
+      password,
+      roleId,
+      role,
+      shiftStart,
+      shiftEnd,
+      scheduleId,
+      clientId,
+    } = req.body;
 
     const existing = await getUserByUsername(username);
     if (existing) {
@@ -216,11 +287,12 @@ export const createUser = async (req: Request, res: Response) => {
       username,
 
       password: hashed,
-      roleId: roleId ? Number(roleId) : undefined,
+      roleId: roleId as string,
       role,
       shiftStart,
       shiftEnd,
-      scheduleId: scheduleId ? Number(scheduleId) : undefined
+      scheduleId: scheduleId as string,
+      clientId: clientId as string,
     });
 
     return res.status(201).json(createTResult(user));
@@ -241,34 +313,51 @@ export const getCoachesList = async (req: Request, res: Response) => {
 export const updateUserProfile = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, lastName, username, shiftStart, shiftEnd, scheduleId, roleId, role } = req.body;
+    const {
+      name,
+      lastName,
+      username,
+      shiftStart,
+      shiftEnd,
+      scheduleId,
+      roleId,
+      role,
+      clientId,
+      active,
+    } = req.body;
 
     const { updateUser, getUserByUsername } = require("./user.service");
 
     if (username) {
       const existing = await getUserByUsername(username);
-      if (existing && existing.id !== Number(id)) {
+      if (existing && existing.id !== id) {
         return res
           .status(400)
-          .json(createTResult(null, ["El nombre de usuario ya está registrado"]));
+          .json(
+            createTResult(null, ["El nombre de usuario ya está registrado"]),
+          );
       }
     }
 
-    const updated = await updateUser(Number(id), {
+    const updated = await updateUser(id, {
       name,
       lastName,
       username,
-      roleId: roleId ? Number(roleId) : undefined,
+      roleId: roleId as string,
       role,
       shiftStart,
       shiftEnd,
-      scheduleId: scheduleId ? Number(scheduleId) : undefined
+      scheduleId: scheduleId as string,
+      clientId: clientId as string,
+      ...(active !== undefined && { active }),
     });
 
     return res.status(200).json(createTResult(updated));
   } catch (error: any) {
-    if (error.code === 'P2002') {
-      return res.status(400).json(createTResult(null, ["El nombre de usuario ya está registrado"]));
+    if (error.code === "P2002") {
+      return res
+        .status(400)
+        .json(createTResult(null, ["El nombre de usuario ya está registrado"]));
     }
     return res.status(500).json(createTResult(null, error.message));
   }
@@ -280,7 +369,7 @@ export const changePassword = async (req: Request, res: Response) => {
     const { oldPassword, newPassword } = req.body;
     const { getUserById, updateUser } = require("./user.service");
 
-    const user = await getUserById(Number(id));
+    const user = await getUserById(id);
     if (!user) {
       return res.status(404).json(createTResult(null, ["User not found"]));
     }
@@ -293,7 +382,7 @@ export const changePassword = async (req: Request, res: Response) => {
     }
 
     const hashed = await hashPassword(newPassword);
-    await updateUser(Number(id), { password: hashed });
+    await updateUser(id, { password: hashed });
 
     return res.status(200).json(createTResult(true));
   } catch (error: any) {
@@ -311,7 +400,7 @@ export const resetPassword = async (req: Request, res: Response) => {
     // Assuming this endpoint is protected/admin-only.
 
     const hashed = await hashPassword(newPassword);
-    await updateUser(Number(id), { password: hashed });
+    await updateUser(id, { password: hashed });
 
     return res.status(200).json(createTResult(true));
   } catch (error: any) {
@@ -323,11 +412,17 @@ export const deleteUser = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { deleteUser: deleteUserService } = require("./user.service");
-    await deleteUserService(Number(id));
+    await deleteUserService(id);
     return res.status(200).json(createTResult(true));
   } catch (error: any) {
-    if (error.code === 'P2003') {
-        return res.status(400).json(createTResult(null, ['No se puede eliminar este usuario porque tiene registros de historial o asignaciones.']));
+    if (error.code === "P2003") {
+      return res
+        .status(400)
+        .json(
+          createTResult(null, [
+            "No se puede eliminar este usuario porque tiene registros de historial o asignaciones.",
+          ]),
+        );
     }
     return res.status(500).json(createTResult(null, error.message));
   }

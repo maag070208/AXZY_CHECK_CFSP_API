@@ -7,15 +7,15 @@ async function main() {
 
     // 1. Create or get Client
     const client = await prisma.client.upsert({
-        where: { id: 1 }, // Assuming ID 1 or just find by name
-        update: { name: "Plaza 2000" },
+        where: { name: "Plaza 2000" },
+        update: {},
         create: { name: "Plaza 2000" }
     });
 
     // 2. Create or get Zone (Recurrente)
     const zone = await prisma.zone.upsert({
-        where: { id: 1 },
-        update: { name: "BAJA", clientId: client.id },
+        where: { name_clientId: { name: "BAJA", clientId: client.id } },
+        update: {},
         create: { name: "BAJA", clientId: client.id }
     });
 

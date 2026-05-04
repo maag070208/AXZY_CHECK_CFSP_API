@@ -24,11 +24,11 @@ export const createIncidentCategory = async (data: any) => {
     return prismaClient.incidentCategory.create({ data });
 };
 
-export const updateIncidentCategory = async (id: number, data: any) => {
+export const updateIncidentCategory = async (id: string, data: any) => {
     return prismaClient.incidentCategory.update({ where: { id }, data });
 };
 
-export const deleteIncidentCategory = async (id: number) => {
+export const deleteIncidentCategory = async (id: string) => {
     return prismaClient.incidentCategory.delete({ where: { id } });
 };
 
@@ -57,11 +57,11 @@ export const createIncidentType = async (data: any) => {
     return prismaClient.incidentType.create({ data });
 };
 
-export const updateIncidentType = async (id: number, data: any) => {
+export const updateIncidentType = async (id: string, data: any) => {
     return prismaClient.incidentType.update({ where: { id }, data });
 };
 
-export const deleteIncidentType = async (id: number) => {
+export const deleteIncidentType = async (id: string) => {
     return prismaClient.incidentType.delete({ where: { id } });
 };
 

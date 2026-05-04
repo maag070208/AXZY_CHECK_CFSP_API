@@ -13,7 +13,7 @@ export const getDataTable = async (req: Request, res: Response) => {
 
 export const createMaintenance = async (req: Request, res: Response) => {
   try {
-    const { title, category, description, media, latitude, longitude, categoryId, typeId } = req.body;
+    const { title, category, description, media, latitude, longitude, categoryId, typeId, clientId } = req.body;
     // @ts-ignore
     const guardId = req.user?.id;
 
@@ -25,15 +25,16 @@ export const createMaintenance = async (req: Request, res: Response) => {
     const mediaFiles = media || [];
 
     const result = await maintenanceService.createMaintenance({
-      guardId: Number(guardId),
+      guardId: guardId as string,
       title,
-      categoryId: categoryId ? Number(categoryId) : undefined,
-      typeId: typeId ? Number(typeId) : undefined,
+      categoryId: categoryId as string,
+      typeId: typeId as string,
       category,
       description,
       media: mediaFiles.length > 0 ? mediaFiles : undefined,
       latitude: latitude ? Number(latitude) : undefined,
       longitude: longitude ? Number(longitude) : undefined,
+      clientId: clientId as string
     });
 
     return res.status(201).json(createTResult(result));
@@ -49,7 +50,7 @@ export const getMaintenances = async (req: Request, res: Response) => {
         const filters: any = {};
         if (startDate) filters.startDate = new Date(String(startDate));
         if (endDate) filters.endDate = new Date(String(endDate));
-        if (guardId) filters.guardId = Number(guardId);
+        if (guardId) filters.guardId = guardId as string;
         if (category) filters.category = String(category);
         if (title) filters.title = String(title);
 
@@ -70,7 +71,7 @@ export const resolveMaintenance = async (req: Request, res: Response) => {
             return res.status(401).json(createTResult(null, ["Usuario no autenticado"]));
         }
 
-        const result = await maintenanceService.resolveMaintenance(Number(id), Number(userId));
+        const result = await maintenanceService.resolveMaintenance(id, userId as string);
         return res.status(200).json(createTResult(result));
     } catch (error: any) {
         return res.status(500).json(createTResult(null, error.message));
@@ -89,12 +90,12 @@ export const getPendingCount = async (req: Request, res: Response) => {
 export const deleteMaintenance = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const maintenance = await maintenanceService.getMaintenanceById(Number(id));
+        const maintenance = await maintenanceService.getMaintenanceById(id);
         if (!maintenance) {
             return res.status(404).json(createTResult(null, ["Mantenimiento no encontrado"]));
         }
 
-        await maintenanceService.deleteMaintenance(Number(id));
+        await maintenanceService.deleteMaintenance(id);
         return res.status(200).json(createTResult(true));
     } catch (error: any) {
         return res.status(500).json(createTResult(null, error.message));
@@ -110,7 +111,7 @@ export const deleteMedia = async (req: Request, res: Response) => {
             return res.status(400).json(createTResult(null, ["Falta el key del archivo"]));
         }
 
-        const maintenance = await maintenanceService.getMaintenanceById(Number(id));
+        const maintenance = await maintenanceService.getMaintenanceById(id);
         if (!maintenance || !maintenance.media) {
             return res.status(404).json(createTResult(null, ["Mantenimiento o media no encontrada"]));
         }
@@ -122,7 +123,7 @@ export const deleteMedia = async (req: Request, res: Response) => {
             return mKey !== String(key);
         });
 
-        await maintenanceService.updateMaintenanceMedia(Number(id), updatedMedia);
+        await maintenanceService.updateMaintenanceMedia(id, updatedMedia);
         return res.status(200).json(createTResult(true));
     } catch (error: any) {
         return res.status(500).json(createTResult(null, error.message));

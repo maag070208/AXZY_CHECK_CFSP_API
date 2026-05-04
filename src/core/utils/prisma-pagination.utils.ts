@@ -14,7 +14,7 @@ export function getPrismaPaginationParams(params: ITDataTableFetchParams) {
   // Sorting
   const orderBy = sort?.key
     ? { [sort.key]: sort.direction || "asc" }
-    : { id: "desc" as const }; // Default sort
+    : { createdAt: "desc" as const }; // Default sort
 
   // Filtering
   const where: any = {};

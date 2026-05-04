@@ -14,13 +14,13 @@ export const createKardexEntry = async (req: Request, res: Response) => {
     }
 
     const entry = await registerCheck({
-      userId: Number(userId),
-      locationId: Number(locationId),
+      userId: userId as string,
+      locationId: locationId as string,
       notes,
       media,
       latitude,
       longitude,
-      assignmentId: assignmentId ? Number(assignmentId) : undefined,
+      assignmentId: assignmentId as string,
     });
 
     return res.status(201).json(createTResult(entry));
@@ -34,7 +34,7 @@ export const updateKardexEntry = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { notes, media, latitude, longitude } = req.body;
 
-    const entry = await updateKardex(Number(id), {
+    const entry = await updateKardex(id, {
       notes,
       media,
       latitude,
@@ -52,8 +52,8 @@ export const getKardexEntries = async (req: Request, res: Response) => {
     const { userId, locationId, startDate, endDate } = req.query;
 
     const entries = await getKardex({
-      userId: userId ? Number(userId) : undefined,
-      locationId: locationId ? Number(locationId) : undefined,
+      userId: userId as string,
+      locationId: locationId as string,
       startDate: startDate as string,
       endDate: endDate as string,
     });
@@ -67,13 +67,8 @@ export const getKardexEntries = async (req: Request, res: Response) => {
 export const getKardexDetail = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const numericId = Number(id);
 
-    if (isNaN(numericId)) {
-        return res.status(400).json(createTResult(null, ["Invalid ID"]));
-    }
-
-    const entry = await getKardexById(numericId);
+    const entry = await getKardexById(id);
 
     if (!entry) {
       return res.status(404).json(createTResult(null, ["Kardex entry not found"]));
@@ -106,7 +101,7 @@ export const getDataTableKardexEntries = async (req: Request, res: Response) => 
 export const deleteKardexEntry = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const entry = await getKardexById(Number(id));
+    const entry = await getKardexById(id);
     
     if (!entry) {
       return res.status(404).json(createTResult(null, ["Registro no encontrado"]));
@@ -117,7 +112,7 @@ export const deleteKardexEntry = async (req: Request, res: Response) => {
     Files are only deleted via deleteMedia (individual deletion).
     */
 
-    await deleteKardex(Number(id));
+    await deleteKardex(id);
     return res.status(200).json(createTResult(true));
   } catch (error: any) {
     return res.status(500).json(createTResult(null, error.message));
@@ -133,7 +128,7 @@ export const deleteMedia = async (req: Request, res: Response) => {
       return res.status(400).json(createTResult(null, ["Falta el key del archivo"]));
     }
 
-    const entry = await getKardexById(Number(id));
+    const entry = await getKardexById(id);
     if (!entry || !entry.media) {
       return res.status(404).json(createTResult(null, ["Registro o media no encontrada"]));
     }
@@ -156,7 +151,7 @@ export const deleteMedia = async (req: Request, res: Response) => {
       return mKey !== String(key);
     });
     
-    await updateKardexMedia(Number(id), updatedMedia);
+    await updateKardexMedia(id, updatedMedia);
 
     return res.status(200).json(createTResult(true));
   } catch (error: any) {

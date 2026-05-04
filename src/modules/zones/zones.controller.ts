@@ -14,7 +14,7 @@ export const getZonesDataTable = async (req: Request, res: Response) => {
 export const getZones = async (req: Request, res: Response) => {
   try {
     const { clientId } = req.params;
-    const result = await zonesService.getZonesByClient(Number(clientId));
+    const result = await zonesService.getZonesByClient(clientId);
     return res.status(200).json(createTResult(result));
   } catch (error: any) {
     return res.status(500).json(createTResult(null, [error.message]));
@@ -33,7 +33,7 @@ export const addZone = async (req: Request, res: Response) => {
 export const putZone = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const result = await zonesService.updateZone(Number(id), req.body);
+        const result = await zonesService.updateZone(id, req.body);
         return res.status(200).json(createTResult(result));
     } catch (error: any) {
         return res.status(500).json(createTResult(null, [error.message]));
@@ -43,7 +43,7 @@ export const putZone = async (req: Request, res: Response) => {
 export const removeZone = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const result = await zonesService.deleteZone(Number(id));
+        const result = await zonesService.deleteZone(id);
         return res.status(200).json(createTResult(result));
     } catch (error: any) {
         return res.status(500).json(createTResult(null, [error.message]));

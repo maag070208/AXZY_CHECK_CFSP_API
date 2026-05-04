@@ -1,5 +1,6 @@
 import express from 'express';
 import { verifyToken } from '@src/core/utils/security';
+import { OPERATIONAL_ROLES } from '@src/core/config/constants';
 
 export default async function (
   req: express.Request,
@@ -21,7 +22,7 @@ export default async function (
     
     // Shift Validation for Guards
     const user = decoded as any; 
-    if (user.role === 'GUARD' || user.role === 'SHIFT' || user.role === 'MAINT') {
+    if (OPERATIONAL_ROLES.includes(user.role)) {
         if (user.shiftStart && user.shiftEnd) {
              const dayjs = require('dayjs');
              const customParseFormat = require('dayjs/plugin/customParseFormat');

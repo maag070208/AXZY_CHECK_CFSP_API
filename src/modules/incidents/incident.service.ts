@@ -1,6 +1,7 @@
 import { prismaClient } from "@src/core/config/database";
 import { ITDataTableFetchParams, ITDataTableResponse } from "@src/core/dto/datatable.dto";
 import { getPrismaPaginationParams } from "@src/core/utils/prisma-pagination.utils";
+import { INCIDENT_STATUS_PENDING } from "@src/core/config/constants";
 
 export const getDataTableIncidents = async (params: ITDataTableFetchParams): Promise<ITDataTableResponse<any>> => {
     const prismaParams = getPrismaPaginationParams(params);
@@ -17,9 +18,9 @@ export const getDataTableIncidents = async (params: ITDataTableFetchParams): Pro
         ];
     }
 
-    // Handle status enum (Prisma enums don't support 'contains')
-    if (params.filters.status && params.filters.status !== 'ALL') {
-        prismaParams.where.status = params.filters.status;
+    // Handle client filter
+    if (params.filters.clientId && params.filters.clientId !== 'ALL') {
+        prismaParams.where.clientId = params.filters.clientId;
     }
 
     const [rows, total] = await Promise.all([
@@ -29,7 +30,8 @@ export const getDataTableIncidents = async (params: ITDataTableFetchParams): Pro
                 guard: true,
                 resolvedBy: true,
                 category: true,
-                type: true
+                type: true,
+                client: true
             },
             orderBy: prismaParams.orderBy || { createdAt: 'desc' }
         }),
@@ -40,18 +42,25 @@ export const getDataTableIncidents = async (params: ITDataTableFetchParams): Pro
 
     return { rows, total };
 };
-import { sendIncidentEmail } from "@src/core/utils/emailSender";
+import { sendIncidentEmail, sendIncidentWhatsApp } from "@src/core/utils/emailSender";
 
 export const createIncident = async (data: {
-    guardId: number;
+    guardId: string;
     title: string;
-    categoryId?: number;
-    typeId?: number;
+    categoryId?: string;
+    typeId?: string;
     description?: string;
     media?: any;
     latitude?: number;
     longitude?: number;
+    clientId?: string;
 }) => {
+    let clientId = data.clientId;
+    if (!clientId) {
+        const guard = await prismaClient.user.findUnique({ where: { id: data.guardId } });
+        clientId = guard?.clientId || undefined;
+    }
+
     const incident = await prismaClient.incident.create({
         data: {
             guardId: data.guardId,
@@ -61,7 +70,8 @@ export const createIncident = async (data: {
             description: data.description,
             media: data.media,
             latitude: data.latitude,
-            longitude: data.longitude
+            longitude: data.longitude,
+            clientId: clientId
         }
     });
 
@@ -78,6 +88,7 @@ export const createIncident = async (data: {
             });
             if (enrichedIncident) {
                 await sendIncidentEmail(enrichedIncident, enrichedIncident.guard);
+                await sendIncidentWhatsApp(enrichedIncident, enrichedIncident.guard);
             }
         } catch (error) {
             console.error("Background incident processing error:", error);
@@ -87,7 +98,7 @@ export const createIncident = async (data: {
     return incident;
 };
 
-export const getIncidentsByGuard = async (guardId: number) => {
+export const getIncidentsByGuard = async (guardId: string) => {
     return prismaClient.incident.findMany({
         where: { guardId },
         orderBy: { createdAt: 'desc' }
@@ -97,9 +108,10 @@ export const getIncidentsByGuard = async (guardId: number) => {
 export const getIncidents = async (filters: {
     startDate?: Date;
     endDate?: Date;
-    guardId?: number;
+    guardId?: string;
     category?: string;
     title?: string;
+    clientId?: string;
 }) => {
     const whereClause: any = {};
 
@@ -115,6 +127,7 @@ export const getIncidents = async (filters: {
     if (filters.guardId) whereClause.guardId = filters.guardId;
     if (filters.category) whereClause.category = filters.category;
     if (filters.title) whereClause.title = { contains: filters.title, mode: 'insensitive' };
+    if (filters.clientId) whereClause.clientId = filters.clientId;
 
     return prismaClient.incident.findMany({
         where: whereClause,
@@ -126,7 +139,7 @@ export const getIncidents = async (filters: {
     });
 };
 
-export const resolveIncident = async (id: number, userId: number) => {
+export const resolveIncident = async (id: string, userId: string) => {
     return prismaClient.incident.update({
         where: { id },
         data: {
@@ -144,25 +157,25 @@ export const resolveIncident = async (id: number, userId: number) => {
 export const getPendingIncidentsCount = async () => {
     return prismaClient.incident.count({
         where: {
-            status: 'PENDING'
+            status: INCIDENT_STATUS_PENDING
         }
     });
 };
 
-export const getIncidentById = async (id: number) => {
+export const getIncidentById = async (id: string) => {
     return prismaClient.incident.findUnique({
         where: { id },
         include: { guard: true }
     });
 };
 
-export const deleteIncident = async (id: number) => {
+export const deleteIncident = async (id: string) => {
     return prismaClient.incident.delete({
         where: { id }
     });
 };
 
-export const updateIncidentMedia = async (id: number, media: any[]) => {
+export const updateIncidentMedia = async (id: string, media: any[]) => {
     return prismaClient.incident.update({
         where: { id },
         data: { media }

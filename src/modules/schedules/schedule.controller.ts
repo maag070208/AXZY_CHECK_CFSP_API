@@ -36,7 +36,7 @@ export const create = async (req: Request, res: Response) => {
 export const update = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const data = await updateSchedule(Number(id), req.body);
+        const data = await updateSchedule(id, req.body);
         return res.status(200).json(createTResult(data));
     } catch (error: any) {
         if (error.code === 'P2002') {
@@ -49,7 +49,7 @@ export const update = async (req: Request, res: Response) => {
 export const remove = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        await deleteSchedule(Number(id));
+        await deleteSchedule(id);
         return res.status(200).json(createTResult(true));
     } catch (error: any) {
         if (error.code === 'P2003') {

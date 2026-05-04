@@ -29,8 +29,8 @@ export const addLocation = async (req: Request, res: Response) => {
     }
 
     const locationData = { 
-        clientId: Number(clientId), 
-        zoneId: zoneId ? Number(zoneId) : undefined,
+        clientId: clientId, 
+        zoneId: zoneId || undefined,
         aisle: aisle || '', 
         spot: spot || '', 
         number: number || '', 
@@ -53,9 +53,9 @@ export const putLocation = async (req: Request, res: Response) => {
             return res.status(400).json(createTResult(null, ["Client ID is required"]));
         }
 
-        const location = await locationsService.updateLocation(Number(id), { 
-            clientId: Number(clientId), 
-            zoneId: zoneId ? Number(zoneId) : undefined,
+        const location = await locationsService.updateLocation(id, { 
+            clientId: clientId, 
+            zoneId: zoneId || undefined,
             aisle, 
             spot, 
             number, 
@@ -70,7 +70,7 @@ export const putLocation = async (req: Request, res: Response) => {
 export const removeLocation = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const location = await locationsService.deleteLocation(Number(id));
+        const location = await locationsService.deleteLocation(id);
         return res.status(200).json(createTResult(location));
     } catch (error: any) {
         return res.status(500).json(createTResult(null, error.message || "Error eliminando zona"));

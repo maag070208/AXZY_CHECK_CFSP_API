@@ -23,7 +23,7 @@ export const createIncidentCategory = async (req: Request, res: Response) => {
 
 export const updateIncidentCategory = async (req: Request, res: Response) => {
     try {
-        const data = await SettingsService.updateIncidentCategory(Number(req.params.id), req.body);
+        const data = await SettingsService.updateIncidentCategory(req.params.id, req.body);
         res.status(200).json(createTResult(data));
     } catch (error: any) {
         res.status(500).json(createTResult(null, [error.message]));
@@ -32,7 +32,7 @@ export const updateIncidentCategory = async (req: Request, res: Response) => {
 
 export const deleteIncidentCategory = async (req: Request, res: Response) => {
     try {
-        await SettingsService.deleteIncidentCategory(Number(req.params.id));
+        await SettingsService.deleteIncidentCategory(req.params.id);
         res.status(200).json(createTResult(true));
     } catch (error: any) {
         res.status(500).json(createTResult(null, [error.message]));
@@ -60,7 +60,7 @@ export const createIncidentType = async (req: Request, res: Response) => {
 
 export const updateIncidentType = async (req: Request, res: Response) => {
     try {
-        const data = await SettingsService.updateIncidentType(Number(req.params.id), req.body);
+        const data = await SettingsService.updateIncidentType(req.params.id, req.body);
         res.status(200).json(createTResult(data));
     } catch (error: any) {
         res.status(500).json(createTResult(null, [error.message]));
@@ -69,7 +69,7 @@ export const updateIncidentType = async (req: Request, res: Response) => {
 
 export const deleteIncidentType = async (req: Request, res: Response) => {
     try {
-        await SettingsService.deleteIncidentType(Number(req.params.id));
+        await SettingsService.deleteIncidentType(req.params.id);
         res.status(200).json(createTResult(true));
     } catch (error: any) {
         res.status(500).json(createTResult(null, [error.message]));
