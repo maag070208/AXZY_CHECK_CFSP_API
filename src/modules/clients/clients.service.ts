@@ -31,6 +31,18 @@ export const getDataTableClients = async (body: any) => {
     return { rows, total };
 };
 
+export const getClientById = async (id: string) => {
+    return prisma.client.findUnique({
+        where: { id },
+        include: {
+            users: {
+                where: { role: { name: ROLE_CLIENT } },
+                select: { id: true, username: true }
+            }
+        }
+    });
+};
+
 export const getAllClients = async () => {
     return prisma.client.findMany({
         where: { active: true, softDelete: false },

@@ -1,6 +1,13 @@
 import { createTResult } from "@src/core/mappers/tresult.mapper";
 import { Request, Response } from "express";
-import { createClient, deleteClient, getAllClients, getDataTableClients, updateClient } from "./clients.service";
+import {
+  createClient,
+  deleteClient,
+  getAllClients,
+  getClientById,
+  getDataTableClients,
+  updateClient,
+} from "./clients.service";
 
 export const getDataTable = async (req: Request, res: Response) => {
   try {
@@ -20,6 +27,16 @@ export const getClients = async (req: Request, res: Response) => {
   }
 };
 
+export const getById = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const result = await getClientById(id);
+    return res.status(200).json(createTResult(result));
+  } catch (error: any) {
+    return res.status(500).json(createTResult(null, error.message));
+  }
+};
+
 export const addClient = async (req: Request, res: Response) => {
   try {
     const client = await createClient(req.body);
@@ -30,21 +47,23 @@ export const addClient = async (req: Request, res: Response) => {
 };
 
 export const putClient = async (req: Request, res: Response) => {
-    try {
-        const { id } = req.params;
-        const client = await updateClient(id, req.body);
-        return res.status(200).json(createTResult(client));
-    } catch (error: any) {
-        return res.status(500).json(createTResult(null, error.message));
-    }
+  try {
+    const { id } = req.params;
+    const client = await updateClient(id, req.body);
+    return res.status(200).json(createTResult(client));
+  } catch (error: any) {
+    return res.status(500).json(createTResult(null, error.message));
+  }
 };
 
 export const removeClient = async (req: Request, res: Response) => {
-    try {
-        const { id } = req.params;
-        const client = await deleteClient(id);
-        return res.status(200).json(createTResult(client));
-    } catch (error: any) {
-        return res.status(500).json(createTResult(null, error.message || "Error eliminando cliente"));
-    }
+  try {
+    const { id } = req.params;
+    const client = await deleteClient(id);
+    return res.status(200).json(createTResult(client));
+  } catch (error: any) {
+    return res
+      .status(500)
+      .json(createTResult(null, error.message || "Error eliminando cliente"));
+  }
 };

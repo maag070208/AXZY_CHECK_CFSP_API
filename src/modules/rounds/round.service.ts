@@ -336,15 +336,16 @@ export const generateRoundPDF = async (
   const buffers: any[] = [];
   doc.on("data", buffers.push.bind(buffers));
 
-  const C_DARK = "#0f172a";
-  const C_PRIMARY = "#10b981";
-  const C_BLUE = "#3b82f6";
-  const C_ORANGE = "#f97316";
-  const C_RED = "#ef4444";
-  const C_GRAY = "#64748b";
-  const C_LIGHT = "#f1f5f9";
-  const C_BORDER = "#e2e8f0";
+  const C_DARK = "#1e293b"; // Slate 800
+  const C_PRIMARY = "#10b981"; // Emerald 500
+  const C_BLUE = "#3b82f6"; // Blue 500
+  const C_ORANGE = "#f59e0b"; // Amber 500
+  const C_RED = "#ef4444"; // Red 500
+  const C_GRAY = "#64748b"; // Slate 500
+  const C_LIGHT = "#f8fafc"; // Slate 50
+  const C_BORDER = "#e2e8f0"; // Slate 200
   const C_WHITE = "#ffffff";
+  const C_TEXT = "#334155"; // Slate 700
 
   const start = new Date(round.startTime);
   const end = round.endTime ? new Date(round.endTime) : new Date();
@@ -381,30 +382,34 @@ export const generateRoundPDF = async (
   const avgStr = `${Math.floor(avgMs / 60000)}m ${Math.floor((avgMs % 60000) / 1000)}s`;
 
   // ─── Header ─────────────────────────────────────────────────────────
-  doc.rect(0, 0, 612, 90).fillColor(C_DARK).fill();
+  doc.rect(0, 0, 612, 90).fillColor(C_WHITE).fill();
+  doc.moveTo(0, 90).lineTo(612, 90).strokeColor(C_BORDER).lineWidth(0.5).stroke();
+
   const logoPath = path.join(process.cwd(), "src/assets/logo_fansal.png");
   if (fs.existsSync(logoPath)) {
     doc.image(logoPath, 24, 18, { height: 54 });
   }
   doc
-    .fillColor(C_PRIMARY)
+    .fillColor(C_DARK)
     .font("Helvetica-Bold")
     .fontSize(18)
-    .text("FANSAL", 90, 22);
+    .text("FANSAL", 94, 28);
   doc
-    .fillColor("#94a3b8")
+    .fillColor(C_GRAY)
     .font("Helvetica")
     .fontSize(8)
-    .text("Sistema de Gestión de Seguridad", 90, 44);
+    .text("Sistema de Gestión de Seguridad", 94, 48);
 
-  doc.roundedRect(430, 22, 158, 46, 8).fillColor("#1e293b").fill();
+  doc.roundedRect(430, 22, 158, 46, 8).fillColor(C_LIGHT).fill();
+  doc.roundedRect(430, 22, 158, 46, 8).lineWidth(1).strokeColor(C_BORDER).stroke();
+
   doc
-    .fillColor(C_PRIMARY)
+    .fillColor(C_DARK)
     .font("Helvetica-Bold")
     .fontSize(8)
     .text("REPORTE DE RONDA", 438, 30, { width: 142, align: "center" });
   doc
-    .fillColor(C_WHITE)
+    .fillColor(C_GRAY)
     .font("Helvetica")
     .fontSize(7)
     .text(
@@ -659,19 +664,21 @@ export const generateRoundPDF = async (
   const totalPages = doc.bufferedPageRange().count;
   for (let i = 0; i < totalPages; i++) {
     doc.switchToPage(i);
-    doc.rect(0, 752, 612, 40).fillColor(C_DARK).fill();
+    doc.rect(0, 752, 612, 40).fillColor(C_WHITE).fill();
+    doc.moveTo(0, 752).lineTo(612, 752).strokeColor(C_BORDER).lineWidth(0.5).stroke();
+
     doc
-      .fillColor("#94a3b8")
+      .fillColor(C_GRAY)
       .font("Helvetica")
       .fontSize(7)
       .text("FANSAL — Sistema de Gestión de Seguridad", 24, 763);
     doc
-      .fillColor("#94a3b8")
+      .fillColor(C_GRAY)
       .font("Helvetica-Bold")
       .fontSize(7)
       .text("powered by axzy.dev", 24, 775);
     doc
-      .fillColor("#94a3b8")
+      .fillColor(C_GRAY)
       .font("Helvetica")
       .fontSize(7)
       .text(`Página ${i + 1} de ${totalPages}`, 0, 763, {
@@ -679,7 +686,7 @@ export const generateRoundPDF = async (
         width: 612,
       });
     doc
-      .fillColor("#94a3b8")
+      .fillColor(C_GRAY)
       .font("Helvetica")
       .fontSize(7)
       .text(`Generado: ${new Date().toLocaleString("es-MX")}`, 24, 775, {

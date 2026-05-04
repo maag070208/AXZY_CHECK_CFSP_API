@@ -287,12 +287,12 @@ export const createUser = async (req: Request, res: Response) => {
       username,
 
       password: hashed,
-      roleId: roleId as string,
+      roleId: roleId === "" ? null : (roleId as string),
       role,
       shiftStart,
       shiftEnd,
-      scheduleId: scheduleId as string,
-      clientId: clientId as string,
+      scheduleId: scheduleId === "" ? null : (scheduleId as string),
+      clientId: clientId === "" ? null : (clientId as string),
     });
 
     return res.status(201).json(createTResult(user));
@@ -347,8 +347,8 @@ export const updateUserProfile = async (req: Request, res: Response) => {
       role,
       shiftStart,
       shiftEnd,
-      scheduleId: scheduleId as string,
-      clientId: clientId as string,
+      scheduleId: scheduleId === "" ? null : (scheduleId as string),
+      clientId: clientId === "" ? null : (clientId as string),
       ...(active !== undefined && { active }),
     });
 
