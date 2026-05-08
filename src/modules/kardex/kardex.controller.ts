@@ -1,16 +1,35 @@
 import { Request, Response } from "express";
 import { createTResult } from "@src/core/mappers/tresult.mapper";
-import { registerCheck, getKardex, getKardexById, updateKardex, getDataTableKardex, deleteKardex, updateKardexMedia } from "./kardex.service";
+import {
+  registerCheck,
+  getKardex,
+  getKardexById,
+  updateKardex,
+  getDataTableKardex,
+  deleteKardex,
+  updateKardexMedia,
+} from "./kardex.service";
 import { StorageService } from "../storage/storage.service";
+import { logger } from "@src/core/utils/logger";
 
 const storageService = new StorageService();
 
 export const createKardexEntry = async (req: Request, res: Response) => {
   try {
-    const { userId, locationId, notes, media, latitude, longitude, assignmentId } = req.body;
+    const {
+      userId,
+      locationId,
+      notes,
+      media,
+      latitude,
+      longitude,
+      assignmentId,
+    } = req.body;
 
     if (!userId || !locationId) {
-      return res.status(400).json(createTResult(null, ["userId and locationId are required"]));
+      return res
+        .status(400)
+        .json(createTResult(null, ["userId and locationId are required"]));
     }
 
     const entry = await registerCheck({
@@ -71,7 +90,9 @@ export const getKardexDetail = async (req: Request, res: Response) => {
     const entry = await getKardexById(id);
 
     if (!entry) {
-      return res.status(404).json(createTResult(null, ["Kardex entry not found"]));
+      return res
+        .status(404)
+        .json(createTResult(null, ["Kardex entry not found"]));
     }
 
     return res.status(200).json(createTResult(entry));
@@ -80,7 +101,10 @@ export const getKardexDetail = async (req: Request, res: Response) => {
   }
 };
 
-export const getDataTableKardexEntries = async (req: Request, res: Response) => {
+export const getDataTableKardexEntries = async (
+  req: Request,
+  res: Response,
+) => {
   try {
     const { page, limit, filters, sort } = req.body;
 
@@ -93,7 +117,7 @@ export const getDataTableKardexEntries = async (req: Request, res: Response) => 
 
     return res.status(200).json(createTResult(result));
   } catch (error: any) {
-    console.error(error);
+    logger.error("Error in getDataTableKardexEntries:", error);
     return res.status(500).json(createTResult(null, error.message));
   }
 };
@@ -102,9 +126,11 @@ export const deleteKardexEntry = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const entry = await getKardexById(id);
-    
+
     if (!entry) {
-      return res.status(404).json(createTResult(null, ["Registro no encontrado"]));
+      return res
+        .status(404)
+        .json(createTResult(null, ["Registro no encontrado"]));
     }
 
     /* 
@@ -125,12 +151,16 @@ export const deleteMedia = async (req: Request, res: Response) => {
     const { key } = req.query;
 
     if (!key) {
-      return res.status(400).json(createTResult(null, ["Falta el key del archivo"]));
+      return res
+        .status(400)
+        .json(createTResult(null, ["Falta el key del archivo"]));
     }
 
     const entry = await getKardexById(id);
     if (!entry || !entry.media) {
-      return res.status(404).json(createTResult(null, ["Registro o media no encontrada"]));
+      return res
+        .status(404)
+        .json(createTResult(null, ["Registro o media no encontrada"]));
     }
 
     // 1. Delete from S3
@@ -139,7 +169,7 @@ export const deleteMedia = async (req: Request, res: Response) => {
       try {
         await storageService.deleteFile(bucketName, String(key));
       } catch (err) {
-        console.error("Error deleting from S3:", err);
+        logger.error("Error deleting from S3:", err);
       }
     }
 
@@ -147,10 +177,11 @@ export const deleteMedia = async (req: Request, res: Response) => {
     const media = entry.media as any[];
     const updatedMedia = media.filter((m: any) => {
       if (!m) return false;
-      const mKey = m.key || (typeof m.url === 'string' ? m.url.split('/').pop() : null);
+      const mKey =
+        m.key || (typeof m.url === "string" ? m.url.split("/").pop() : null);
       return mKey !== String(key);
     });
-    
+
     await updateKardexMedia(id, updatedMedia);
 
     return res.status(200).json(createTResult(true));

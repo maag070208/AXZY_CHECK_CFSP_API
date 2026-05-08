@@ -3,18 +3,23 @@ import { ITDataTableFetchParams, ITDataTableResponse } from "@src/core/dto/datat
 import { getPrismaPaginationParams } from "@src/core/utils/prisma-pagination.utils";
 
 export const getDataTableSchedules = async (params: ITDataTableFetchParams): Promise<ITDataTableResponse<any>> => {
-    const prismaParams = getPrismaPaginationParams(params);
+    const prismaParams = getPrismaPaginationParams(params || { page: 1, limit: 10, filters: {} });
 
     const [rows, total] = await Promise.all([
         prismaClient.schedule.findMany({
             ...prismaParams,
+            include: {
+                _count: {
+                    select: { users: true }
+                }
+            }
         }),
         prismaClient.schedule.count({
             where: prismaParams.where
         })
     ]);
 
-    return { rows, total };
+    return { rows: rows as any, total };
 };
 
 export const getSchedules = async () => {
@@ -49,5 +54,18 @@ export const updateSchedule = async (id: string, data: {
 export const deleteSchedule = async (id: string) => {
     return prismaClient.schedule.delete({
         where: { id }
+    });
+};
+
+export const getUsersBySchedule = async (scheduleId: string) => {
+    return prismaClient.user.findMany({
+        where: { scheduleId, softDelete: false },
+        select: {
+            id: true,
+            name: true,
+            lastName: true,
+            username: true,
+            active: true
+        }
     });
 };

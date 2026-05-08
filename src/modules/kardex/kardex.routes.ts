@@ -4,12 +4,14 @@ import { authenticate } from "../common/middlewares/auth.middleware";
 
 const router = Router();
 
-router.post("/", authenticate, createKardexEntry);
-router.get("/", authenticate, getKardexEntries);
-router.get("/:id", authenticate, getKardexDetail);
-router.patch("/:id", authenticate, updateKardexEntry);
-router.delete("/:id", authenticate, deleteKardexEntry);
-router.delete("/:id/media", authenticate, deleteMedia);
-router.post("/datatable", authenticate, getDataTableKardexEntries);
+router.use(authenticate);
+
+router.post("/", createKardexEntry);
+router.get("/", getKardexEntries);
+router.get("/:id", getKardexDetail);
+router.patch("/:id", updateKardexEntry);
+router.delete("/:id", deleteKardexEntry);
+router.delete("/:id/media", deleteMedia);
+router.post("/datatable", getDataTableKardexEntries);
 
 export default router;

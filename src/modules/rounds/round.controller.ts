@@ -1,6 +1,7 @@
-import { Request, Response } from 'express';
-import * as roundService from './round.service';
+import { Request, Response } from "express";
+import * as roundService from "./round.service";
 import { createTResult } from "@src/core/mappers/tresult.mapper";
+import { StorageService } from "../storage/storage.service";
 
 export const getDataTable = async (req: Request, res: Response) => {
   try {
@@ -17,10 +18,13 @@ export const startRound = async (req: Request, res: Response) => {
   const user = (req as any).user;
   const targetGuardId = user?.id || guardId;
 
-  const result = await roundService.startRound(String(targetGuardId), clientId as string, recurringConfigurationId as string);
+  const result = await roundService.startRound(
+    String(targetGuardId),
+    clientId as string,
+    recurringConfigurationId as string,
+  );
   return res.status(result.success ? 200 : 400).json(result);
 };
-
 
 export const endRound = async (req: Request, res: Response) => {
   const { id } = req.params;
@@ -31,41 +35,68 @@ export const endRound = async (req: Request, res: Response) => {
 export const getCurrentRound = async (req: Request, res: Response) => {
   const userId = (req as any).user?.id;
   if (!userId) {
-      return res.status(401).json({ success: false, message: 'No autorizado' });
+    return res.status(401).json({ success: false, message: "No autorizado" });
   }
   const result = await roundService.getCurrentRound(String(userId));
   return res.status(result.success ? 200 : 400).json(result);
 };
 
 export const getRounds = async (req: Request, res: Response) => {
-    // Optional filters like date, or guardId
-    const { date, guardId } = req.query;
-    const user = (req as any).user;
-    const result = await roundService.getRounds(
-        date ? String(date) : undefined, 
-        guardId as string,
-        user
-    );
-    return res.status(result.success ? 200 : 500).json(result);
+  // Optional filters like date, or guardId
+  const { date, guardId, status } = req.query;
+  const user = (req as any).user;
+  const result = await roundService.getRounds(
+    date ? String(date) : undefined,
+    guardId as string,
+    user,
+    status as string,
+  );
+  return res.status(result.success ? 200 : 500).json(result);
 };
 
 export const getRoundDetail = async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const user = (req as any).user;
-    const result = await roundService.getRoundDetail(id, user);
-    return res.status(result.success ? 200 : 404).json(result);
+  const { id } = req.params;
+  const user = (req as any).user;
+  const result = await roundService.getRoundDetail(id, user);
+  return res.status(result.success ? 200 : 404).json(result);
 };
 
 export const generateReport = async (req: Request, res: Response) => {
-    try {
-        const { id } = req.params;
-        const user = (req as any).user;
-        const buffer = await roundService.generateRoundPDF(id, user);
-        
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=Ronda_${id}.pdf`);
-        return res.send(buffer);
-    } catch (error: any) {
-        return res.status(500).json(createTResult(null, error.message));
-    }
+  try {
+    const { id } = req.params;
+    const user = (req as any).user;
+    const buffer = await roundService.generateRoundPDF(id, user);
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=Ronda_${id}.pdf`,
+    );
+    return res.send(buffer);
+  } catch (error: any) {
+    return res.status(500).json(createTResult(null, error.message));
+  }
+};
+
+export const shareReport = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = (req as any).user;
+    const buffer = await roundService.generateRoundPDF(id, user);
+
+    const storage = new StorageService();
+    const bucket = process.env.AWS_BUCKET_NAME || "cfsp-s3-bucket-prod";
+    const key = `reports/round_${id}_${Date.now()}.pdf`;
+
+    await storage.uploadBuffer(buffer, bucket, key, "application/pdf");
+
+    // We could use a signed URL or a public one if the bucket is public.
+    // Given the previous conversation, let's use a signed URL for security,
+    // but with a long expiration for sharing (e.g. 24 hours).
+    const url = await storage.getSignedReadUrl(bucket, key, 86400); // 24 hours
+
+    return res.status(200).json(createTResult(url));
+  } catch (error: any) {
+    return res.status(500).json(createTResult(null, error.message));
+  }
 };

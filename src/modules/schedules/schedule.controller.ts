@@ -1,6 +1,6 @@
 import { createTResult } from "@src/core/mappers/tresult.mapper";
 import { Request, Response } from "express";
-import { createSchedule, deleteSchedule, getDataTableSchedules, getSchedules, updateSchedule } from "./schedule.service";
+import { createSchedule, deleteSchedule, getDataTableSchedules, getSchedules, getUsersBySchedule, updateSchedule } from "./schedule.service";
 
 export const getDataTable = async (req: Request, res: Response) => {
     try {
@@ -55,6 +55,16 @@ export const remove = async (req: Request, res: Response) => {
         if (error.code === 'P2003') {
             return res.status(400).json(createTResult(null, ['Este horario está asignado a uno o más guardias y no puede ser eliminado.']));
         }
+        return res.status(500).json(createTResult(null, error.message));
+    }
+};
+
+export const getUsers = async (req: Request, res: Response) => {
+    try {
+        const { id } = req.params;
+        const data = await getUsersBySchedule(id);
+        return res.status(200).json(createTResult(data));
+    } catch (error: any) {
         return res.status(500).json(createTResult(null, error.message));
     }
 };

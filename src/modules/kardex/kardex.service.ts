@@ -214,6 +214,14 @@ export const getDataTableKardex = async (params: {
     where.userId = filters.userId;
   }
 
+  if (filters.locationId) {
+    where.locationId = filters.locationId;
+  }
+
+  if (filters.clientId) {
+    where.location = { clientId: filters.clientId };
+  }
+
   if (filters.search) {
     where.user = {
       OR: [
@@ -236,19 +244,21 @@ export const getDataTableKardex = async (params: {
     }
   }
 
-  const orderBy: any = {};
+  const orderBy: any = [];
   if (sort && sort.key) {
     // Basic mapping for related fields if needed
     if (sort.key === "user") {
-      orderBy.user = { name: sort.order };
+      orderBy.push({ user: { name: sort.order } });
     } else if (sort.key === "location") {
-      orderBy.location = { name: sort.order };
+      orderBy.push({ location: { name: sort.order } });
     } else {
-      orderBy[sort.key] = sort.order;
+      orderBy.push({ [sort.key]: sort.order });
     }
   } else {
-    orderBy.timestamp = "desc";
+    orderBy.push({ timestamp: "desc" });
   }
+  // Primary key as secondary sort for stability
+  orderBy.push({ id: "desc" });
 
   const [rows, total] = await Promise.all([
     prismaClient.kardex.findMany({

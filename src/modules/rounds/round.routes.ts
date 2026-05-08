@@ -14,5 +14,6 @@ router.post('/datatable', roundController.getDataTable);
 router.get('/', roundController.getRounds);
 router.get('/:id', roundController.getRoundDetail);
 router.get('/:id/report', roundController.generateReport);
+router.get('/:id/share', roundController.shareReport);
 
 export default router;

@@ -1,7 +1,11 @@
 import { Router } from "express";
 import * as SettingsController from "./settings.controller";
 
+import { authenticate } from "../common/middlewares/auth.middleware";
+
 const router = Router();
+
+router.use(authenticate);
 
 // Incident Categories
 router.post("/categories/datatable", SettingsController.getPaginatedIncidentCategories);

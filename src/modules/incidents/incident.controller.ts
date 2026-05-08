@@ -2,6 +2,7 @@ import { createTResult } from "@src/core/mappers/tresult.mapper";
 import { Request, Response } from "express";
 import { StorageService } from "../storage/storage.service";
 import * as incidentService from "./incident.service";
+import { logger } from "@src/core/utils/logger";
 
 export const getDataTable = async (req: Request, res: Response) => {
   try {
@@ -16,14 +17,25 @@ const storageService = new StorageService();
 
 export const createIncident = async (req: Request, res: Response) => {
   try {
-    const { title, categoryId, typeId, description, media, latitude, longitude, clientId } = req.body;
+    const {
+      title,
+      categoryId,
+      typeId,
+      description,
+      media,
+      latitude,
+      longitude,
+      clientId,
+    } = req.body;
     // @ts-ignore
     const guardId = req.user?.id;
 
     if (!guardId) {
-        return res.status(401).json(createTResult(null, ["Usuario no autenticado"]));
+      return res
+        .status(401)
+        .json(createTResult(null, ["Usuario no autenticado"]));
     }
-    console.log("body", req.body);
+    logger.debug("Creating incident with body:", req.body);
     // Media is now passed as an array of objects { type, url, key }
     const mediaFiles = media || [];
 
@@ -36,7 +48,7 @@ export const createIncident = async (req: Request, res: Response) => {
       media: mediaFiles.length > 0 ? mediaFiles : undefined,
       latitude: latitude ? Number(latitude) : undefined,
       longitude: longitude ? Number(longitude) : undefined,
-      clientId: clientId as string
+      clientId: clientId as string,
     });
 
     return res.status(201).json(createTResult(result));
@@ -46,104 +58,113 @@ export const createIncident = async (req: Request, res: Response) => {
 };
 
 export const getIncidents = async (req: Request, res: Response) => {
-    try {
-        const { startDate, endDate, guardId, category, title } = req.query;
+  try {
+    const { startDate, endDate, guardId, category, title } = req.query;
 
-        const filters: any = {};
-        if (startDate) filters.startDate = new Date(String(startDate));
-        if (endDate) filters.endDate = new Date(String(endDate));
-        if (guardId) filters.guardId = guardId as string;
-        if (category) filters.category = String(category);
-        if (title) filters.title = String(title);
+    const filters: any = {};
+    if (startDate) filters.startDate = new Date(String(startDate));
+    if (endDate) filters.endDate = new Date(String(endDate));
+    if (guardId) filters.guardId = guardId as string;
+    if (category) filters.category = String(category);
+    if (title) filters.title = String(title);
 
-        const result = await incidentService.getIncidents(filters);
-        return res.status(200).json(createTResult(result));
-    } catch (error: any) {
-        return res.status(500).json(createTResult(null, error.message));
-    }
+    const result = await incidentService.getIncidents(filters);
+    return res.status(200).json(createTResult(result));
+  } catch (error: any) {
+    return res.status(500).json(createTResult(null, error.message));
+  }
 };
 
 export const resolveIncident = async (req: Request, res: Response) => {
-    try {
-        const { id } = req.params;
-        // @ts-ignore
-        const userId = req.user?.id;
+  try {
+    const { id } = req.params;
+    // @ts-ignore
+    const userId = req.user?.id;
 
-        if (!userId) {
-            return res.status(401).json(createTResult(null, ["Usuario no autenticado"]));
-        }
-
-        const result = await incidentService.resolveIncident(id, userId as string);
-        return res.status(200).json(createTResult(result));
-    } catch (error: any) {
-        return res.status(500).json(createTResult(null, error.message));
+    if (!userId) {
+      return res
+        .status(401)
+        .json(createTResult(null, ["Usuario no autenticado"]));
     }
+
+    const result = await incidentService.resolveIncident(id, userId as string);
+    return res.status(200).json(createTResult(result));
+  } catch (error: any) {
+    return res.status(500).json(createTResult(null, error.message));
+  }
 };
 
 export const getPendingCount = async (req: Request, res: Response) => {
-    try {
-        const count = await incidentService.getPendingIncidentsCount();
-        return res.status(200).json(createTResult({ count }));
-    } catch (error: any) {
-        return res.status(500).json(createTResult(null, error.message));
-    }
+  try {
+    const count = await incidentService.getPendingIncidentsCount();
+    return res.status(200).json(createTResult({ count }));
+  } catch (error: any) {
+    return res.status(500).json(createTResult(null, error.message));
+  }
 };
 
 export const deleteIncident = async (req: Request, res: Response) => {
-    try {
-        const { id } = req.params;
-        const incident = await incidentService.getIncidentById(id);
-        if (!incident) {
-            return res.status(404).json(createTResult(null, ["Incidencia no encontrada"]));
-        }
+  try {
+    const { id } = req.params;
+    const incident = await incidentService.getIncidentById(id);
+    if (!incident) {
+      return res
+        .status(404)
+        .json(createTResult(null, ["Incidencia no encontrada"]));
+    }
 
-        /* 
+    /* 
         NOTE: User requested NOT to delete files from S3 when deleting the incident record.
         Files are only deleted via deleteMedia (individual deletion).
         */
 
-        await incidentService.deleteIncident(id);
-        return res.status(200).json(createTResult(true));
-    } catch (error: any) {
-        return res.status(500).json(createTResult(null, error.message));
-    }
+    await incidentService.deleteIncident(id);
+    return res.status(200).json(createTResult(true));
+  } catch (error: any) {
+    return res.status(500).json(createTResult(null, error.message));
+  }
 };
 
 export const deleteMedia = async (req: Request, res: Response) => {
-    try {
-        const { id } = req.params;
-        const { key } = req.query; // Key of the file in S3
+  try {
+    const { id } = req.params;
+    const { key } = req.query; // Key of the file in S3
 
-        if (!key) {
-            return res.status(400).json(createTResult(null, ["Falta el key del archivo"]));
-        }
-
-        const incident = await incidentService.getIncidentById(id);
-        if (!incident || !incident.media) {
-            return res.status(404).json(createTResult(null, ["Incidencia o media no encontrada"]));
-        }
-
-        // 1. Delete from S3
-        const bucketName = process.env.AWS_BUCKET_NAME;
-        if (bucketName) {
-            try {
-                await storageService.deleteFile(bucketName, String(key));
-            } catch (s3Err) {
-                console.error("Scale error deleting from S3:", s3Err);
-            }
-        }
-
-        // 2. Update DB
-        const media = incident.media as any[];
-        const updatedMedia = media.filter((m: any) => {
-            if (!m) return false;
-            const mKey = m.key || (typeof m.url === 'string' ? m.url.split('/').pop() : null);
-            return mKey !== String(key);
-        });
-        await incidentService.updateIncidentMedia(id, updatedMedia);
-
-        return res.status(200).json(createTResult(true));
-    } catch (error: any) {
-        return res.status(500).json(createTResult(null, error.message));
+    if (!key) {
+      return res
+        .status(400)
+        .json(createTResult(null, ["Falta el key del archivo"]));
     }
+
+    const incident = await incidentService.getIncidentById(id);
+    if (!incident || !incident.media) {
+      return res
+        .status(404)
+        .json(createTResult(null, ["Incidencia o media no encontrada"]));
+    }
+
+    // 1. Delete from S3
+    const bucketName = process.env.AWS_BUCKET_NAME;
+    if (bucketName) {
+      try {
+        await storageService.deleteFile(bucketName, String(key));
+      } catch (s3Err) {
+        logger.error("Error deleting from S3:", s3Err);
+      }
+    }
+
+    // 2. Update DB
+    const media = incident.media as any[];
+    const updatedMedia = media.filter((m: any) => {
+      if (!m) return false;
+      const mKey =
+        m.key || (typeof m.url === "string" ? m.url.split("/").pop() : null);
+      return mKey !== String(key);
+    });
+    await incidentService.updateIncidentMedia(id, updatedMedia);
+
+    return res.status(200).json(createTResult(true));
+  } catch (error: any) {
+    return res.status(500).json(createTResult(null, error.message));
+  }
 };

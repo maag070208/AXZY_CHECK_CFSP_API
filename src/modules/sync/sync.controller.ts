@@ -21,6 +21,7 @@ export const push = async (req: Request, res: Response) => {
     const result = await syncService.pushChanges({ changes });
     res.json(createTResult(result));
   } catch (error: any) {
+    console.error("SYNC PUSH ERROR:", error);
     res.status(500).json(createTResult(null, [error.message]));
   }
 };

@@ -13,7 +13,8 @@ export const getDataTable = async (req: Request, res: Response) => {
 
 export const getLocations = async (req: Request, res: Response) => {
   try {
-    const locations = await locationsService.getAllLocations();
+    const { clientId } = req.query;
+    const locations = await locationsService.getAllLocations(clientId as string);
     return res.status(200).json(createTResult(locations));
   } catch (error: any) {
     return res.status(500).json(createTResult(null, error.message));
@@ -24,10 +25,6 @@ export const addLocation = async (req: Request, res: Response) => {
   try {
     const { clientId, name, zoneId, aisle, spot, number } = req.body;
     
-    if (!clientId) {
-        return res.status(400).json(createTResult(null, ["Client ID es requerido"]));
-    }
-
     const locationData = { 
         clientId: clientId, 
         zoneId: zoneId || undefined,
@@ -47,19 +44,16 @@ export const addLocation = async (req: Request, res: Response) => {
 export const putLocation = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        const { clientId, zoneId, aisle, spot, number, name } = req.body;
+        const { clientId, zoneId, aisle, spot, number, name, active } = req.body;
         
-        if (!clientId) {
-            return res.status(400).json(createTResult(null, ["Client ID is required"]));
-        }
-
         const location = await locationsService.updateLocation(id, { 
-            clientId: clientId, 
+            clientId: clientId || undefined, 
             zoneId: zoneId || undefined,
             aisle, 
             spot, 
             number, 
-            name 
+            name,
+            active
         });
         return res.status(200).json(createTResult(location));
     } catch (error: any) {

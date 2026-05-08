@@ -1,852 +1,1143 @@
 openapi: 3.0.3
 
 info:
-  title: AXZY PARKING API
-  description: API para control de estacionamiento, entradas, salidas, movimientos y evidencia.
-  version: 1.0.0
+  title: AXZY CHECK API
+  description: Documentación técnica completa de la API de AXZY CHECK. Cubre gestión operativa, administrativa y analítica.
+  version: 1.3.2
 
 servers:
   - url: http://localhost:4444/api/v1
     description: Local server
 
 tags:
+  - name: auth
+    description: Control de acceso
   - name: users
-    description: Gestión de usuarios y roles
+    description: Personal y administración
+  - name: clients
+    description: Empresas clientes
+  - name: zones
+    description: Áreas/Zonas geográficas
   - name: locations
-    description: Gestión de cajones de estacionamiento
-  - name: uploads
-    description: Carga de archivos
-  - name: kardex
-    description: Registro de rondines y evidencia
-  - name: schedules
-    description: Gestión de horarios de trabajo
+    description: Puntos de control / Spots
   - name: assignments
-    description: Control de tareas y zonas asignadas
+    description: Órdenes de trabajo y tareas
   - name: rounds
-    description: Seguimiento de recorridos de seguridad
+    description: Recorridos de seguridad
   - name: incidents
-    description: Reporte de anomalías detectadas
+    description: Gestión de anomalías
   - name: maintenance
-    description: Solicitudes y seguimiento de mantenimiento
-  - name: properties
-    description: Gestión de casas y departamentos
-  - name: residents
-    description: Gestión de perfiles de residentes y sus accesos
-
-
+    description: Soporte técnico
+  - name: schedules
+    description: Horarios y turnos
+  - name: kardex
+    description: Bitácora de actividad
+  - name: reports
+    description: Analítica y KPIs
+  - name: settings
+    description: Configuración maestra y catálogos
+  - name: sync
+    description: Sincronización móvil offline
+  - name: recurring
+    description: Tareas recurrentes
+  - name: catalog
+    description: Listas rápidas de sistema
+  - name: home
+    description: Métricas y dashboard de inicio
 
 paths:
-
-  ###########################################################################
-  # USERS
-  ###########################################################################
-  /users:
+  # --- HOME / DASHBOARD ---
+  /home/stats:
     get:
-      tags: [users]
-      summary: Obtener todos los usuarios
+      tags: [home]
+      summary: Obtener métricas para el dashboard
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultUserArray'
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      activeRoundsCount: { type: integer }
+                      activeRounds: { type: array, items: { $ref: "#/components/schemas/Round" } }
+                      pendingIncidentsCount: { type: integer }
+                      pendingMaintenanceCount: { type: integer }
+                  messages: { type: array, items: { type: string } }
 
+  # --- AUTH ---
+  /users/login:
     post:
-      tags: [users]
-      summary: Registrar nuevo usuario
+      tags: [auth]
+      summary: Iniciar sesión
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/UserCreate'
+            schema: { $ref: "#/components/schemas/UserLogin" }
       responses:
-        "201":
-          description: Usuario creado exitosamente.
+        "200":
+          description: OK
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/TResultUser'
+              schema: { $ref: "#/components/schemas/TResultLogin" }
+
+  # --- USERS ---
+  /users:
+    get:
+      tags: [users]
+      summary: Listar usuarios
+      responses:
+        "200": { description: OK }
+    post:
+      tags: [users]
+      summary: Crear usuario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UserCreate" }
+      responses:
+        "201": { description: Creado }
 
   /users/datatable:
     post:
       tags: [users]
-      summary: Obtener usuarios paginados con filtros y ordenamiento
+      summary: Tabla paginada de usuarios
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/DataTableFetchParams'
+            schema: { $ref: "#/components/schemas/DataTableFetchParams" }
       responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultDataTable'
+        "200": { description: OK }
 
-  /users/login:
-    post:
+  /users/{id}:
+    get:
       tags: [users]
-      summary: Login
+      summary: Detalle de usuario
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+    put:
+      tags: [users]
+      summary: Actualizar usuario
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/UserLogin'
+            schema: { $ref: "#/components/schemas/UserUpdate" }
       responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultLogin'
-        "401":
-          description: Invalid credentials
+        "200": { description: OK }
+    delete:
+      tags: [users]
+      summary: Eliminar usuario
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
 
-  ###########################################################################
-  # LOCATIONS
-  ###########################################################################
+  # --- CLIENTS ---
+  /clients:
+    get:
+      tags: [clients]
+      summary: Listar clientes
+      responses:
+        "200": { description: OK }
+    post:
+      tags: [clients]
+      summary: Crear cliente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClientCreate" }
+      responses:
+        "201": { description: Creado }
+
+  /clients/datatable:
+    post:
+      tags: [clients]
+      summary: Tabla paginada de clientes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DataTableFetchParams" }
+      responses:
+        "200": { description: OK }
+
+  /clients/{id}:
+    get:
+      tags: [clients]
+      summary: Detalle de cliente
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+    put:
+      tags: [clients]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClientUpdate" }
+      responses:
+        "200": { description: OK }
+    delete:
+      tags: [clients]
+      summary: Eliminar cliente (Cascading)
+      description: Elimina físicamente el cliente y todos sus datos relacionados (Zonas, Ubicaciones, Rondas, Incidencias, Tareas). Los usuarios operativos (guardias) son desasignados (clientId = null) pero no eliminados.
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+
+  # --- ZONES ---
+  /zones:
+    post:
+      tags: [zones]
+      summary: Crear zona
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ZoneCreate" }
+      responses:
+        "201": { description: Creado }
+
+  /zones/client/{clientId}:
+    get:
+      tags: [zones]
+      summary: Listar zonas de un cliente
+      parameters:
+        - in: path
+          name: clientId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+
+  /zones/datatable:
+    post:
+      tags: [zones]
+      summary: Tabla paginada de zonas
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DataTableFetchParams" }
+      responses:
+        "200": { description: OK }
+
+  /zones/{id}:
+    put:
+      tags: [zones]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ZoneUpdate" }
+      responses:
+        "200": { description: OK }
+    delete:
+      tags: [zones]
+      summary: Eliminar zona
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+
+  # --- LOCATIONS ---
   /locations:
     get:
       tags: [locations]
-      summary: Listar locaciones
-
+      summary: Listar ubicaciones
       responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultLocationArray'
+        "200": { description: OK }
     post:
       tags: [locations]
-      summary: Crear locación
+      summary: Crear ubicación
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-               type: object
-               properties:
-                 aisle: { type: string }
-                 spot: { type: string }
-                 number: { type: string }
+            schema: { $ref: "#/components/schemas/LocationCreate" }
       responses:
-        "201":
-          description: Created
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultLocation'
+        "201": { description: Creado }
 
   /locations/datatable:
     post:
       tags: [locations]
-      summary: Obtener locaciones paginadas con filtros y ordenamiento
+      summary: Tabla paginada de ubicaciones
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DataTableFetchParams" }
+      responses:
+        "200": { description: OK }
+
+  /locations/{id}:
+    get:
+      tags: [locations]
+      summary: Detalle de ubicación
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+    put:
+      tags: [locations]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/LocationUpdate" }
+      responses:
+        "200": { description: OK }
+    delete:
+      tags: [locations]
+      summary: Eliminar ubicación (Cascading)
+      description: Elimina físicamente la ubicación y sus dependencias (Kardex, Tareas recurrentes, Tareas activas).
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+  /assignments:
+    get:
+      tags: [assignments]
+      summary: Listar todas las asignaciones
+      parameters:
+        - in: query
+          name: guardId
+          schema: { type: string, format: uuid }
+        - in: query
+          name: status
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+    post:
+      tags: [assignments]
+      summary: Crear asignación
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AssignmentCreate" }
+      responses:
+        "201": { description: Creado }
+
+  /assignments/me:
+    get:
+      tags: [assignments]
+      summary: Mis asignaciones activas (Guardia)
+      responses:
+        "200": { description: OK }
+
+  /assignments/datatable:
+    post:
+      tags: [assignments]
+      summary: Tabla paginada de asignaciones
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DataTableFetchParams" }
+      responses:
+        "200": { description: OK }
+
+  /assignments/{id}/status:
+    patch:
+      tags: [assignments]
+      summary: Actualizar estado de asignación
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/DataTableFetchParams'
+              type: object
+              properties:
+                status: { type: string, enum: [PENDING, CHECKING, COMPLETED, ANOMALY] }
+      responses:
+        "200": { description: OK }
+
+  /assignments/tasks/{taskId}/toggle:
+    patch:
+      tags: [assignments]
+      summary: Alternar check de tarea específica
+      parameters:
+        - in: path
+          name: taskId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+
+  # --- ROUNDS ---
+  /rounds/start:
+    post:
+      tags: [rounds]
+      summary: Iniciar un nuevo recorrido (Ronda)
+      description: Permite a un guardia iniciar una ronda, ya sea libre o basada en una configuración recurrente predefinida.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                guardId:
+                  type: string
+                  format: uuid
+                  description: ID del guardia que inicia la ronda (opcional si se usa token de guardia)
+                clientId:
+                  type: string
+                  format: uuid
+                  description: ID del cliente al que pertenece la ronda
+                recurringConfigurationId:
+                  type: string
+                  format: uuid
+                  description: ID de la configuración recurrente (opcional para rondas libres)
+      responses:
+        "201":
+          description: Ronda iniciada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Round"
+        "400":
+          description: Error en la solicitud (ej. ya existe una ronda activa)
+
+  /rounds/{id}/end:
+    put:
+      tags: [rounds]
+      summary: Finalizar rondín
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+
+  /rounds/current:
+    get:
+      tags: [rounds]
+      summary: Rondín actual en curso
+      responses:
+        "200": { description: OK }
+
+  /rounds/datatable:
+    post:
+      tags: [rounds]
+      summary: Tabla paginada de rondines
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DataTableFetchParams" }
+      responses:
+        "200": { description: OK }
+
+  /rounds:
+    get:
+      tags: [rounds]
+      summary: Listar rondines (con filtros)
+      parameters:
+        - in: query
+          name: date
+          schema: { type: string, format: date }
+          description: Filtro por fecha (YYYY-MM-DD)
+        - in: query
+          name: guardId
+          schema: { type: string, format: uuid }
+          description: Filtro por guardia específico
+        - in: query
+          name: status
+          schema: { type: string, enum: [IN_PROGRESS, COMPLETED] }
+          description: Filtro por estado de la ronda
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultDataTable'
+                type: array
+                items: { $ref: "#/components/schemas/Round" }
 
-  ###########################################################################
-  # UPLOADS
-  ###########################################################################
-  /uploads:
+  /rounds/{id}:
+    get:
+      tags: [rounds]
+      summary: Detalle de rondín
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+
+  /rounds/{id}/report:
+    get:
+      tags: [rounds]
+      summary: Generar reporte de rondín
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+
+  # --- INCIDENTS ---
+  /incidents:
+    get:
+      tags: [incidents]
+      summary: Listar incidencias
+      responses:
+        "200": { description: OK }
     post:
-      tags: [uploads]
-      summary: Subir archivo (Imagen o Video)
+      tags: [incidents]
+      summary: Crear reporte de incidencia
       requestBody:
         required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/IncidentCreate" }
+      responses:
+        "201": { description: Creado }
+
+  /incidents/pending-count:
+    get:
+      tags: [incidents]
+      summary: Contador de pendientes
+      responses:
+        "200": { description: OK }
+
+  /incidents/{id}/resolve:
+    put:
+      tags: [incidents]
+      summary: Marcar resuelta
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+
+  /incidents/datatable:
+    post:
+      tags: [incidents]
+      summary: Tabla paginada de incidencias
+      responses:
+        "200": { description: OK }
+
+  /incidents/{id}:
+    delete:
+      tags: [incidents]
+      summary: Eliminar incidencia
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+
+  # --- MAINTENANCE ---
+  /maintenance:
+    get:
+      tags: [maintenance]
+      summary: Listar solicitudes
+      responses:
+        "200": { description: OK }
+    post:
+      tags: [maintenance]
+      summary: Crear solicitud
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MaintenanceCreate" }
+      responses:
+        "201": { description: Creado }
+
+  /maintenance/pending-count:
+    get:
+      tags: [maintenance]
+      summary: Contador de pendientes
+      responses:
+        "200": { description: OK }
+
+  /maintenance/{id}/resolve:
+    put:
+      tags: [maintenance]
+      summary: Marcar finalizada
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+
+  /maintenance/datatable:
+    post:
+      tags: [maintenance]
+      summary: Tabla paginada de mantenimiento
+      responses:
+        "200": { description: OK }
+
+  /maintenance/{id}:
+    delete:
+      tags: [maintenance]
+      summary: Eliminar mantenimiento
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+
+  # --- SCHEDULES ---
+  /schedules:
+    get:
+      tags: [schedules]
+      summary: Listar horarios
+      responses:
+        "200": { description: OK }
+    post:
+      tags: [schedules]
+      summary: Crear horario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ScheduleCreate" }
+      responses:
+        "201": { description: Creado }
+
+  /schedules/datatable:
+    post:
+      tags: [schedules]
+      summary: Tabla paginada de horarios
+      responses:
+        "200": { description: OK }
+
+  /schedules/{id}:
+    put:
+      tags: [schedules]
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ScheduleUpdate" }
+      responses:
+        "200": { description: OK }
+    delete:
+      tags: [schedules]
+      summary: Eliminar horario
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+
+  # --- KARDEX ---
+  /kardex:
+    get:
+      tags: [kardex]
+      summary: Listar bitácora
+      responses:
+        "200": { description: OK }
+    post:
+      tags: [kardex]
+      summary: Crear registro
+      responses:
+        "201": { description: Creado }
+
+  # --- RECURRING ---
+  /recurring:
+    get:
+      tags: [recurring]
+      summary: Listar todas las configuraciones recurrentes
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/RecurringConfiguration" }
+    post:
+      tags: [recurring]
+      summary: Crear una nueva configuración de ronda recurrente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RecurringConfigurationCreate" }
+      responses:
+        "201":
+          description: Creado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RecurringConfiguration" }
+
+  /recurring/datatable:
+    post:
+      tags: [recurring]
+      summary: Tabla paginada de recurrentes
+      responses:
+        "200": { description: OK }
+
+  /recurring/guard/{guardId}:
+    get:
+      tags: [recurring]
+      summary: Listar por guardia
+      parameters:
+        - in: path
+          name: guardId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+
+  /recurring/{id}:
+    get:
+      tags: [recurring]
+      summary: Detalle de recurrente
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+    put:
+      tags: [recurring]
+      summary: Actualizar configuración recurrente
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RecurringConfigurationUpdate" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RecurringConfiguration" }
+    delete:
+      tags: [recurring]
+      summary: Eliminar recurrente
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+
+  # --- REPORTS ---
+  /reports/guards/stats:
+    get:
+      tags: [reports]
+      summary: Estadísticas generales de guardias
+      responses:
+        "200": { description: OK }
+
+  /reports/guards/top-performance:
+    get:
+      tags: [reports]
+      summary: Guardias con mejor desempeño
+      responses:
+        "200": { description: OK }
+
+  /reports/guards/distribution:
+    get:
+      tags: [reports]
+      summary: Distribución de actividad
+      responses:
+        "200": { description: OK }
+
+  /reports/guards/detail:
+    get:
+      tags: [reports]
+      summary: Reporte detallado de guardias
+      responses:
+        "200": { description: OK }
+
+  /reports/guards/detail-breakdown/{id}:
+    get:
+      tags: [reports]
+      summary: Desglose detallado por guardia
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+
+  /reports/guards/workload:
+    get:
+      tags: [reports]
+      summary: Comparación de carga de trabajo
+      responses:
+        "200": { description: OK }
+
+  # --- SETTINGS ---
+  /settings/categories/datatable:
+    post:
+      tags: [settings]
+      summary: Tabla paginada de categorías (Incidentes)
+      responses:
+        "200": { description: OK }
+  /settings/categories:
+    post:
+      tags: [settings]
+      summary: Crear categoría
+      responses:
+        "201": { description: Creado }
+  /settings/categories/{id}:
+    put:
+      tags: [settings]
+      summary: Actualizar categoría
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+    delete:
+      tags: [settings]
+      summary: Eliminar categoría
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+
+  /settings/types/datatable:
+    post:
+      tags: [settings]
+      summary: Tabla paginada de tipos (Incidentes)
+      responses:
+        "200": { description: OK }
+  /settings/types:
+    post:
+      tags: [settings]
+      summary: Crear tipo de incidente
+      responses:
+        "201": { description: Creado }
+  /settings/types/{id}:
+    put:
+      tags: [settings]
+      summary: Actualizar tipo
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+    delete:
+      tags: [settings]
+      summary: Eliminar tipo
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200": { description: OK }
+
+  /settings/sysconfig/datatable:
+    post:
+      tags: [settings]
+      summary: Tabla paginada de configuración de sistema
+      responses:
+        "200": { description: OK }
+  /settings/sysconfig:
+    post:
+      tags: [settings]
+      summary: Actualizar configuración de sistema
+      responses:
+        "200": { description: OK }
+  /settings/sysconfig/{key}:
+    delete:
+      tags: [settings]
+      summary: Eliminar configuración específica
+      parameters:
+        - in: path
+          name: key
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+
+  # --- SYNC ---
+  /sync:
+    get:
+      tags: [sync]
+      summary: Pull data (Offline)
+      responses:
+        "200": { description: OK }
+    post:
+      tags: [sync]
+      summary: Push data (Offline)
+      responses:
+        "200": { description: OK }
+
+  # --- CATALOG ---
+  /catalog/{key}:
+    get:
+      tags: [catalog]
+      summary: Obtener catálogo genérico
+      parameters:
+        - in: path
+          name: key
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: OK }
+
+  # --- UPLOADS ---
+  /uploads:
+    post:
+      tags: [settings]
+      summary: Subir archivo multimedia
+      requestBody:
         content:
           multipart/form-data:
             schema:
               type: object
               properties:
-                file:
-                  type: string
-                  format: binary
+                file: { type: string, format: binary }
       responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultUpload'
-
-  ###########################################################################
-  # KARDEX
-  ###########################################################################
-  /kardex:
-    post:
-      tags: [kardex]
-      summary: Crear registro de kardex
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/KardexCreate'
-      responses:
-        "201":
-           description: Le Created
-           content:
-             application/json:
-               schema:
-                 $ref: '#/components/schemas/TResultKardex'
-    get:
-      tags: [kardex]
-      summary: Listar kardex (filtros opcionales)
-      parameters:
-        - in: query
-          name: userId
-          schema:
-            type: integer
-        - in: query
-          name: locationId
-          schema:
-            type: integer
-        - in: query
-          name: startDate
-          schema:
-            type: string
-            format: date-time
-        - in: query
-          name: endDate
-          schema:
-            type: string
-            format: date-time
-      responses:
-         "200":
-           description: OK
-           content:
-             application/json:
-               schema:
-                 $ref: '#/components/schemas/TResultKardexArray'
-  
-  /kardex/{id}:
-    get:
-      tags: [kardex]
-      summary: Detalle de kardex
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema: 
-            type: integer
-      responses:
-         "200":
-           description: OK
-           content:
-             application/json:
-               schema:
-                 $ref: '#/components/schemas/TResultKardex'
-
-
-
-
-  ###########################################################################
-  # SCHEDULES
-  ###########################################################################
-  /schedules/datatable:
-    post:
-      tags: [schedules]
-      summary: Obtener horarios paginados con filtros y ordenamiento
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DataTableFetchParams'
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultDataTable'
-
-  ###########################################################################
-  # ASSIGNMENTS
-  ###########################################################################
-  /assignments/datatable:
-    post:
-      tags: [assignments]
-      summary: Obtener asignaciones paginadas con filtros y ordenamiento
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DataTableFetchParams'
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultDataTable'
-
-  ###########################################################################
-  # ROUNDS
-  ###########################################################################
-  /rounds/datatable:
-    post:
-      tags: [rounds]
-      summary: Obtener rondines paginados con filtros y ordenamiento
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DataTableFetchParams'
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultDataTable'
-
-  ###########################################################################
-  # INCIDENTS
-  ###########################################################################
-  /incidents/datatable:
-    post:
-      tags: [incidents]
-      summary: Obtener incidencias paginadas con filtros y ordenamiento
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DataTableFetchParams'
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultDataTable'
-
-  ###########################################################################
-  # MAINTENANCE
-  ###########################################################################
-  /maintenance/datatable:
-    post:
-      tags: [maintenance]
-      summary: Obtener mantenimientos paginados con filtros y ordenamiento
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DataTableFetchParams'
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultDataTable'
-
-  ###########################################################################
-  # PROPERTIES
-  ###########################################################################
-  /properties:
-    get:
-      tags: [properties]
-      summary: Listar todas las propiedades
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultPropertyArray'
-    post:
-      tags: [properties]
-      summary: Crear nueva propiedad
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PropertyCreate'
-      responses:
-        "201":
-          description: Creado
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultProperty'
-
-  /properties/datatable:
-    post:
-      tags: [properties]
-      summary: Obtener propiedades paginadas
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DataTableFetchParams'
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultDataTable'
-
-  /properties/{id}:
-    get:
-      tags: [properties]
-      summary: Detalle de propiedad
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer }
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultProperty'
-    put:
-      tags: [properties]
-      summary: Actualizar propiedad
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PropertyUpdate'
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultProperty'
-    delete:
-      tags: [properties]
-      summary: Eliminar propiedad
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer }
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultProperty'
-
-  ###########################################################################
-  # RESIDENTS
-  ###########################################################################
-  /residents:
-    get:
-      tags: [residents]
-      summary: Listar todos los residentes con sus perfiles
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultResidentArray'
-    post:
-      tags: [residents]
-      summary: Registrar nuevo residente (Usuario + Perfil)
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ResidentCreate'
-      responses:
-        "201":
-          description: Creado
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultResident'
-
-  /residents/{id}:
-    get:
-      tags: [residents]
-      summary: Detalle de residente
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer }
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultResident'
-    put:
-      tags: [residents]
-      summary: Actualizar residente y su perfil
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ResidentUpdate'
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultResident'
-    delete:
-      tags: [residents]
-      summary: Eliminar residente
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer }
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultResident'
+        "200": { description: OK }
 
 components:
   schemas:
+    UserLogin:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string }
+        password: { type: string }
+
+    TResultLogin:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { type: string, description: JWT Token }
+
     DataTableFetchParams:
       type: object
       properties:
         page: { type: integer, default: 1 }
         limit: { type: integer, default: 10 }
-        filters: { type: object, additionalProperties: true }
-        sort:
-          type: object
-          properties:
-            key: { type: string }
-            direction: { type: string, enum: [asc, desc] }
+        filters: { type: object }
+        sort: { type: object }
 
-    TResultDataTable:
-      type: object
-      properties:
-        success: { type: boolean }
-        data:
-          type: object
-          properties:
-            rows: { type: array, items: { type: object } }
-            total: { type: integer }
-        messages: { type: array, items: { type: string } }
-
-    ################################################################
-    # TResult WRAPPERS
-    ################################################################
-    TResultString:
-      type: object
-      properties:
-        data: { type: string }
-        error: { type: string, nullable: true }
-
-    TResultUser:
-      type: object
-      properties:
-        data: { $ref: '#/components/schemas/User' }
-        error: { type: string, nullable: true }
-
-    TResultUserArray:
-      type: object
-      properties:
-        data:
-          type: array
-          items: { $ref: '#/components/schemas/User' }
-        error: { type: string, nullable: true }
-
-    TResultLogin:
-      type: object
-      properties:
-        data: { type: string, description: JWT generado }
-        error: { type: string, nullable: true }
-    
-    TResultLocation:
-       type: object
-       properties:
-         data: { $ref: '#/components/schemas/Location' }
-         error: { type: string, nullable: true }
-    
-    TResultLocationArray:
-       type: object
-       properties:
-         data:
-           type: array
-           items: { $ref: '#/components/schemas/Location' }
-         error: { type: string, nullable: true }
-
-    TResultUpload:
-       type: object
-       properties:
-         data:
-           type: object
-           properties:
-             url: { type: string }
-             mimetype: { type: string }
-             size: { type: integer }
-         error: { type: string, nullable: true }
-
-    TResultKardex:
-       type: object
-       properties:
-         data: { $ref: '#/components/schemas/Kardex' }
-         error: { type: string, nullable: true }
-
-    TResultKardexArray:
-       type: object
-       properties:
-         data:
-           type: array
-           items: { $ref: '#/components/schemas/Kardex' }
-         error: { type: string, nullable: true }
-
-
-
-    ################################################################
-    # ENTITIES
-    ################################################################
-
-    User:
-      type: object
-      properties:
-        id: { type: integer }
-        name: { type: string }
-        lastName: { type: string }
-        username: { type: string }
-
-        role: 
-           type: string
-           enum: [ADMIN, SHIFT_GUARD, GUARD, MANTENIMIENTO, RESIDENT]
     UserCreate:
       type: object
-      required: [name, username, password]
+      required: [name, username, password, roleId]
+      properties:
+        name: { type: string }
+        username: { type: string }
+        password: { type: string }
+        roleId: { type: string, format: uuid }
+        clientId: { type: string, format: uuid }
 
+    UserUpdate:
+      type: object
       properties:
         name: { type: string }
         lastName: { type: string }
         username: { type: string }
+        roleId: { type: string, format: uuid }
+        clientId: { type: string, format: uuid }
+        scheduleId: { type: string, format: uuid }
+        active: { type: boolean }
 
-        password: { type: string }
-        role: 
-           type: string
-           enum: [ADMIN, SHIFT_GUARD, GUARD, MANTENIMIENTO, RESIDENT]
-    UserLogin:
+    ClientCreate:
       type: object
-      required: [username, password]
-
+      required: [name]
       properties:
-        username: { type: string }
+        name: { type: string }
+        address: { type: string }
+        rfc: { type: string }
+        contactName: { type: string }
+        contactPhone: { type: string }
+        active: { type: boolean, default: true }
+        appUsername: { type: string }
+        appPassword: { type: string }
 
-        password: { type: string }
-    
-    Location:
-       type: object
-       properties:
-         id: { type: integer }
-         name: { type: string }
-         aisle: { type: string }
-         spot: { type: string }
-         number: { type: string }
-         isOccupied: { type: boolean }
-    
-    Kardex:
-       type: object
-       properties:
-         id: { type: integer }
-         userId: { type: integer }
-         locationId: { type: integer }
-         timestamp: { type: string, format: date-time }
-         notes: { type: string }
-         media: 
-           type: array
-           items:
-             type: object
-             properties:
-                type: { type: string, enum: [IMAGE, VIDEO] }
-                url: { type: string }
-
-    ################################################################
-    # PROPERTY SCHEMAS
-    ################################################################
-    TResultProperty:
+    ClientUpdate:
       type: object
       properties:
-        data: { $ref: '#/components/schemas/Property' }
-        error: { type: string, nullable: true }
+        name: { type: string }
+        address: { type: string }
+        rfc: { type: string }
+        contactName: { type: string }
+        contactPhone: { type: string }
+        active: { type: boolean }
+        appUsername: { type: string }
+        appPassword: { type: string }
+        softDelete: { type: boolean }
 
-    TResultPropertyArray:
+    ZoneCreate:
+      type: object
+      required: [name, clientId]
+      properties:
+        name: { type: string }
+        clientId: { type: string, format: uuid }
+
+    ZoneUpdate:
       type: object
       properties:
-        data:
+        name: { type: string }
+        active: { type: boolean }
+
+    LocationCreate:
+      type: object
+      required: [name, clientId]
+      properties:
+        name: { type: string, description: "Nombre simple. El API lo convertirá a formato compuesto Cliente-Zona-Nombre" }
+        clientId: { type: string, format: uuid }
+        zoneId: { type: string, format: uuid }
+        reference: { type: string }
+        aisle: { type: string }
+        spot: { type: string }
+        number: { type: string }
+
+    LocationUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        clientId: { type: string, format: uuid }
+        zoneId: { type: string, format: uuid }
+        reference: { type: string }
+        aisle: { type: string }
+        spot: { type: string }
+        number: { type: string }
+        active: { type: boolean }
+
+    AssignmentCreate:
+      type: object
+      required: [guardId, locationId, assignedBy]
+      properties:
+        guardId: { type: string, format: uuid }
+        locationId: { type: string, format: uuid }
+        assignedBy: { type: string, format: uuid }
+        notes: { type: string }
+        tasks:
           type: array
-          items: { $ref: '#/components/schemas/Property' }
-        error: { type: string, nullable: true }
+          items:
+            type: object
+            properties:
+              description: { type: string }
+              reqPhoto: { type: boolean }
 
-    Property:
+    IncidentCreate:
       type: object
+      required: [title, locationId]
       properties:
-        id: { type: integer }
-        identifier: { type: string }
-        name: { type: string }
-        type: { type: string, enum: [CASA, DEPARTAMENTO] }
-        mainStreet: { type: string }
-        betweenStreets: { type: string }
-        latitude: { type: number }
-        longitude: { type: number }
-        isInhabited: { type: boolean }
-        isForRent: { type: boolean }
+        title: { type: string }
+        description: { type: string }
+        locationId: { type: string, format: uuid }
+        media: { type: array, items: { type: string } }
 
-    PropertyCreate:
+    MaintenanceCreate:
       type: object
-      required: [identifier, name, type, mainStreet]
+      required: [title]
       properties:
-        identifier: { type: string }
-        name: { type: string }
-        type: { type: string, enum: [CASA, DEPARTAMENTO] }
-        mainStreet: { type: string }
-        betweenStreets: { type: string }
-        latitude: { type: number }
-        longitude: { type: number }
-        isInhabited: { type: boolean }
-        isForRent: { type: boolean }
+        title: { type: string }
+        description: { type: string }
+        media: { type: array, items: { type: string } }
 
-    PropertyUpdate:
+    ScheduleCreate:
       type: object
-      properties:
-        identifier: { type: string }
-        name: { type: string }
-        type: { type: string, enum: [CASA, DEPARTAMENTO] }
-        mainStreet: { type: string }
-        betweenStreets: { type: string }
-        latitude: { type: number }
-        longitude: { type: number }
-        isInhabited: { type: boolean }
-        isForRent: { type: boolean }
-
-    ################################################################
-    # RESIDENT SCHEMAS
-    ################################################################
-    TResultResident:
-      type: object
-      properties:
-        data: { $ref: '#/components/schemas/User' } # Retorna el usuario con su perfil
-        error: { type: string, nullable: true }
-
-    TResultResidentArray:
-      type: object
-      properties:
-        data:
-          type: array
-          items: { $ref: '#/components/schemas/User' }
-        error: { type: string, nullable: true }
-
-    ResidentCreate:
-      type: object
-      required: [name, username, password]
+      required: [name, startTime, endTime]
       properties:
         name: { type: string }
-        lastName: { type: string }
-        username: { type: string }
-        password: { type: string }
-        propertyId: { type: integer }
-        firstName: { type: string }
-        fatherLastName: { type: string }
-        motherLastName: { type: string }
-        phoneNumber: { type: string }
-        email: { type: string }
-        ineFrontUrl: { type: string }
-        ineBackUrl: { type: string }
-        emergencyContact: { type: string }
-        emergencyPhone: { type: string }
-        notes: { type: string }
+        startTime: { type: string, example: "08:00" }
+        endTime: { type: string, example: "17:00" }
 
-    ResidentUpdate:
+    ScheduleUpdate:
       type: object
       properties:
         name: { type: string }
-        lastName: { type: string }
-        username: { type: string }
-        password: { type: string }
-        propertyId: { type: integer }
-        firstName: { type: string }
-        fatherLastName: { type: string }
-        motherLastName: { type: string }
-        phoneNumber: { type: string }
-        email: { type: string }
-        ineFrontUrl: { type: string }
-        ineBackUrl: { type: string }
-        emergencyContact: { type: string }
-        emergencyPhone: { type: string }
-        notes: { type: string }
-
-    ResidentProfile:
-      type: object
-      properties:
-        id: { type: integer }
-        userId: { type: integer }
-        firstName: { type: string }
-        fatherLastName: { type: string }
-        motherLastName: { type: string }
-        phoneNumber: { type: string }
-        email: { type: string }
-        ineFrontUrl: { type: string }
-        ineBackUrl: { type: string }
-        emergencyContact: { type: string }
-        emergencyPhone: { type: string }
-        notes: { type: string }
-    
-    KardexCreate:
-       type: object
-       required: [userId, locationId]
-       properties:
-         userId: { type: integer }
-         locationId: { type: integer }
-         notes: { type: string }
-         media:
-           type: array
-           items:
-             type: object
-             properties:
-               type: { type: string, enum: [IMAGE, VIDEO] }
-               url: { type: string }
+        startTime: { type: string, example: "08:00" }
+        endTime: { type: string, example: "17:00" }
+        active: { type: boolean }

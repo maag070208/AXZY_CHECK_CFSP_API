@@ -37,6 +37,7 @@ model Client {
   incidents    Incident[]
   maintenances Maintenance[]
   recurringConfigurations RecurringConfiguration[]
+  assignmentLogs AssignmentLog[]
 }
 
 model Zone {
@@ -81,7 +82,21 @@ model User {
   client                   Client?                  @relation(fields: [clientId], references: [id])
   role                     Role                     @relation(fields: [roleId], references: [id])
   schedule                 Schedule?                @relation(fields: [scheduleId], references: [id])
-  recurringConfigurations RecurringConfiguration[]
+  recurringConfigurations  RecurringConfiguration[]
+  createdAssignments       Assignment[]             @relation("AssignedByAssignments")
+  assignmentLogs           AssignmentLog[]
+}
+
+model AssignmentLog {
+  id        String   @id @default(uuid())
+  guardId   String
+  clientId  String?
+  type      String   // ASIGNADO, REMOVIDO
+  notes     String?
+  createdAt DateTime @default(now())
+  
+  guard     User     @relation(fields: [guardId], references: [id])
+  client    Client?  @relation(fields: [clientId], references: [id])
 }
 
 model Schedule {
@@ -160,7 +175,8 @@ model Assignment {
   guardId    String
   locationId String
   status     AssignmentStatus @default(PENDING)
-  assignedBy Int // Keeping Int if this is an external reference or just user ID (wait, should be String)
+  assignedBy String
+  assignedByUser User?            @relation("AssignedByAssignments", fields: [assignedBy], references: [id])
   notes      String?
   createdAt  DateTime         @default(now())
   updatedAt  DateTime         @updatedAt

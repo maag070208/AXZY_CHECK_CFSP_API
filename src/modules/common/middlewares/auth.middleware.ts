@@ -1,7 +1,7 @@
-
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../../../core/utils/security';
 import { createTResult } from '../../../core/mappers/tresult.mapper';
+import { AppError } from '../../../core/errors/AppError';
 
 export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -22,4 +22,15 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     } catch (error) {
         return res.status(401).json(createTResult(null, ['Invalid or expired token']));
     }
+};
+
+export const authorize = (roles: string[]) => {
+    return (req: Request, res: Response, next: NextFunction) => {
+        // @ts-ignore
+        const user = req.user;
+        if (!user || !roles.includes(user.role)) {
+            throw new AppError("Forbidden: Insufficient permissions", 403);
+        }
+        next();
+    };
 };

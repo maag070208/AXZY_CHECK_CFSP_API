@@ -6,28 +6,27 @@ import { maintenanceCatalogsSeed } from "./seeds/maintenance";
 import { schedulesSeed } from "./seeds/schedules";
 import { securitySeed } from "./seeds/security";
 import { sysConfigSeed } from "./seeds/sysconfig";
-import { plaza2000Seed } from "./seeds/plaza2000";
+import { seedPlaza2000Full } from "./seeds/plaza2000_full";
 import { vinasDelMarSeed } from "./seeds/vinas";
-
 import { hackerLog } from "./seeds/logger";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  hackerLog.header('Master Seeding Sequence');
-  
+  hackerLog.header("Master Seeding Sequence");
+
   await catalogsSeed(prisma);
   await incidentCatalogsSeed(prisma);
   await maintenanceCatalogsSeed(prisma);
   await schedulesSeed(prisma);
   // await locationsSeed(prisma); // Commented out old generic locations
-  await plaza2000Seed(prisma);
+  await seedPlaza2000Full();
   await vinasDelMarSeed(prisma);
   await securitySeed(prisma);
   await sysConfigSeed(prisma);
 
   hackerLog.divider();
-  hackerLog.success('SYSTEM', 'Master Seeding Complete');
+  hackerLog.success("SYSTEM", "Master Seeding Complete");
 }
 
 main()

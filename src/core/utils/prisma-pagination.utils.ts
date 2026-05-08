@@ -5,7 +5,7 @@ import { ITDataTableFetchParams } from "../dto/datatable.dto";
  * Handles pagination (skip/take), sorting (orderBy), and filtering (where).
  */
 export function getPrismaPaginationParams(params: ITDataTableFetchParams) {
-  const { page, limit, filters, sort } = params;
+  const { page = 1, limit = 10, filters = {}, sort } = params || {};
 
   // Pagination
   const take = Number(limit) || 10;
@@ -35,10 +35,10 @@ export function getPrismaPaginationParams(params: ITDataTableFetchParams) {
         }
 
         // Enums and Status must be exact match (Prisma doesn't support 'contains' on enums)
-        const isStatus = key === "status";
-        const isEnum = /^[A-Z_]+$/.test(value); // Heuristic for enum values (COMPLETED, IN_PROGRESS, etc)
+        const isStatusOrRole = ["status", "role", "type", "category"].includes(key.toLowerCase());
+        const isEnumPattern = /^[A-Z_]+$/.test(value); 
 
-        if (isStatus || isEnum) {
+        if (isStatusOrRole && isEnumPattern) {
             where[key] = value;
             return;
         }
