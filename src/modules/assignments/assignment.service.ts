@@ -3,19 +3,57 @@ import { prismaClient } from "@src/core/config/database";
 import { PrismaClient, AssignmentStatus } from "@prisma/client";
 import { ITDataTableFetchParams, ITDataTableResponse } from "@src/core/dto/datatable.dto";
 import { getPrismaPaginationParams } from "@src/core/utils/prisma-pagination.utils";
+import { now } from "@src/core/utils/date-time.utils";
+import { OPERATIONAL_ROLES, ASSIGNMENT_STATUS_PENDING } from "@src/core/config/constants";
+import { CreateAssignmentSchema } from "./schemas/assignment.schema";
+
+import { AppError } from "@src/core/errors/AppError";
 
 const prisma = prismaClient;
 
-export const getDataTableAssignments = async (params: ITDataTableFetchParams): Promise<ITDataTableResponse<any>> => {
+import { IAssignmentResponse } from "./assignment.response";
+
+export const getDataTableAssignments = async (params: ITDataTableFetchParams): Promise<ITDataTableResponse<IAssignmentResponse>> => {
   const prismaParams = getPrismaPaginationParams(params);
+
+  // Map clientId to location relation
+  if (prismaParams.where.clientId) {
+    prismaParams.where.location = {
+      clientId: prismaParams.where.clientId
+    };
+    delete prismaParams.where.clientId;
+  }
 
   const [rows, total] = await Promise.all([
     prisma.assignment.findMany({
       ...prismaParams,
-      include: {
-        location: true,
-        guard: { select: { id: true, name: true, lastName: true } },
-        tasks: true,
+      select: {
+        id: true,
+        guardId: true,
+        locationId: true,
+        status: true,
+        assignedBy: true,
+        notes: true,
+        createdAt: true,
+        location: {
+          select: {
+            id: true,
+            name: true,
+            clientId: true
+          }
+        },
+        guard: {
+          select: { id: true, name: true, lastName: true }
+        },
+        tasks: {
+          select: {
+            id: true,
+            description: true,
+            reqPhoto: true,
+            completed: true,
+            completedAt: true
+          }
+        },
       }
     }),
     prisma.assignment.count({
@@ -23,27 +61,19 @@ export const getDataTableAssignments = async (params: ITDataTableFetchParams): P
     })
   ]);
 
-  return { rows, total };
+  return { rows: rows as IAssignmentResponse[], total };
 };
 
 // Create a new assignment
-export const createAssignment = async (data: {
-  guardId: string;
-  locationId: string;
-  assignedBy: number;
-  notes?: string;
-  tasks?: { description: string; reqPhoto: boolean }[];
-}) => {
+export const createAssignment = async (data: CreateAssignmentSchema) => {
   // Validate guard role
   const guard = await prisma.user.findUnique({
     where: { id: data.guardId },
     include: { role: true }
   });
 
-  const isAllowed = guard?.role?.name === "GUARD" || guard?.role?.name === "SHIFT" || guard?.role?.name === "MAINT";
-
-  if (!guard || !isAllowed) {
-    throw new Error("Invalid guard ID or user is not a GUARD, SHIFT or MAINT");
+  if (!guard || !OPERATIONAL_ROLES.includes(guard.role.name)) {
+    throw new AppError(`Invalid guard ID or user is not a GUARD, SHIFT or MAINT. Guard: ${guard?.username}, Role: ${guard?.role?.name}`, 400);
   }
 
   // Duplicate Check: Guard + Location + Active Status
@@ -63,7 +93,7 @@ export const createAssignment = async (data: {
   });
 
   if (activeAssignment) {
-    throw new Error("El guardia ya tiene una asignación activa para esta ubicación.");
+    throw new AppError("El guardia ya tiene una asignación activa para esta ubicación.", 400);
   }
 
   return prisma.assignment.create({
@@ -72,20 +102,19 @@ export const createAssignment = async (data: {
       locationId: data.locationId,
       assignedBy: data.assignedBy,
       notes: data.notes,
-      status: AssignmentStatus.PENDING,
-      tasks: {
-        create: data.tasks?.map((t) => ({
+      status: ASSIGNMENT_STATUS_PENDING as AssignmentStatus,
+      tasks: data.tasks && data.tasks.length > 0 ? {
+        create: data.tasks.map((t) => ({
           description: t.description,
           reqPhoto: t.reqPhoto,
         })),
-      },
+      } : undefined,
     },
     include: {
       location: true,
       guard: {
         select: { id: true, name: true, lastName: true },
       },
-      kardex: true,
       tasks: true,
     },
   });
@@ -150,7 +179,7 @@ export const toggleAssignmentTask = async (taskId: string) => {
         where: { id: taskId },
         data: { 
             completed: !task.completed,
-            completedAt: !task.completed ? new Date() : null
+            completedAt: !task.completed ? now() : null
         }
     });
 }

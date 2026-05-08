@@ -2,6 +2,7 @@
 import { prismaClient } from "@src/core/config/database";
 import { TResult } from '@src/core/dto/TResult';
 import { OPERATIONAL_ROLES, ROUND_STATUS_COMPLETED } from "@src/core/config/constants";
+import { getStartOfDay, getEndOfDay } from "@src/core/utils/date-time.utils";
 
 const prisma = prismaClient;
 
@@ -30,23 +31,21 @@ const getGuards = (guardId?: string, clientId?: string) => {
 export const getGuardGeneralStats = async (filters: IGuardReportFilters): Promise<TResult<any>> => {
     try {
         const { startDate, endDate, guardId, clientId } = filters;
-        const start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
+        const start = getStartOfDay(startDate);
+        const end = getEndOfDay(endDate);
 
         const [incidentCount, maintenanceCount, scans, rounds] = await Promise.all([
             prisma.incident.count({
                 where: {
                     ...(guardId ? { guardId } : {}),
-                    ...(clientId ? { location: { clientId } } : {}),
+                    ...(clientId ? { clientId } : {}),
                     createdAt: { gte: start, lte: end }
                 }
             }),
             prisma.maintenance.count({
                 where: {
                     ...(guardId ? { guardId } : {}),
-                    ...(clientId ? { location: { clientId } } : {}),
+                    ...(clientId ? { clientId } : {}),
                     createdAt: { gte: start, lte: end }
                 }
             }),
@@ -123,9 +122,8 @@ export const getGuardGeneralStats = async (filters: IGuardReportFilters): Promis
 export const getTopPerformanceGuards = async (filters: IGuardReportFilters): Promise<TResult<any>> => {
     try {
         const { startDate, endDate, clientId } = filters;
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
+        const start = getStartOfDay(startDate);
+        const end = getEndOfDay(endDate);
 
         const groupData = await prisma.kardex.groupBy({
             by: ['userId'],
@@ -164,9 +162,8 @@ export const getTopPerformanceGuards = async (filters: IGuardReportFilters): Pro
 export const getWorkloadComparison = async (filters: IGuardReportFilters): Promise<TResult<any>> => {
     try {
         const { startDate, endDate, clientId } = filters;
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
+        const start = getStartOfDay(startDate);
+        const end = getEndOfDay(endDate);
 
         const guards = await getGuards(undefined, clientId);
         const guardIds = guards.map(g => g.id);
@@ -186,7 +183,7 @@ export const getWorkloadComparison = async (filters: IGuardReportFilters): Promi
                 where: { 
                     guardId: { in: guardIds }, 
                     createdAt: { gte: start, lte: end },
-                    ...(clientId ? { location: { clientId } } : {})
+                    ...(clientId ? { clientId } : {})
                 },
                 _count: { _all: true }
             }),
@@ -195,7 +192,7 @@ export const getWorkloadComparison = async (filters: IGuardReportFilters): Promi
                 where: { 
                     guardId: { in: guardIds }, 
                     createdAt: { gte: start, lte: end },
-                    ...(clientId ? { location: { clientId } } : {})
+                    ...(clientId ? { clientId } : {})
                 },
                 _count: { _all: true }
             }),
@@ -242,9 +239,8 @@ export const getActivityDistribution = async (filters: IGuardReportFilters): Pro
 export const getGuardDetailedReport = async (filters: IGuardReportFilters): Promise<TResult<any>> => {
     try {
         const { startDate, endDate, guardId, clientId } = filters;
-        const start = new Date(startDate);
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
+        const start = getStartOfDay(startDate);
+        const end = getEndOfDay(endDate);
 
         const guards = await getGuards(guardId, clientId);
         const guardIds = guards.map(g => g.id);
@@ -341,10 +337,8 @@ export const getGuardDetailBreakdown = async (filters: IGuardReportFilters): Pro
         const { startDate, endDate, guardId, clientId } = filters;
         if (!guardId) throw new Error("GuardId is required");
 
-        const start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
+        const start = getStartOfDay(startDate);
+        const end = getEndOfDay(endDate);
 
         const [rounds, allKardex] = await Promise.all([
             prisma.round.findMany({

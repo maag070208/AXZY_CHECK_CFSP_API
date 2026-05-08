@@ -17,11 +17,12 @@ import zonesRoute from "./zones/zones.routes";
 import recurringRoute from "./recurring/recurring.routes";
 import settingsRoute from "./settings/settings.routes";
 import syncRoute from "./sync/sync.routes";
-
+import homeRoute from "./home/home.routes";
 
 const apiRouter = Router();
 
 apiRouter.use("/", indexRoute);
+apiRouter.use("/home", homeRoute);
 apiRouter.use("/users", userRoute);
 apiRouter.use("/locations", locationsRoute);
 apiRouter.use("/uploads", uploadRoute);
@@ -38,6 +39,5 @@ apiRouter.use("/zones", zonesRoute);
 apiRouter.use("/recurring", recurringRoute);
 apiRouter.use("/settings", settingsRoute);
 apiRouter.use("/sync", syncRoute);
-
 
 export default apiRouter;

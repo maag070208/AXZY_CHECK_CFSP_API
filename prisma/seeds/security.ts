@@ -24,7 +24,7 @@ export const securitySeed = async (prisma: PrismaClient) => {
 
   // Get Clients
   const plaza2000 = await prisma.client.findUnique({ where: { name: "Plaza 2000" } });
-  const vinas = await prisma.client.findUnique({ where: { name: "Vinas del Mar" } });
+  const vinas = await prisma.client.findUnique({ where: { name: "Vinas del mar" } });
 
   // 1. ADMINS
   hackerLog.info('AUTH', 'Deploying Admin accounts');
@@ -62,7 +62,7 @@ export const securitySeed = async (prisma: PrismaClient) => {
   ];
 
   for (const u of guardUsers) {
-    await prisma.user.upsert({
+    const user = await prisma.user.upsert({
       where: { username: u.username },
       update: { scheduleId: u.scheduleId, roleId: guardRole.id, clientId: u.clientId },
       create: {
@@ -75,6 +75,17 @@ export const securitySeed = async (prisma: PrismaClient) => {
         clientId: u.clientId,
       },
     });
+
+    if (u.clientId) {
+      await prisma.assignmentLog.create({
+        data: {
+          guardId: user.id,
+          clientId: u.clientId,
+          type: "ASIGNADO",
+          notes: "Asignado por script de inicialización"
+        }
+      });
+    }
   }
 
   // 3. SHIFT GUARDS

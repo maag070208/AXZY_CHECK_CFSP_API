@@ -48,3 +48,12 @@ export const PDF_COLOR_BORDER = '#f1f5f9';
 export const PDF_COLOR_CARD_BG = '#ffffff';
 export const PDF_COLOR_WHITE = '#FFFFFF';
 export const PDF_COLOR_BLACK = '#000000';
+// Timeline Event Types
+export const TIMELINE_EVENT_START = "START";
+export const TIMELINE_EVENT_END = "END";
+export const TIMELINE_EVENT_SCAN = "SCAN";
+export const TIMELINE_EVENT_INCIDENT = "INCIDENT";
+
+// Security
+export const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutos
+export const RATE_LIMIT_MAX_REQUESTS = 100; // Máximo 100 req por IP

@@ -2,19 +2,32 @@ import { prismaClient } from "@src/core/config/database";
 import { ITDataTableFetchParams, ITDataTableResponse } from "@src/core/dto/datatable.dto";
 import { getPrismaPaginationParams } from "@src/core/utils/prisma-pagination.utils";
 
-export const getDataTableSchedules = async (params: ITDataTableFetchParams): Promise<ITDataTableResponse<any>> => {
-    const prismaParams = getPrismaPaginationParams(params);
+import { IScheduleResponse } from "./schedule.response";
+
+export const getDataTableSchedules = async (params: ITDataTableFetchParams): Promise<ITDataTableResponse<IScheduleResponse>> => {
+    const prismaParams = getPrismaPaginationParams(params || { page: 1, limit: 10, filters: {} });
 
     const [rows, total] = await Promise.all([
         prismaClient.schedule.findMany({
             ...prismaParams,
+            select: {
+                id: true,
+                name: true,
+                startTime: true,
+                endTime: true,
+                active: true,
+                createdAt: true,
+                _count: {
+                    select: { users: true }
+                }
+            }
         }),
         prismaClient.schedule.count({
             where: prismaParams.where
         })
     ]);
 
-    return { rows, total };
+    return { rows: rows as IScheduleResponse[], total };
 };
 
 export const getSchedules = async () => {
@@ -49,5 +62,18 @@ export const updateSchedule = async (id: string, data: {
 export const deleteSchedule = async (id: string) => {
     return prismaClient.schedule.delete({
         where: { id }
+    });
+};
+
+export const getUsersBySchedule = async (scheduleId: string) => {
+    return prismaClient.user.findMany({
+        where: { scheduleId, softDelete: false },
+        select: {
+            id: true,
+            name: true,
+            lastName: true,
+            username: true,
+            active: true
+        }
     });
 };

@@ -25,16 +25,22 @@ export class StorageService {
     bucketName: string,
     customKey?: string
   ): Promise<{ bucket: string; key: string }> {
-    const key = customKey || `${Date.now()}_${file.originalname}`;
+    return this.uploadBuffer(file.buffer, bucketName, customKey || `${Date.now()}_${file.originalname}`, file.mimetype);
+  }
 
+  async uploadBuffer(
+    buffer: Buffer,
+    bucketName: string,
+    key: string,
+    contentType: string = "application/octet-stream"
+  ): Promise<{ bucket: string; key: string }> {
     const upload = new Upload({
       client: this.client,
       params: {
         Bucket: bucketName,
         Key: key,
-        Body: file.buffer,
-        ContentType: file.mimetype,
-        // ACL: 'public-read' // Note: This depends on bucket policy and block public access settings
+        Body: buffer,
+        ContentType: contentType,
       },
     });
 

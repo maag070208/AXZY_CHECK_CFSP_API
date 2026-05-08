@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { resend, transporter } from "../config/mail";
+import { logger } from "./logger";
 
 const prisma = new PrismaClient();
 
@@ -11,7 +12,7 @@ export const sendIncidentEmail = async (incident: any, guard: any) => {
     });
 
     if (!config || !config.value) {
-      console.warn("No Recipients found for INCIDENT_EMAIL");
+      logger.warn("No Recipients found for INCIDENT_EMAIL");
       return;
     }
 
@@ -94,7 +95,7 @@ export const sendIncidentEmail = async (incident: any, guard: any) => {
     `;
 
     // 4. Send Email
-    console.log("Sending email using Resend", resend);
+    logger.debug("Sending email using Resend");
     if (resend) {
       const { data, error } = await resend.emails.send({
         from: "AXZY Check <noreply@axzy.dev>",
@@ -103,9 +104,9 @@ export const sendIncidentEmail = async (incident: any, guard: any) => {
         html: htmlContent,
       });
       if (error) {
-        console.error("Resend Error:", error);
+        logger.error("Resend Error:", error);
       } else {
-        console.log("Resend Success:", data);
+        logger.info("Resend Success:", data);
       }
     } else {
       await transporter.sendMail({
@@ -116,9 +117,9 @@ export const sendIncidentEmail = async (incident: any, guard: any) => {
       });
     }
 
-    console.log(`Incident email sent to ${recipients.join(", ")}`);
+    logger.info(`Incident email sent to ${recipients.join(", ")}`);
   } catch (error) {
-    console.error("Error sending incident email:", error);
+    logger.error("Error sending incident email:", error);
   }
 };
 
@@ -129,7 +130,7 @@ export const sendMaintenanceEmail = async (maintenance: any, guard: any) => {
     });
 
     if (!config || !config.value) {
-      console.warn("No Recipients found for MAINTENANCE_EMAIL");
+      logger.warn("No Recipients found for MAINTENANCE_EMAIL");
       return;
     }
 
@@ -212,9 +213,9 @@ export const sendMaintenanceEmail = async (maintenance: any, guard: any) => {
         html: htmlContent,
       });
       if (error) {
-        console.error("Resend Error (Maintenance):", error);
+        logger.error("Resend Error (Maintenance):", error);
       } else {
-        console.log("Resend Success (Maintenance):", data);
+        logger.info("Resend Success (Maintenance):", data);
       }
     } else {
       await transporter.sendMail({
@@ -225,9 +226,9 @@ export const sendMaintenanceEmail = async (maintenance: any, guard: any) => {
       });
     }
 
-    console.log(`Maintenance email sent to ${recipients.join(", ")}`);
+    logger.info(`Maintenance email sent to ${recipients.join(", ")}`);
   } catch (error) {
-    console.error("Error sending maintenance email:", error);
+    logger.error("Error sending maintenance email:", error);
   }
 };
 
@@ -238,14 +239,14 @@ export const sendIncidentWhatsApp = async (incident: any, guard: any) => {
     });
 
     if (!config || !config.value) {
-      console.warn("No Recipients found for INCIDENT_WHATSAPP");
+      logger.warn("No Recipients found for INCIDENT_WHATSAPP");
       return;
     }
 
     const recipients = config.value.split("|");
     const incidentUrl = `${process.env.SYSTEM_URL || "https://axzycheckui-production.up.railway.app"}/#/incidents/${incident.id}`;
   } catch (error) {
-    console.error("Error sending incident WhatsApp:", error);
+    logger.error("Error sending incident WhatsApp:", error);
   }
 };
 
@@ -256,7 +257,7 @@ export const sendMaintenanceWhatsApp = async (maintenance: any, guard: any) => {
     });
 
     if (!config || !config.value) {
-      console.warn("No Recipients found for MAINTENANCE_WHATSAPP");
+      logger.warn("No Recipients found for MAINTENANCE_WHATSAPP");
       return;
     }
 
@@ -264,10 +265,10 @@ export const sendMaintenanceWhatsApp = async (maintenance: any, guard: any) => {
 
     for (const to of recipients) {
       // Note: Using a generic approach for maintenance if no specific template exists yet
-      console.log(`Sending maintenance WhatsApp to ${to} (Infobip)`);
+      logger.debug(`Sending maintenance WhatsApp to ${to} (Infobip)`);
       // await WhatsAppService.sendTemplateMessage(to, MaintenanceReportTemplate, ...);
     }
   } catch (error) {
-    console.error("Error sending maintenance WhatsApp:", error);
+    logger.error("Error sending maintenance WhatsApp:", error);
   }
 };

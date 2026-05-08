@@ -4,66 +4,54 @@ import helmet from "helmet";
 import morgan from "morgan";
 import swaggerUi from "swagger-ui-express";
 import YAML from "yamljs";
-
-//middlewares
-import { createTResult } from "@src/core/mappers/tresult.mapper";
-
-//router
+import { env } from "@src/core/config/env.config";
+import { logger } from "@src/core/utils/logger";
+import { errorMiddleware } from "@src/core/middlewares/error.middleware";
 import apiRouter from "@src/modules/api.router";
 
-//server
-const app = express();
+import { RATE_LIMIT_MAX_REQUESTS, RATE_LIMIT_WINDOW_MS } from "@src/core/config/constants";
+import rateLimit from "express-rate-limit";
 
-const PORT = 4444;
+// Load swagger once
+const swaggerDocument = YAML.load("./swagger.yaml");
+
+export const app = express();
+
+const limiter = rateLimit({
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  max: RATE_LIMIT_MAX_REQUESTS,
+  message: {
+    success: false,
+    messages: ["Demasiadas peticiones desde esta IP, por favor intente de nuevo más tarde."],
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 app.use([
   express.json(),
-  helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }),
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: env.NODE_ENV === "production" ? undefined : false,
+  }),
   cors(),
-  morgan("dev"),
+  limiter,
+  morgan(env.NODE_ENV === "development" ? "dev" : "combined"),
 ]);
 
-app.use(
-  "/swagger",
-  swaggerUi.serve,
-  (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    const swaggerDocument = YAML.load("./swagger.yaml");
-    const swaggerUiHandler = swaggerUi.setup(swaggerDocument);
-    swaggerUiHandler(req, res, next);
-  }
-);
+// Documentation
+app.use("/swagger", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+app.get("/swagger.json", (req, res) => res.json(swaggerDocument));
 
-app.get("/swagger.json", (req, res) => {
-  const swaggerDocument = YAML.load("./swagger.yaml");
-  res.json(swaggerDocument);
-});
-
-
-// app.use(apiValidator());
-
+// Routes
 app.use("/api/v1", apiRouter);
 
-app.use(
-  (
-    err: any,
-    req: express.Request,
-    res: express.Response,
-    next: express.NextFunction
-  ) => {
-    console.log({ err });
-    console.log({ err: err.errors });
-    res
-      .status(err.status || 500)
-      .json(createTResult<any>(null, [err.message, err.errors]));
-  }
-);
+// Global Error Handler
+app.use(errorMiddleware);
 
-// cron.schedule("15 8 * * *", () => {
-//   console.log("⏳ Tarea programada ejecutada.");
-// });
-
-const server = app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server is running on port ${PORT}`);
-});
-
-server.timeout = 300000; // 5 minutes timeout for uploads
+if (process.env.NODE_ENV !== "test") {
+  const server = app.listen(env.PORT, "0.0.0.0", () => {
+    logger.info(`Server is running on port ${env.PORT} in ${env.NODE_ENV} mode`);
+  });
+  server.timeout = 60000; // 1 minute timeout
+}

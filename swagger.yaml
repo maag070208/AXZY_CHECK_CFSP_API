@@ -1,96 +1,85 @@
 openapi: 3.0.3
-
 info:
-  title: AXZY PARKING API
-  description: API para control de estacionamiento, entradas, salidas, movimientos y evidencia.
-  version: 1.0.0
-
+  title: AXZY CHECK API
+  description: Documentación técnica completa de la API de AXZY CHECK. Cubre gestión
+    operativa, administrativa y analítica.
+  version: 1.3.2
 servers:
-  - url: http://localhost:4444/api/v1
-    description: Local server
-
+- url: http://localhost:4444/api/v1
+  description: Local server
 tags:
-  - name: users
-    description: Gestión de usuarios y roles
-  - name: locations
-    description: Gestión de cajones de estacionamiento
-  - name: uploads
-    description: Carga de archivos
-  - name: kardex
-    description: Registro de rondines y evidencia
-  - name: schedules
-    description: Gestión de horarios de trabajo
-  - name: assignments
-    description: Control de tareas y zonas asignadas
-  - name: rounds
-    description: Seguimiento de recorridos de seguridad
-  - name: incidents
-    description: Reporte de anomalías detectadas
-  - name: maintenance
-    description: Solicitudes y seguimiento de mantenimiento
-  - name: properties
-    description: Gestión de casas y departamentos
-  - name: residents
-    description: Gestión de perfiles de residentes y sus accesos
-
-
-
+- name: auth
+  description: Control de acceso
+- name: users
+  description: Personal y administración
+- name: clients
+  description: Empresas clientes
+- name: zones
+  description: Áreas/Zonas geográficas
+- name: locations
+  description: Puntos de control / Spots
+- name: assignments
+  description: Órdenes de trabajo y tareas
+- name: rounds
+  description: Recorridos de seguridad
+- name: incidents
+  description: Gestión de anomalías
+- name: maintenance
+  description: Soporte técnico
+- name: schedules
+  description: Horarios y turnos
+- name: kardex
+  description: Bitácora de actividad
+- name: reports
+  description: Analítica y KPIs
+- name: settings
+  description: Configuración maestra y catálogos
+- name: sync
+  description: Sincronización móvil offline
+- name: recurring
+  description: Tareas recurrentes
+- name: catalog
+  description: Listas rápidas de sistema
+- name: home
+  description: Métricas y dashboard de inicio
 paths:
-
-  ###########################################################################
-  # USERS
-  ###########################################################################
-  /users:
+  /home/stats:
     get:
-      tags: [users]
-      summary: Obtener todos los usuarios
+      tags:
+      - home
+      summary: Obtener métricas para el dashboard
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultUserArray'
-
-    post:
-      tags: [users]
-      summary: Registrar nuevo usuario
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserCreate'
-      responses:
-        "201":
-          description: Usuario creado exitosamente.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultUser'
-
-  /users/datatable:
-    post:
-      tags: [users]
-      summary: Obtener usuarios paginados con filtros y ordenamiento
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DataTableFetchParams'
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultDataTable'
-
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      activeRoundsCount:
+                        type: integer
+                      activeRounds:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Round'
+                      pendingIncidentsCount:
+                        type: integer
+                      pendingMaintenanceCount:
+                        type: integer
+                  messages:
+                    type: array
+                    items:
+                      type: string
   /users/login:
     post:
-      tags: [users]
-      summary: Login
+      tags:
+      - auth
+      summary: Iniciar sesión
       requestBody:
         required: true
         content:
@@ -98,55 +87,94 @@ paths:
             schema:
               $ref: '#/components/schemas/UserLogin'
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultLogin'
-        "401":
-          description: Invalid credentials
-
-  ###########################################################################
-  # LOCATIONS
-  ###########################################################################
-  /locations:
+        '401':
+          description: No autorizado (Credenciales inválidas)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '403':
+          description: Prohibido (Cuenta inactiva o fuera de horario)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /users:
     get:
-      tags: [locations]
-      summary: Listar locaciones
-
+      tags:
+      - users
+      summary: Listar usuarios
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultLocationArray'
+                $ref: '#/components/schemas/TResultListUser'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
     post:
-      tags: [locations]
-      summary: Crear locación
+      tags:
+      - users
+      summary: Crear usuario
       requestBody:
         required: true
         content:
           application/json:
             schema:
-               type: object
-               properties:
-                 aisle: { type: string }
-                 spot: { type: string }
-                 number: { type: string }
+              $ref: '#/components/schemas/UserCreate'
       responses:
-        "201":
-          description: Created
+        '201':
+          description: Creado
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultLocation'
-
-  /locations/datatable:
+                $ref: '#/components/schemas/TResult'
+        '400':
+          description: Error de validación o usuario duplicado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /users/datatable:
     post:
-      tags: [locations]
-      summary: Obtener locaciones paginadas con filtros y ordenamiento
+      tags:
+      - users
+      summary: Tabla paginada de usuarios
       requestBody:
         required: true
         content:
@@ -154,22 +182,2202 @@ paths:
             schema:
               $ref: '#/components/schemas/DataTableFetchParams'
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultDataTable'
-
-  ###########################################################################
-  # UPLOADS
-  ###########################################################################
-  /uploads:
-    post:
-      tags: [uploads]
-      summary: Subir archivo (Imagen o Video)
+                $ref: '#/components/schemas/TResultDatatableUser'
+        '400':
+          description: Error en filtros o paginación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /users/{id}:
+    get:
+      tags:
+      - users
+      summary: Detalle de usuario
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatable'
+        '400':
+          description: Petición inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+    put:
+      tags:
+      - users
+      summary: Actualizar usuario
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
       requestBody:
         required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '400':
+          description: Error de validación o usuario duplicado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+    delete:
+      tags:
+      - users
+      summary: Eliminar usuario
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '400':
+          description: Petición inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /users/{id}/password:
+    put:
+      tags:
+      - users
+      summary: Cambiar contraseña (Usuario propio)
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - oldPassword
+              - newPassword
+              properties:
+                oldPassword:
+                  type: string
+                newPassword:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '400':
+          description: Error de validación o contraseña incorrecta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /users/{id}/reset-password:
+    put:
+      tags:
+      - users
+      summary: Resetear contraseña (Administrador)
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - newPassword
+              properties:
+                newPassword:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '400':
+          description: Error de validación
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '403':
+          description: Prohibido (No es administrador)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /users/logout:
+    post:
+      tags:
+      - auth
+      summary: Cerrar sesión
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '401':
+          description: No autorizado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /clients:
+    get:
+      tags:
+      - clients
+      summary: Listar clientes
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListClient'
+    post:
+      tags:
+      - clients
+      summary: Crear cliente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientCreate'
+      responses:
+        '201':
+          description: Creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListClient'
+        '400':
+          description: Datos inválidos o cliente duplicado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /clients/datatable:
+    post:
+      tags:
+      - clients
+      summary: Tabla paginada de clientes
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataTableFetchParams'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableClient'
+        '400':
+          description: Error en filtros
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /clients/{id}:
+    get:
+      tags:
+      - clients
+      summary: Detalle de cliente
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableClient'
+        '400':
+          description: Error de paginación o filtros
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+    put:
+      tags:
+      - clients
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientUpdate'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListClient'
+    delete:
+      tags:
+      - clients
+      summary: Eliminar cliente (Cascading)
+      description: Elimina físicamente el cliente y todos sus datos relacionados (Zonas,
+        Ubicaciones, Rondas, Incidencias, Tareas). Los usuarios operativos (guardias)
+        son desasignados (clientId = null) pero no eliminados.
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListClient'
+  /zones:
+    post:
+      tags:
+      - zones
+      summary: Crear zona
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ZoneCreate'
+      responses:
+        '201':
+          description: Creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableClient'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /zones/client/{clientId}:
+    get:
+      tags:
+      - zones
+      summary: Listar zonas de un cliente
+      parameters:
+      - in: path
+        name: clientId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableClient'
+  /zones/datatable:
+    post:
+      tags:
+      - zones
+      summary: Tabla paginada de zonas
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataTableFetchParams'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableZone'
+        '400':
+          description: Error en filtros
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /zones/{id}:
+    put:
+      tags:
+      - zones
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ZoneUpdate'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableZone'
+        '400':
+          description: Error de paginación o filtros
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+    delete:
+      tags:
+      - zones
+      summary: Eliminar zona
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableZone'
+        '400':
+          description: Petición inválida o restricción de llave foránea
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /locations:
+    get:
+      tags:
+      - locations
+      summary: Listar ubicaciones
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableZone'
+    post:
+      tags:
+      - locations
+      summary: Crear ubicación
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocationCreate'
+      responses:
+        '201':
+          description: Creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListClient'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /locations/datatable:
+    post:
+      tags:
+      - locations
+      summary: Tabla paginada de ubicaciones
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataTableFetchParams'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableLocation'
+        '400':
+          description: Error de paginación o filtros
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /locations/{id}:
+    get:
+      tags:
+      - locations
+      summary: Detalle de ubicación
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListLocation'
+    put:
+      tags:
+      - locations
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocationUpdate'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListLocation'
+    delete:
+      tags:
+      - locations
+      summary: Eliminar ubicación (Cascading)
+      description: Elimina físicamente la ubicación y sus dependencias (Kardex, Tareas
+        recurrentes, Tareas activas).
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableLocation'
+        '400':
+          description: Petición inválida o restricción de llave foránea
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /locations/print-bulk-qr:
+    post:
+      tags:
+      - locations
+      summary: Generar PDF masivo con códigos QR
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - ids
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '200':
+          description: Archivo PDF
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+  /assignments:
+    get:
+      tags:
+      - assignments
+      summary: Listar todas las asignaciones
+      parameters:
+      - in: query
+        name: guardId
+        schema:
+          type: string
+          format: uuid
+      - in: query
+        name: status
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListAssignment'
+    post:
+      tags:
+      - assignments
+      summary: Crear asignación
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignmentCreate'
+      responses:
+        '201':
+          description: Creado
+  /assignments/me:
+    get:
+      tags:
+      - assignments
+      summary: Mis asignaciones activas (Guardia)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListAssignment'
+  /assignments/datatable:
+    post:
+      tags:
+      - assignments
+      summary: Tabla paginada de asignaciones
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataTableFetchParams'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableAssignment'
+        '400':
+          description: Error de paginación o filtros
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /assignments/{id}/status:
+    patch:
+      tags:
+      - assignments
+      summary: Actualizar estado de asignación
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum:
+                  - PENDING
+                  - CHECKING
+                  - COMPLETED
+                  - ANOMALY
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableAssignment'
+        '400':
+          description: Petición inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /assignments/tasks/{taskId}/toggle:
+    patch:
+      tags:
+      - assignments
+      summary: Alternar check de tarea específica
+      parameters:
+      - in: path
+        name: taskId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '400':
+          description: Petición inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /rounds/start:
+    post:
+      tags:
+      - rounds
+      summary: Iniciar un nuevo recorrido (Ronda)
+      description: Permite a un guardia iniciar una ronda, ya sea libre o basada en
+        una configuración recurrente predefinida.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                guardId:
+                  type: string
+                  format: uuid
+                  description: ID del guardia que inicia la ronda (opcional si se
+                    usa token de guardia)
+                clientId:
+                  type: string
+                  format: uuid
+                  description: ID del cliente al que pertenece la ronda
+                recurringConfigurationId:
+                  type: string
+                  format: uuid
+                  description: ID de la configuración recurrente (opcional para rondas
+                    libres)
+      responses:
+        '201':
+          description: Ronda iniciada exitosamente
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableLocation'
+        '400':
+          description: Error en la solicitud (ej. ya existe una ronda activa)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /rounds/{id}/end:
+    put:
+      tags:
+      - rounds
+      summary: Finalizar rondín
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableLocation'
+  /rounds/current:
+    get:
+      tags:
+      - rounds
+      summary: Rondín actual en curso
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableAssignment'
+  /rounds/datatable:
+    post:
+      tags:
+      - rounds
+      summary: Tabla paginada de rondines
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataTableFetchParams'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableRound'
+        '400':
+          description: Error en filtros
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /rounds:
+    get:
+      tags:
+      - rounds
+      summary: Listar rondines (con filtros)
+      parameters:
+      - in: query
+        name: date
+        schema:
+          type: string
+          format: date
+        description: Filtro por fecha (YYYY-MM-DD)
+      - in: query
+        name: guardId
+        schema:
+          type: string
+          format: uuid
+        description: Filtro por guardia específico
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - IN_PROGRESS
+          - COMPLETED
+        description: Filtro por estado de la ronda
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableRound'
+  /rounds/{id}:
+    get:
+      tags:
+      - rounds
+      summary: Detalle de rondín
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableRound'
+  /rounds/{id}/report:
+    get:
+      tags:
+      - rounds
+      summary: Generar reporte de rondín
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableAssignment'
+        '400':
+          description: Error de paginación o filtros
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /incidents:
+    get:
+      tags:
+      - incidents
+      summary: Listar incidencias
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+    post:
+      tags:
+      - incidents
+      summary: Crear reporte de incidencia
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IncidentCreate'
+      responses:
+        '201':
+          description: Creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /incidents/pending-count:
+    get:
+      tags:
+      - incidents
+      summary: Contador de pendientes
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListRound'
+  /incidents/{id}/resolve:
+    put:
+      tags:
+      - incidents
+      summary: Marcar resuelta
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListIncident'
+  /incidents/datatable:
+    post:
+      tags:
+      - incidents
+      summary: Tabla paginada de incidencias
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableIncident'
+        '400':
+          description: Error de paginación o filtros
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /incidents/{id}:
+    delete:
+      tags:
+      - incidents
+      summary: Eliminar incidencia
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListRound'
+  /maintenance:
+    get:
+      tags:
+      - maintenance
+      summary: Listar solicitudes
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListMaintenance'
+    post:
+      tags:
+      - maintenance
+      summary: Crear solicitud
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MaintenanceCreate'
+      responses:
+        '201':
+          description: Creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableRound'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /maintenance/pending-count:
+    get:
+      tags:
+      - maintenance
+      summary: Contador de pendientes
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListIncident'
+  /maintenance/{id}/resolve:
+    put:
+      tags:
+      - maintenance
+      summary: Marcar finalizada
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListMaintenance'
+  /maintenance/datatable:
+    post:
+      tags:
+      - maintenance
+      summary: Tabla paginada de mantenimiento
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableMaintenance'
+        '400':
+          description: Error de paginación o filtros
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /maintenance/{id}:
+    delete:
+      tags:
+      - maintenance
+      summary: Eliminar mantenimiento
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableIncident'
+        '400':
+          description: Petición inválida o restricción de llave foránea
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /schedules:
+    get:
+      tags:
+      - schedules
+      summary: Listar horarios
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListSchedule'
+    post:
+      tags:
+      - schedules
+      summary: Crear horario
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleCreate'
+      responses:
+        '201':
+          description: Creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableIncident'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /schedules/datatable:
+    post:
+      tags:
+      - schedules
+      summary: Tabla paginada de horarios
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableSchedule'
+        '400':
+          description: Error de paginación o filtros
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /schedules/{id}:
+    put:
+      tags:
+      - schedules
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleUpdate'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListSchedule'
+    delete:
+      tags:
+      - schedules
+      summary: Eliminar horario
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableMaintenance'
+        '400':
+          description: Petición inválida o restricción de llave foránea
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /kardex:
+    get:
+      tags:
+      - kardex
+      summary: Listar bitácora
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableSchedule'
+        '400':
+          description: Petición inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+    post:
+      tags:
+      - kardex
+      summary: Crear registro
+      responses:
+        '201':
+          description: Creado
+  /recurring:
+    get:
+      tags:
+      - recurring
+      summary: Listar todas las configuraciones recurrentes
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RecurringConfiguration'
+    post:
+      tags:
+      - recurring
+      summary: Crear una nueva configuración de ronda recurrente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecurringConfigurationCreate'
+      responses:
+        '201':
+          description: Creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableMaintenance'
+        '400':
+          description: Datos inválidos
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /recurring/datatable:
+    post:
+      tags:
+      - recurring
+      summary: Tabla paginada de recurrentes
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableRecurringConfiguration'
+        '400':
+          description: Error de paginación o filtros
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /recurring/guard/{guardId}:
+    get:
+      tags:
+      - recurring
+      summary: Listar por guardia
+      parameters:
+      - in: path
+        name: guardId
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListRecurringConfiguration'
+  /recurring/{id}:
+    get:
+      tags:
+      - recurring
+      summary: Detalle de recurrente
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListRecurringConfiguration'
+    put:
+      tags:
+      - recurring
+      summary: Actualizar configuración recurrente
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecurringConfigurationUpdate'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecurringConfiguration'
+    delete:
+      tags:
+      - recurring
+      summary: Eliminar recurrente
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableRecurringConfiguration'
+        '400':
+          description: Petición inválida o restricción de llave foránea
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /reports/guards/stats:
+    get:
+      tags:
+      - reports
+      summary: Estadísticas generales de guardias
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListKardex'
+        '400':
+          description: Petición inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /reports/guards/top-performance:
+    get:
+      tags:
+      - reports
+      summary: Guardias con mejor desempeño
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '400':
+          description: Petición inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /reports/guards/distribution:
+    get:
+      tags:
+      - reports
+      summary: Distribución de actividad
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '400':
+          description: Petición inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /reports/guards/detail:
+    get:
+      tags:
+      - reports
+      summary: Reporte detallado de guardias
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '400':
+          description: Petición inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /reports/guards/detail-breakdown/{id}:
+    get:
+      tags:
+      - reports
+      summary: Desglose detallado por guardia
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '400':
+          description: Petición inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /reports/guards/workload:
+    get:
+      tags:
+      - reports
+      summary: Comparación de carga de trabajo
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '400':
+          description: Petición inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /settings/categories/datatable:
+    post:
+      tags:
+      - settings
+      summary: Tabla paginada de categorías (Incidentes)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableCategory'
+        '400':
+          description: Error de paginación o filtros
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /settings/categories:
+    post:
+      tags:
+      - settings
+      summary: Crear categoría
+      responses:
+        '201':
+          description: Creado
+  /settings/categories/{id}:
+    put:
+      tags:
+      - settings
+      summary: Actualizar categoría
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableCategory'
+        '400':
+          description: Petición inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+    delete:
+      tags:
+      - settings
+      summary: Eliminar categoría
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '400':
+          description: Petición inválida o restricción de llave foránea
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /settings/types/datatable:
+    post:
+      tags:
+      - settings
+      summary: Tabla paginada de tipos (Incidentes)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableType'
+        '400':
+          description: Error de paginación o filtros
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /settings/types:
+    post:
+      tags:
+      - settings
+      summary: Crear tipo de incidente
+      responses:
+        '201':
+          description: Creado
+  /settings/types/{id}:
+    put:
+      tags:
+      - settings
+      summary: Actualizar tipo
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableType'
+        '400':
+          description: Petición inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+    delete:
+      tags:
+      - settings
+      summary: Eliminar tipo
+      parameters:
+      - in: path
+        name: id
+        required: true
+        schema:
+          type: string
+          format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '400':
+          description: Petición inválida o restricción de llave foránea
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /settings/sysconfig/datatable:
+    post:
+      tags:
+      - settings
+      summary: Tabla paginada de configuración de sistema
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableSysConfig'
+        '400':
+          description: Error de paginación o filtros
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /settings/sysconfig:
+    post:
+      tags:
+      - settings
+      summary: Actualizar configuración de sistema
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableSysConfig'
+        '400':
+          description: Petición inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /settings/sysconfig/{key}:
+    delete:
+      tags:
+      - settings
+      summary: Eliminar configuración específica
+      parameters:
+      - in: path
+        name: key
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '400':
+          description: Petición inválida o restricción de llave foránea
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /sync:
+    get:
+      tags:
+      - sync
+      summary: Pull data (Offline)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '400':
+          description: Petición inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+    post:
+      tags:
+      - sync
+      summary: Push data (Offline)
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '400':
+          description: Petición inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: No encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /catalog/{key}:
+    get:
+      tags:
+      - catalog
+      summary: Obtener catálogo genérico
+      parameters:
+      - in: path
+        name: key
+        required: true
+        schema:
+          type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '400':
+          description: Petición inválida
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /uploads:
+    post:
+      tags:
+      - settings
+      summary: Subir archivo multimedia
+      requestBody:
         content:
           multipart/form-data:
             schema:
@@ -179,674 +2387,2810 @@ paths:
                   type: string
                   format: binary
       responses:
-        "200":
+        '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultUpload'
-
-  ###########################################################################
-  # KARDEX
-  ###########################################################################
-  /kardex:
-    post:
-      tags: [kardex]
-      summary: Crear registro de kardex
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/KardexCreate'
-      responses:
-        "201":
-           description: Le Created
-           content:
-             application/json:
-               schema:
-                 $ref: '#/components/schemas/TResultKardex'
-    get:
-      tags: [kardex]
-      summary: Listar kardex (filtros opcionales)
-      parameters:
-        - in: query
-          name: userId
-          schema:
-            type: integer
-        - in: query
-          name: locationId
-          schema:
-            type: integer
-        - in: query
-          name: startDate
-          schema:
-            type: string
-            format: date-time
-        - in: query
-          name: endDate
-          schema:
-            type: string
-            format: date-time
-      responses:
-         "200":
-           description: OK
-           content:
-             application/json:
-               schema:
-                 $ref: '#/components/schemas/TResultKardexArray'
-  
-  /kardex/{id}:
-    get:
-      tags: [kardex]
-      summary: Detalle de kardex
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema: 
-            type: integer
-      responses:
-         "200":
-           description: OK
-           content:
-             application/json:
-               schema:
-                 $ref: '#/components/schemas/TResultKardex'
-
-
-
-
-  ###########################################################################
-  # SCHEDULES
-  ###########################################################################
-  /schedules/datatable:
-    post:
-      tags: [schedules]
-      summary: Obtener horarios paginados con filtros y ordenamiento
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DataTableFetchParams'
-      responses:
-        "200":
-          description: OK
+                $ref: '#/components/schemas/TResult'
+        '400':
+          description: Petición inválida
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultDataTable'
-
-  ###########################################################################
-  # ASSIGNMENTS
-  ###########################################################################
-  /assignments/datatable:
-    post:
-      tags: [assignments]
-      summary: Obtener asignaciones paginadas con filtros y ordenamiento
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DataTableFetchParams'
-      responses:
-        "200":
-          description: OK
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: No encontrado
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultDataTable'
-
-  ###########################################################################
-  # ROUNDS
-  ###########################################################################
-  /rounds/datatable:
-    post:
-      tags: [rounds]
-      summary: Obtener rondines paginados con filtros y ordenamiento
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DataTableFetchParams'
-      responses:
-        "200":
-          description: OK
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: Error interno del servidor
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultDataTable'
-
-  ###########################################################################
-  # INCIDENTS
-  ###########################################################################
-  /incidents/datatable:
-    post:
-      tags: [incidents]
-      summary: Obtener incidencias paginadas con filtros y ordenamiento
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DataTableFetchParams'
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultDataTable'
-
-  ###########################################################################
-  # MAINTENANCE
-  ###########################################################################
-  /maintenance/datatable:
-    post:
-      tags: [maintenance]
-      summary: Obtener mantenimientos paginados con filtros y ordenamiento
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DataTableFetchParams'
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultDataTable'
-
-  ###########################################################################
-  # PROPERTIES
-  ###########################################################################
-  /properties:
-    get:
-      tags: [properties]
-      summary: Listar todas las propiedades
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultPropertyArray'
-    post:
-      tags: [properties]
-      summary: Crear nueva propiedad
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PropertyCreate'
-      responses:
-        "201":
-          description: Creado
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultProperty'
-
-  /properties/datatable:
-    post:
-      tags: [properties]
-      summary: Obtener propiedades paginadas
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/DataTableFetchParams'
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultDataTable'
-
-  /properties/{id}:
-    get:
-      tags: [properties]
-      summary: Detalle de propiedad
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer }
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultProperty'
-    put:
-      tags: [properties]
-      summary: Actualizar propiedad
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PropertyUpdate'
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultProperty'
-    delete:
-      tags: [properties]
-      summary: Eliminar propiedad
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer }
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultProperty'
-
-  ###########################################################################
-  # RESIDENTS
-  ###########################################################################
-  /residents:
-    get:
-      tags: [residents]
-      summary: Listar todos los residentes con sus perfiles
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultResidentArray'
-    post:
-      tags: [residents]
-      summary: Registrar nuevo residente (Usuario + Perfil)
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ResidentCreate'
-      responses:
-        "201":
-          description: Creado
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultResident'
-
-  /residents/{id}:
-    get:
-      tags: [residents]
-      summary: Detalle de residente
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer }
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultResident'
-    put:
-      tags: [residents]
-      summary: Actualizar residente y su perfil
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ResidentUpdate'
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultResident'
-    delete:
-      tags: [residents]
-      summary: Eliminar residente
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema: { type: integer }
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultResident'
-
+                $ref: '#/components/schemas/TResultError'
 components:
   schemas:
-    DataTableFetchParams:
+    UserLogin:
       type: object
+      required:
+      - username
+      - password
       properties:
-        page: { type: integer, default: 1 }
-        limit: { type: integer, default: 10 }
-        filters: { type: object, additionalProperties: true }
-        sort:
-          type: object
-          properties:
-            key: { type: string }
-            direction: { type: string, enum: [asc, desc] }
-
-    TResultDataTable:
-      type: object
-      properties:
-        success: { type: boolean }
-        data:
-          type: object
-          properties:
-            rows: { type: array, items: { type: object } }
-            total: { type: integer }
-        messages: { type: array, items: { type: string } }
-
-    ################################################################
-    # TResult WRAPPERS
-    ################################################################
-    TResultString:
-      type: object
-      properties:
-        data: { type: string }
-        error: { type: string, nullable: true }
-
-    TResultUser:
-      type: object
-      properties:
-        data: { $ref: '#/components/schemas/User' }
-        error: { type: string, nullable: true }
-
-    TResultUserArray:
-      type: object
-      properties:
-        data:
-          type: array
-          items: { $ref: '#/components/schemas/User' }
-        error: { type: string, nullable: true }
-
+        username:
+          type: string
+        password:
+          type: string
     TResultLogin:
       type: object
       properties:
-        data: { type: string, description: JWT generado }
-        error: { type: string, nullable: true }
-    
-    TResultLocation:
-       type: object
-       properties:
-         data: { $ref: '#/components/schemas/Location' }
-         error: { type: string, nullable: true }
-    
-    TResultLocationArray:
-       type: object
-       properties:
-         data:
-           type: array
-           items: { $ref: '#/components/schemas/Location' }
-         error: { type: string, nullable: true }
-
-    TResultUpload:
-       type: object
-       properties:
-         data:
-           type: object
-           properties:
-             url: { type: string }
-             mimetype: { type: string }
-             size: { type: integer }
-         error: { type: string, nullable: true }
-
-    TResultKardex:
-       type: object
-       properties:
-         data: { $ref: '#/components/schemas/Kardex' }
-         error: { type: string, nullable: true }
-
-    TResultKardexArray:
-       type: object
-       properties:
-         data:
-           type: array
-           items: { $ref: '#/components/schemas/Kardex' }
-         error: { type: string, nullable: true }
-
-
-
-    ################################################################
-    # ENTITIES
-    ################################################################
-
+        success:
+          type: boolean
+        data:
+          type: string
+          description: JWT Token
+    DataTableFetchParams:
+      type: object
+      properties:
+        page:
+          type: integer
+          default: 1
+        limit:
+          type: integer
+          default: 10
+        filters:
+          type: object
+        sort:
+          type: object
+    UserCreate:
+      type: object
+      required:
+      - name
+      - username
+      - password
+      - roleId
+      properties:
+        name:
+          type: string
+        username:
+          type: string
+        password:
+          type: string
+        roleId:
+          type: string
+          format: uuid
+        clientId:
+          type: string
+          format: uuid
+    UserUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        lastName:
+          type: string
+        username:
+          type: string
+        roleId:
+          type: string
+          format: uuid
+        clientId:
+          type: string
+          format: uuid
+        scheduleId:
+          type: string
+          format: uuid
+        active:
+          type: boolean
+    RoleBasic:
+      type: object
+      properties:
+        id: &id012
+          type: string
+          format: uuid
+        name: &id013
+          type: string
+        value: &id014
+          type: string
+        createdAt: &id015
+          type: string
+          format: date-time
+        updatedAt: &id016
+          type: string
+          format: date-time
+        deletedAt: &id017
+          type: string
+          format: date-time
+          nullable: true
+    ClientBasic:
+      type: object
+      properties:
+        id: &id001
+          type: string
+          format: uuid
+        name: &id002
+          type: string
+        address: &id003
+          type: string
+          nullable: true
+        rfc: &id004
+          type: string
+          nullable: true
+        contactName: &id005
+          type: string
+          nullable: true
+        contactPhone: &id006
+          type: string
+          nullable: true
+        active: &id007
+          type: boolean
+        softDelete: &id008
+          type: boolean
+        createdAt: &id009
+          type: string
+          format: date-time
+        updatedAt: &id010
+          type: string
+          format: date-time
+        deletedAt: &id011
+          type: string
+          format: date-time
+          nullable: true
     User:
       type: object
       properties:
-        id: { type: integer }
-        name: { type: string }
-        lastName: { type: string }
-        username: { type: string }
-
-        role: 
-           type: string
-           enum: [ADMIN, SHIFT_GUARD, GUARD, MANTENIMIENTO, RESIDENT]
-    UserCreate:
+        id: &id026
+          type: string
+          format: uuid
+        name: &id027
+          type: string
+        lastName: &id028
+          type: string
+          nullable: true
+        username: &id029
+          type: string
+        active: &id030
+          type: boolean
+        softDelete: &id031
+          type: boolean
+        shiftStart: &id032
+          type: string
+          nullable: true
+        shiftEnd: &id033
+          type: string
+          nullable: true
+        createdAt: &id034
+          type: string
+          format: date-time
+        updatedAt: &id035
+          type: string
+          format: date-time
+        deletedAt: &id036
+          type: string
+          format: date-time
+          nullable: true
+        isLoggedIn: &id037
+          type: boolean
+        scheduleId: &id038
+          type: string
+          format: uuid
+          nullable: true
+        clientId: &id039
+          type: string
+          format: uuid
+          nullable: true
+        roleId: &id040
+          type: string
+          format: uuid
+        assignments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssignmentBasic'
+        incidents:
+          type: array
+          items:
+            $ref: '#/components/schemas/IncidentBasic'
+        resolvedIncidents:
+          type: array
+          items:
+            $ref: '#/components/schemas/IncidentBasic'
+        kardexEntries:
+          type: array
+          items:
+            $ref: '#/components/schemas/KardexBasic'
+        maintenances:
+          type: array
+          items:
+            $ref: '#/components/schemas/MaintenanceBasic'
+        resolvedMaintenances:
+          type: array
+          items:
+            $ref: '#/components/schemas/MaintenanceBasic'
+        rounds:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoundBasic'
+        client:
+          $ref: '#/components/schemas/ClientBasic'
+        role:
+          $ref: '#/components/schemas/RoleBasic'
+        schedule:
+          $ref: '#/components/schemas/ScheduleBasic'
+        recurringConfigurations:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecurringConfigurationBasic'
+        createdAssignments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssignmentBasic'
+        assignmentLogs:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssignmentLogBasic'
+        auditLogs:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLogBasic'
+    TResultDatatableUser:
       type: object
-      required: [name, username, password]
-
       properties:
-        name: { type: string }
-        lastName: { type: string }
-        username: { type: string }
-
-        password: { type: string }
-        role: 
-           type: string
-           enum: [ADMIN, SHIFT_GUARD, GUARD, MANTENIMIENTO, RESIDENT]
-    UserLogin:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/User'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListUser:
       type: object
-      required: [username, password]
-
       properties:
-        username: { type: string }
-
-        password: { type: string }
-    
-    Location:
-       type: object
-       properties:
-         id: { type: integer }
-         name: { type: string }
-         aisle: { type: string }
-         spot: { type: string }
-         number: { type: string }
-         isOccupied: { type: boolean }
-    
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        messages:
+          type: array
+          items:
+            type: string
+    ClientCreate:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+        rfc:
+          type: string
+        contactName:
+          type: string
+        contactPhone:
+          type: string
+        active:
+          type: boolean
+          default: true
+        appUsername:
+          type: string
+        appPassword:
+          type: string
+    ClientUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+        rfc:
+          type: string
+        contactName:
+          type: string
+        contactPhone:
+          type: string
+        active:
+          type: boolean
+        appUsername:
+          type: string
+        appPassword:
+          type: string
+        softDelete:
+          type: boolean
+    ZoneCreate:
+      type: object
+      required:
+      - name
+      - clientId
+      properties:
+        name:
+          type: string
+        clientId:
+          type: string
+          format: uuid
+    ZoneUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        active:
+          type: boolean
+    LocationCreate:
+      type: object
+      required:
+      - name
+      - clientId
+      properties:
+        name:
+          type: string
+          description: Nombre simple. El API lo convertirá a formato compuesto Cliente-Zona-Nombre
+        clientId:
+          type: string
+          format: uuid
+        zoneId:
+          type: string
+          format: uuid
+        reference:
+          type: string
+        aisle:
+          type: string
+        spot:
+          type: string
+        number:
+          type: string
+    LocationUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        clientId:
+          type: string
+          format: uuid
+        zoneId:
+          type: string
+          format: uuid
+        reference:
+          type: string
+        aisle:
+          type: string
+        spot:
+          type: string
+        number:
+          type: string
+        active:
+          type: boolean
+    AssignmentCreate:
+      type: object
+      required:
+      - guardId
+      - locationId
+      - assignedBy
+      properties:
+        guardId:
+          type: string
+          format: uuid
+        locationId:
+          type: string
+          format: uuid
+        assignedBy:
+          type: string
+          format: uuid
+        notes:
+          type: string
+        tasks:
+          type: array
+          items:
+            type: object
+            properties:
+              description:
+                type: string
+              reqPhoto:
+                type: boolean
+    IncidentCreate:
+      type: object
+      required:
+      - title
+      - locationId
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        locationId:
+          type: string
+          format: uuid
+        media:
+          type: array
+          items:
+            type: string
+    MaintenanceCreate:
+      type: object
+      required:
+      - title
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        media:
+          type: array
+          items:
+            type: string
+    ScheduleCreate:
+      type: object
+      required:
+      - name
+      - startTime
+      - endTime
+      properties:
+        name:
+          type: string
+        startTime:
+          type: string
+          example: 08:00
+        endTime:
+          type: string
+          example: '17:00'
+    ScheduleUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        startTime:
+          type: string
+          example: 08:00
+        endTime:
+          type: string
+          example: '17:00'
+        active:
+          type: boolean
+    Round:
+      type: object
+      properties:
+        id: &id143
+          type: string
+          format: uuid
+        guardId: &id144
+          type: string
+          format: uuid
+        clientId: &id145
+          type: string
+          format: uuid
+          nullable: true
+        startTime: &id146
+          type: string
+          format: date-time
+        endTime: &id147
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          $ref: '#/components/schemas/RoundStatus'
+        recurringConfigurationId: &id148
+          type: string
+          format: uuid
+          nullable: true
+        createdAt: &id149
+          type: string
+          format: date-time
+        updatedAt: &id150
+          type: string
+          format: date-time
+        deletedAt: &id151
+          type: string
+          format: date-time
+          nullable: true
+        guard:
+          $ref: '#/components/schemas/UserBasic'
+        client:
+          $ref: '#/components/schemas/ClientBasic'
+        recurringConfiguration:
+          $ref: '#/components/schemas/RecurringConfigurationBasic'
+    RecurringConfiguration:
+      type: object
+      properties:
+        id: &id155
+          type: string
+          format: uuid
+        title: &id156
+          type: string
+        clientId: &id157
+          type: string
+          format: uuid
+          nullable: true
+        active: &id158
+          type: boolean
+        softDelete: &id159
+          type: boolean
+        createdAt: &id160
+          type: string
+          format: date-time
+        updatedAt: &id161
+          type: string
+          format: date-time
+        deletedAt: &id162
+          type: string
+          format: date-time
+          nullable: true
+        client:
+          $ref: '#/components/schemas/ClientBasic'
+        recurringLocations:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecurringLocationBasic'
+        guards:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserBasic'
+        rounds:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoundBasic'
+    RecurringLocation:
+      type: object
+      properties:
+        id: &id163
+          type: string
+          format: uuid
+        recurringConfigurationId: &id164
+          type: string
+          format: uuid
+        locationId: &id165
+          type: string
+          format: uuid
+        order: &id166
+          type: integer
+        createdAt: &id167
+          type: string
+          format: date-time
+        updatedAt: &id168
+          type: string
+          format: date-time
+        deletedAt: &id169
+          type: string
+          format: date-time
+          nullable: true
+        recurringConfiguration:
+          $ref: '#/components/schemas/RecurringConfigurationBasic'
+        location:
+          $ref: '#/components/schemas/LocationBasic'
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecurringTaskBasic'
+    RecurringTask:
+      type: object
+      properties:
+        id: &id170
+          type: string
+          format: uuid
+        recurringLocationId: &id171
+          type: string
+          format: uuid
+        description: &id172
+          type: string
+        reqPhoto: &id173
+          type: boolean
+        createdAt: &id174
+          type: string
+          format: date-time
+        updatedAt: &id175
+          type: string
+          format: date-time
+        deletedAt: &id176
+          type: string
+          format: date-time
+          nullable: true
+        recurringLocation:
+          $ref: '#/components/schemas/RecurringLocationBasic'
+    RecurringConfigurationCreate:
+      type: object
+      required:
+      - title
+      properties:
+        title:
+          type: string
+        clientId:
+          type: string
+          format: uuid
+        guardIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        locations:
+          type: array
+          items:
+            type: object
+            properties:
+              locationId:
+                type: string
+                format: uuid
+              order:
+                type: integer
+              tasks:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    description:
+                      type: string
+                    reqPhoto:
+                      type: boolean
+    RecurringConfigurationUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        active:
+          type: boolean
+        guardIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        locations:
+          type: array
+          items:
+            type: object
+            properties:
+              locationId:
+                type: string
+                format: uuid
+              order:
+                type: integer
+              tasks:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      format: uuid
+                    description:
+                      type: string
+                    reqPhoto:
+                      type: boolean
+    Incident:
+      type: object
+      properties:
+        id: &id128
+          type: string
+          format: uuid
+        guardId: &id129
+          type: string
+          format: uuid
+        title: &id130
+          type: string
+        categoryId: &id131
+          type: string
+          format: uuid
+          nullable: true
+        typeId: &id132
+          type: string
+          format: uuid
+          nullable: true
+        description: &id133
+          type: string
+          nullable: true
+        media: &id134
+          type: object
+          nullable: true
+        latitude: &id135
+          type: number
+          nullable: true
+        longitude: &id136
+          type: number
+          nullable: true
+        createdAt: &id137
+          type: string
+          format: date-time
+        updatedAt: &id138
+          type: string
+          format: date-time
+        deletedAt: &id139
+          type: string
+          format: date-time
+          nullable: true
+        resolvedAt: &id140
+          type: string
+          format: date-time
+          nullable: true
+        resolvedById: &id141
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          $ref: '#/components/schemas/IncidentStatus'
+        clientId: &id142
+          type: string
+          format: uuid
+          nullable: true
+        client:
+          $ref: '#/components/schemas/ClientBasic'
+        category:
+          $ref: '#/components/schemas/IncidentCategoryBasic'
+        type:
+          $ref: '#/components/schemas/IncidentTypeBasic'
+        guard:
+          $ref: '#/components/schemas/UserBasic'
+        resolvedBy:
+          $ref: '#/components/schemas/UserBasic'
+    Maintenance:
+      type: object
+      properties:
+        id: &id177
+          type: string
+          format: uuid
+        guardId: &id178
+          type: string
+          format: uuid
+        title: &id179
+          type: string
+        categoryId: &id180
+          type: string
+          format: uuid
+          nullable: true
+        typeId: &id181
+          type: string
+          format: uuid
+          nullable: true
+        category: &id182
+          type: string
+          nullable: true
+        description: &id183
+          type: string
+          nullable: true
+        media: &id184
+          type: object
+          nullable: true
+        latitude: &id185
+          type: number
+          nullable: true
+        longitude: &id186
+          type: number
+          nullable: true
+        status:
+          $ref: '#/components/schemas/MaintenanceStatus'
+        resolvedAt: &id187
+          type: string
+          format: date-time
+          nullable: true
+        resolvedById: &id188
+          type: string
+          format: uuid
+          nullable: true
+        createdAt: &id189
+          type: string
+          format: date-time
+        updatedAt: &id190
+          type: string
+          format: date-time
+        deletedAt: &id191
+          type: string
+          format: date-time
+          nullable: true
+        guard:
+          $ref: '#/components/schemas/UserBasic'
+        resolvedBy:
+          $ref: '#/components/schemas/UserBasic'
+        categoryRel:
+          $ref: '#/components/schemas/IncidentCategoryBasic'
+        type:
+          $ref: '#/components/schemas/IncidentTypeBasic'
+        clientId: &id192
+          type: string
+          format: uuid
+          nullable: true
+        client:
+          $ref: '#/components/schemas/ClientBasic'
     Kardex:
-       type: object
-       properties:
-         id: { type: integer }
-         userId: { type: integer }
-         locationId: { type: integer }
-         timestamp: { type: string, format: date-time }
-         notes: { type: string }
-         media: 
-           type: array
-           items:
-             type: object
-             properties:
-                type: { type: string, enum: [IMAGE, VIDEO] }
-                url: { type: string }
-
-    ################################################################
-    # PROPERTY SCHEMAS
-    ################################################################
-    TResultProperty:
       type: object
       properties:
-        data: { $ref: '#/components/schemas/Property' }
-        error: { type: string, nullable: true }
-
-    TResultPropertyArray:
+        id: &id083
+          type: string
+          format: uuid
+        userId: &id084
+          type: string
+          format: uuid
+        locationId: &id085
+          type: string
+          format: uuid
+        timestamp: &id086
+          type: string
+          format: date-time
+        notes: &id087
+          type: string
+          nullable: true
+        media: &id088
+          type: object
+          nullable: true
+        latitude: &id089
+          type: number
+          nullable: true
+        longitude: &id090
+          type: number
+          nullable: true
+        assignmentId: &id091
+          type: string
+          format: uuid
+          nullable: true
+        scanType:
+          $ref: '#/components/schemas/ScanType'
+        createdAt: &id092
+          type: string
+          format: date-time
+        updatedAt: &id093
+          type: string
+          format: date-time
+        deletedAt: &id094
+          type: string
+          format: date-time
+          nullable: true
+        assignment:
+          $ref: '#/components/schemas/AssignmentBasic'
+        location:
+          $ref: '#/components/schemas/LocationBasic'
+        user:
+          $ref: '#/components/schemas/UserBasic'
+    TResult:
       type: object
+      description: Estructura de respuesta estándar AXZY
       properties:
+        success:
+          type: boolean
+          description: Indica si la operación fue exitosa
+          example: true
+        data:
+          type: object
+          description: Datos de la respuesta
+          example:
+            id: uuid
+            name: Ejemplo
+        messages:
+          type: array
+          description: Lista de mensajes informativos o de éxito
+          items:
+            type: string
+          example:
+          - Operación realizada con éxito
+    TResultList:
+      type: object
+      description: Estructura de respuesta para listas sin paginar
+      properties:
+        success:
+          type: boolean
+          example: true
         data:
           type: array
-          items: { $ref: '#/components/schemas/Property' }
-        error: { type: string, nullable: true }
-
-    Property:
+          description: Arreglo de elementos
+          items:
+            type: object
+          example:
+          - id: uuid
+            name: Ejemplo 1
+          - id: uuid
+            name: Ejemplo 2
+        messages:
+          type: array
+          items:
+            type: string
+          example:
+          - Success
+    TResultDatatable:
+      type: object
+      description: Estructura de respuesta para datatables paginados
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                type: object
+              example:
+              - id: uuid
+                name: Ejemplo 1
+            total:
+              type: integer
+              example: 55
+        messages:
+          type: array
+          items:
+            type: string
+          example:
+          - Success
+    TResultError:
+      type: object
+      description: Estructura de respuesta de error estándar
+      properties:
+        success:
+          type: boolean
+          example: false
+        data:
+          type: object
+          nullable: true
+          example: null
+        messages:
+          type: array
+          description: Detalles del error o validación
+          items:
+            type: string
+          example:
+          - Credenciales inválidas
+          - El campo nombre es obligatorio
+        stack:
+          type: string
+          description: Traza del error (solo en desarrollo)
+          example: 'Error: Stack trace sample...'
+    AppError:
       type: object
       properties:
-        id: { type: integer }
-        identifier: { type: string }
-        name: { type: string }
-        type: { type: string, enum: [CASA, DEPARTAMENTO] }
-        mainStreet: { type: string }
-        betweenStreets: { type: string }
-        latitude: { type: number }
-        longitude: { type: number }
-        isInhabited: { type: boolean }
-        isForRent: { type: boolean }
-
-    PropertyCreate:
-      type: object
-      required: [identifier, name, type, mainStreet]
-      properties:
-        identifier: { type: string }
-        name: { type: string }
-        type: { type: string, enum: [CASA, DEPARTAMENTO] }
-        mainStreet: { type: string }
-        betweenStreets: { type: string }
-        latitude: { type: number }
-        longitude: { type: number }
-        isInhabited: { type: boolean }
-        isForRent: { type: boolean }
-
-    PropertyUpdate:
+        message:
+          type: string
+          example: Usuario no encontrado
+        statusCode:
+          type: integer
+          example: 404
+        isOperational:
+          type: boolean
+          example: true
+    Client:
       type: object
       properties:
-        identifier: { type: string }
-        name: { type: string }
-        type: { type: string, enum: [CASA, DEPARTAMENTO] }
-        mainStreet: { type: string }
-        betweenStreets: { type: string }
-        latitude: { type: number }
-        longitude: { type: number }
-        isInhabited: { type: boolean }
-        isForRent: { type: boolean }
-
-    ################################################################
-    # RESIDENT SCHEMAS
-    ################################################################
-    TResultResident:
+        id: *id001
+        name: *id002
+        address: *id003
+        rfc: *id004
+        contactName: *id005
+        contactPhone: *id006
+        active: *id007
+        softDelete: *id008
+        createdAt: *id009
+        updatedAt: *id010
+        deletedAt: *id011
+        locations:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocationBasic'
+        rounds:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoundBasic'
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserBasic'
+        zones:
+          type: array
+          items:
+            $ref: '#/components/schemas/ZoneBasic'
+        incidents:
+          type: array
+          items:
+            $ref: '#/components/schemas/IncidentBasic'
+        maintenances:
+          type: array
+          items:
+            $ref: '#/components/schemas/MaintenanceBasic'
+        recurringConfigurations:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecurringConfigurationBasic'
+        assignmentLogs:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssignmentLogBasic'
+    TResultDatatableClient:
       type: object
       properties:
-        data: { $ref: '#/components/schemas/User' } # Retorna el usuario con su perfil
-        error: { type: string, nullable: true }
-
-    TResultResidentArray:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/Client'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListClient:
       type: object
       properties:
+        success:
+          type: boolean
+          example: true
         data:
           type: array
-          items: { $ref: '#/components/schemas/User' }
-        error: { type: string, nullable: true }
-
-    ResidentCreate:
-      type: object
-      required: [name, username, password]
-      properties:
-        name: { type: string }
-        lastName: { type: string }
-        username: { type: string }
-        password: { type: string }
-        propertyId: { type: integer }
-        firstName: { type: string }
-        fatherLastName: { type: string }
-        motherLastName: { type: string }
-        phoneNumber: { type: string }
-        email: { type: string }
-        ineFrontUrl: { type: string }
-        ineBackUrl: { type: string }
-        emergencyContact: { type: string }
-        emergencyPhone: { type: string }
-        notes: { type: string }
-
-    ResidentUpdate:
+          items:
+            $ref: '#/components/schemas/Client'
+        messages:
+          type: array
+          items:
+            type: string
+    Zone:
       type: object
       properties:
-        name: { type: string }
-        lastName: { type: string }
-        username: { type: string }
-        password: { type: string }
-        propertyId: { type: integer }
-        firstName: { type: string }
-        fatherLastName: { type: string }
-        motherLastName: { type: string }
-        phoneNumber: { type: string }
-        email: { type: string }
-        ineFrontUrl: { type: string }
-        ineBackUrl: { type: string }
-        emergencyContact: { type: string }
-        emergencyPhone: { type: string }
-        notes: { type: string }
-
-    ResidentProfile:
+        id: &id018
+          type: string
+          format: uuid
+        clientId: &id019
+          type: string
+          format: uuid
+        name: &id020
+          type: string
+        active: &id021
+          type: boolean
+        softDelete: &id022
+          type: boolean
+        createdAt: &id023
+          type: string
+          format: date-time
+        updatedAt: &id024
+          type: string
+          format: date-time
+        deletedAt: &id025
+          type: string
+          format: date-time
+          nullable: true
+        client:
+          $ref: '#/components/schemas/ClientBasic'
+        locations:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocationBasic'
+    TResultDatatableZone:
       type: object
       properties:
-        id: { type: integer }
-        userId: { type: integer }
-        firstName: { type: string }
-        fatherLastName: { type: string }
-        motherLastName: { type: string }
-        phoneNumber: { type: string }
-        email: { type: string }
-        ineFrontUrl: { type: string }
-        ineBackUrl: { type: string }
-        emergencyContact: { type: string }
-        emergencyPhone: { type: string }
-        notes: { type: string }
-    
-    KardexCreate:
-       type: object
-       required: [userId, locationId]
-       properties:
-         userId: { type: integer }
-         locationId: { type: integer }
-         notes: { type: string }
-         media:
-           type: array
-           items:
-             type: object
-             properties:
-               type: { type: string, enum: [IMAGE, VIDEO] }
-               url: { type: string }
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/Zone'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListZone:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Zone'
+        messages:
+          type: array
+          items:
+            type: string
+    Location:
+      type: object
+      properties:
+        id: &id062
+          type: string
+          format: uuid
+        clientId: &id063
+          type: string
+          format: uuid
+          nullable: true
+        zoneId: &id064
+          type: string
+          format: uuid
+          nullable: true
+        aisle: &id065
+          type: string
+          nullable: true
+        spot: &id066
+          type: string
+          nullable: true
+        number: &id067
+          type: string
+          nullable: true
+        name: &id068
+          type: string
+        reference: &id069
+          type: string
+          nullable: true
+        isOccupied: &id070
+          type: boolean
+        active: &id071
+          type: boolean
+        softDelete: &id072
+          type: boolean
+        createdAt: &id073
+          type: string
+          format: date-time
+        updatedAt: &id074
+          type: string
+          format: date-time
+        deletedAt: &id075
+          type: string
+          format: date-time
+          nullable: true
+        client:
+          $ref: '#/components/schemas/ClientBasic'
+        zone:
+          $ref: '#/components/schemas/ZoneBasic'
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocationTaskBasic'
+        assignments:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssignmentBasic'
+        kardexEntries:
+          type: array
+          items:
+            $ref: '#/components/schemas/KardexBasic'
+        recurringLocations:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecurringLocationBasic'
+    TResultDatatableLocation:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/Location'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListLocation:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Location'
+        messages:
+          type: array
+          items:
+            type: string
+    Assignment:
+      type: object
+      properties:
+        id: &id095
+          type: string
+          format: uuid
+        guardId: &id096
+          type: string
+          format: uuid
+        locationId: &id097
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/AssignmentStatus'
+        assignedBy: &id098
+          type: string
+        assignedByUser:
+          $ref: '#/components/schemas/UserBasic'
+        notes: &id099
+          type: string
+          nullable: true
+        createdAt: &id100
+          type: string
+          format: date-time
+        updatedAt: &id101
+          type: string
+          format: date-time
+        deletedAt: &id102
+          type: string
+          format: date-time
+          nullable: true
+        guard:
+          $ref: '#/components/schemas/UserBasic'
+        location:
+          $ref: '#/components/schemas/LocationBasic'
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssignmentTaskBasic'
+        kardex:
+          type: array
+          items:
+            $ref: '#/components/schemas/KardexBasic'
+    TResultDatatableAssignment:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/Assignment'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListAssignment:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Assignment'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultDatatableRound:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/Round'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListRound:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Round'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultDatatableIncident:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/Incident'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListIncident:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Incident'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultDatatableMaintenance:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/Maintenance'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListMaintenance:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Maintenance'
+        messages:
+          type: array
+          items:
+            type: string
+    Schedule:
+      type: object
+      properties:
+        id: &id054
+          type: string
+          format: uuid
+        name: &id055
+          type: string
+        startTime: &id056
+          type: string
+        endTime: &id057
+          type: string
+        active: &id058
+          type: boolean
+        createdAt: &id059
+          type: string
+          format: date-time
+        updatedAt: &id060
+          type: string
+          format: date-time
+        deletedAt: &id061
+          type: string
+          format: date-time
+          nullable: true
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserBasic'
+    TResultDatatableSchedule:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/Schedule'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListSchedule:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Schedule'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultDatatableRecurringConfiguration:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/RecurringConfiguration'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListRecurringConfiguration:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecurringConfiguration'
+        messages:
+          type: array
+          items:
+            type: string
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        value:
+          type: string
+        type:
+          type: string
+        color:
+          type: string
+          nullable: true
+        icon:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    TResultDatatableCategory:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/Category'
+            total:
+              type: integer
+              example: 55
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListCategory:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+        messages:
+          type: array
+          items:
+            type: string
+    Type:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        categoryId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        value:
+          type: string
+        category:
+          $ref: '#/components/schemas/Category'
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    TResultDatatableType:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/Type'
+            total:
+              type: integer
+              example: 55
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListType:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Type'
+        messages:
+          type: array
+          items:
+            type: string
+    SysConfig:
+      type: object
+      properties:
+        key: &id152
+          type: string
+          format: uuid
+        value: &id153
+          type: string
+        updatedAt: &id154
+          type: string
+          format: date-time
+    TResultDatatableSysConfig:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/SysConfig'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListSysConfig:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SysConfig'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListKardex:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Kardex'
+        messages:
+          type: array
+          items:
+            type: string
+    Role:
+      type: object
+      properties:
+        id: *id012
+        name: *id013
+        value: *id014
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserBasic'
+        createdAt: *id015
+        updatedAt: *id016
+        deletedAt: *id017
+    TResultDatatableRole:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/Role'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListRole:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+        messages:
+          type: array
+          items:
+            type: string
+    AssignmentLog:
+      type: object
+      properties:
+        id: &id041
+          type: string
+          format: uuid
+        guardId: &id042
+          type: string
+          format: uuid
+        clientId: &id043
+          type: string
+          format: uuid
+          nullable: true
+        type: &id044
+          type: string
+        notes: &id045
+          type: string
+          nullable: true
+        createdAt: &id046
+          type: string
+          format: date-time
+        guard:
+          $ref: '#/components/schemas/UserBasic'
+        client:
+          $ref: '#/components/schemas/ClientBasic'
+    TResultDatatableAssignmentLog:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/AssignmentLog'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListAssignmentLog:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssignmentLog'
+        messages:
+          type: array
+          items:
+            type: string
+    AuditLog:
+      type: object
+      properties:
+        id: &id047
+          type: string
+          format: uuid
+        userId: &id048
+          type: string
+          format: uuid
+        module: &id049
+          type: string
+        action: &id050
+          type: string
+        resourceId: &id051
+          type: string
+          format: uuid
+          nullable: true
+        details: &id052
+          type: object
+          nullable: true
+        createdAt: &id053
+          type: string
+          format: date-time
+        user:
+          $ref: '#/components/schemas/UserBasic'
+    TResultDatatableAuditLog:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/AuditLog'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListAuditLog:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditLog'
+        messages:
+          type: array
+          items:
+            type: string
+    LocationTask:
+      type: object
+      properties:
+        id: &id076
+          type: string
+          format: uuid
+        locationId: &id077
+          type: string
+          format: uuid
+        description: &id078
+          type: string
+        reqPhoto: &id079
+          type: boolean
+        createdAt: &id080
+          type: string
+          format: date-time
+        updatedAt: &id081
+          type: string
+          format: date-time
+        deletedAt: &id082
+          type: string
+          format: date-time
+          nullable: true
+        location:
+          $ref: '#/components/schemas/LocationBasic'
+    TResultDatatableLocationTask:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/LocationTask'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListLocationTask:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocationTask'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultDatatableKardex:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/Kardex'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    AssignmentTask:
+      type: object
+      properties:
+        id: &id103
+          type: string
+          format: uuid
+        assignmentId: &id104
+          type: string
+          format: uuid
+        description: &id105
+          type: string
+        reqPhoto: &id106
+          type: boolean
+        completed: &id107
+          type: boolean
+        completedAt: &id108
+          type: string
+          format: date-time
+          nullable: true
+        createdAt: &id109
+          type: string
+          format: date-time
+        updatedAt: &id110
+          type: string
+          format: date-time
+        deletedAt: &id111
+          type: string
+          format: date-time
+          nullable: true
+        assignment:
+          $ref: '#/components/schemas/AssignmentBasic'
+    TResultDatatableAssignmentTask:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/AssignmentTask'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListAssignmentTask:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssignmentTask'
+        messages:
+          type: array
+          items:
+            type: string
+    IncidentCategory:
+      type: object
+      properties:
+        id: &id112
+          type: string
+          format: uuid
+        name: &id113
+          type: string
+        value: &id114
+          type: string
+        type: &id115
+          type: string
+        color: &id116
+          type: string
+          nullable: true
+        icon: &id117
+          type: string
+          nullable: true
+        createdAt: &id118
+          type: string
+          format: date-time
+        updatedAt: &id119
+          type: string
+          format: date-time
+        deletedAt: &id120
+          type: string
+          format: date-time
+          nullable: true
+        types:
+          type: array
+          items:
+            $ref: '#/components/schemas/IncidentTypeBasic'
+        incidents:
+          type: array
+          items:
+            $ref: '#/components/schemas/IncidentBasic'
+        maintenances:
+          type: array
+          items:
+            $ref: '#/components/schemas/MaintenanceBasic'
+    TResultDatatableIncidentCategory:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/IncidentCategory'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListIncidentCategory:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/IncidentCategory'
+        messages:
+          type: array
+          items:
+            type: string
+    IncidentType:
+      type: object
+      properties:
+        id: &id121
+          type: string
+          format: uuid
+        categoryId: &id122
+          type: string
+          format: uuid
+        name: &id123
+          type: string
+        value: &id124
+          type: string
+        createdAt: &id125
+          type: string
+          format: date-time
+        updatedAt: &id126
+          type: string
+          format: date-time
+        deletedAt: &id127
+          type: string
+          format: date-time
+          nullable: true
+        category:
+          $ref: '#/components/schemas/IncidentCategoryBasic'
+        incidents:
+          type: array
+          items:
+            $ref: '#/components/schemas/IncidentBasic'
+        maintenances:
+          type: array
+          items:
+            $ref: '#/components/schemas/MaintenanceBasic'
+    TResultDatatableIncidentType:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/IncidentType'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListIncidentType:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/IncidentType'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultDatatableRecurringLocation:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/RecurringLocation'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListRecurringLocation:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecurringLocation'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultDatatableRecurringTask:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/RecurringTask'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListRecurringTask:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecurringTask'
+        messages:
+          type: array
+          items:
+            type: string
+    AssignmentStatus:
+      type: string
+      enum:
+      - PENDING
+      - CHECKING
+      - UNDER_REVIEW
+      - REVIEWED
+      - ANOMALY
+    ScanType:
+      type: string
+      enum:
+      - ASSIGNMENT
+      - RECURRING
+      - FREE
+    IncidentStatus:
+      type: string
+      enum:
+      - PENDING
+      - ATTENDED
+    RoundStatus:
+      type: string
+      enum:
+      - IN_PROGRESS
+      - COMPLETED
+    MaintenanceStatus:
+      type: string
+      enum:
+      - PENDING
+      - ATTENDED
+    TResultRole:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Role'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultClient:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Client'
+        messages:
+          type: array
+          items:
+            type: string
+    ZoneBasic:
+      type: object
+      properties:
+        id: *id018
+        clientId: *id019
+        name: *id020
+        active: *id021
+        softDelete: *id022
+        createdAt: *id023
+        updatedAt: *id024
+        deletedAt: *id025
+    TResultZone:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Zone'
+        messages:
+          type: array
+          items:
+            type: string
+    UserBasic:
+      type: object
+      properties:
+        id: *id026
+        name: *id027
+        lastName: *id028
+        username: *id029
+        active: *id030
+        softDelete: *id031
+        shiftStart: *id032
+        shiftEnd: *id033
+        createdAt: *id034
+        updatedAt: *id035
+        deletedAt: *id036
+        isLoggedIn: *id037
+        scheduleId: *id038
+        clientId: *id039
+        roleId: *id040
+    TResultUser:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/User'
+        messages:
+          type: array
+          items:
+            type: string
+    AssignmentLogBasic:
+      type: object
+      properties:
+        id: *id041
+        guardId: *id042
+        clientId: *id043
+        type: *id044
+        notes: *id045
+        createdAt: *id046
+    TResultAssignmentLog:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/AssignmentLog'
+        messages:
+          type: array
+          items:
+            type: string
+    AuditLogBasic:
+      type: object
+      properties:
+        id: *id047
+        userId: *id048
+        module: *id049
+        action: *id050
+        resourceId: *id051
+        details: *id052
+        createdAt: *id053
+    TResultAuditLog:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/AuditLog'
+        messages:
+          type: array
+          items:
+            type: string
+    ScheduleBasic:
+      type: object
+      properties:
+        id: *id054
+        name: *id055
+        startTime: *id056
+        endTime: *id057
+        active: *id058
+        createdAt: *id059
+        updatedAt: *id060
+        deletedAt: *id061
+    TResultSchedule:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Schedule'
+        messages:
+          type: array
+          items:
+            type: string
+    LocationBasic:
+      type: object
+      properties:
+        id: *id062
+        clientId: *id063
+        zoneId: *id064
+        aisle: *id065
+        spot: *id066
+        number: *id067
+        name: *id068
+        reference: *id069
+        isOccupied: *id070
+        active: *id071
+        softDelete: *id072
+        createdAt: *id073
+        updatedAt: *id074
+        deletedAt: *id075
+    TResultLocation:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Location'
+        messages:
+          type: array
+          items:
+            type: string
+    LocationTaskBasic:
+      type: object
+      properties:
+        id: *id076
+        locationId: *id077
+        description: *id078
+        reqPhoto: *id079
+        createdAt: *id080
+        updatedAt: *id081
+        deletedAt: *id082
+    TResultLocationTask:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/LocationTask'
+        messages:
+          type: array
+          items:
+            type: string
+    KardexBasic:
+      type: object
+      properties:
+        id: *id083
+        userId: *id084
+        locationId: *id085
+        timestamp: *id086
+        notes: *id087
+        media: *id088
+        latitude: *id089
+        longitude: *id090
+        assignmentId: *id091
+        createdAt: *id092
+        updatedAt: *id093
+        deletedAt: *id094
+    TResultKardex:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Kardex'
+        messages:
+          type: array
+          items:
+            type: string
+    AssignmentBasic:
+      type: object
+      properties:
+        id: *id095
+        guardId: *id096
+        locationId: *id097
+        assignedBy: *id098
+        notes: *id099
+        createdAt: *id100
+        updatedAt: *id101
+        deletedAt: *id102
+    TResultAssignment:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Assignment'
+        messages:
+          type: array
+          items:
+            type: string
+    AssignmentTaskBasic:
+      type: object
+      properties:
+        id: *id103
+        assignmentId: *id104
+        description: *id105
+        reqPhoto: *id106
+        completed: *id107
+        completedAt: *id108
+        createdAt: *id109
+        updatedAt: *id110
+        deletedAt: *id111
+    TResultAssignmentTask:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/AssignmentTask'
+        messages:
+          type: array
+          items:
+            type: string
+    IncidentCategoryBasic:
+      type: object
+      properties:
+        id: *id112
+        name: *id113
+        value: *id114
+        type: *id115
+        color: *id116
+        icon: *id117
+        createdAt: *id118
+        updatedAt: *id119
+        deletedAt: *id120
+    TResultIncidentCategory:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/IncidentCategory'
+        messages:
+          type: array
+          items:
+            type: string
+    IncidentTypeBasic:
+      type: object
+      properties:
+        id: *id121
+        categoryId: *id122
+        name: *id123
+        value: *id124
+        createdAt: *id125
+        updatedAt: *id126
+        deletedAt: *id127
+    TResultIncidentType:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/IncidentType'
+        messages:
+          type: array
+          items:
+            type: string
+    IncidentBasic:
+      type: object
+      properties:
+        id: *id128
+        guardId: *id129
+        title: *id130
+        categoryId: *id131
+        typeId: *id132
+        description: *id133
+        media: *id134
+        latitude: *id135
+        longitude: *id136
+        createdAt: *id137
+        updatedAt: *id138
+        deletedAt: *id139
+        resolvedAt: *id140
+        resolvedById: *id141
+        clientId: *id142
+    TResultIncident:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Incident'
+        messages:
+          type: array
+          items:
+            type: string
+    RoundBasic:
+      type: object
+      properties:
+        id: *id143
+        guardId: *id144
+        clientId: *id145
+        startTime: *id146
+        endTime: *id147
+        recurringConfigurationId: *id148
+        createdAt: *id149
+        updatedAt: *id150
+        deletedAt: *id151
+    TResultRound:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Round'
+        messages:
+          type: array
+          items:
+            type: string
+    SysConfigBasic:
+      type: object
+      properties:
+        key: *id152
+        value: *id153
+        updatedAt: *id154
+    TResultSysConfig:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/SysConfig'
+        messages:
+          type: array
+          items:
+            type: string
+    RecurringConfigurationBasic:
+      type: object
+      properties:
+        id: *id155
+        title: *id156
+        clientId: *id157
+        active: *id158
+        softDelete: *id159
+        createdAt: *id160
+        updatedAt: *id161
+        deletedAt: *id162
+    TResultRecurringConfiguration:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/RecurringConfiguration'
+        messages:
+          type: array
+          items:
+            type: string
+    RecurringLocationBasic:
+      type: object
+      properties:
+        id: *id163
+        recurringConfigurationId: *id164
+        locationId: *id165
+        order: *id166
+        createdAt: *id167
+        updatedAt: *id168
+        deletedAt: *id169
+    TResultRecurringLocation:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/RecurringLocation'
+        messages:
+          type: array
+          items:
+            type: string
+    RecurringTaskBasic:
+      type: object
+      properties:
+        id: *id170
+        recurringLocationId: *id171
+        description: *id172
+        reqPhoto: *id173
+        createdAt: *id174
+        updatedAt: *id175
+        deletedAt: *id176
+    TResultRecurringTask:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/RecurringTask'
+        messages:
+          type: array
+          items:
+            type: string
+    MaintenanceBasic:
+      type: object
+      properties:
+        id: *id177
+        guardId: *id178
+        title: *id179
+        categoryId: *id180
+        typeId: *id181
+        category: *id182
+        description: *id183
+        media: *id184
+        latitude: *id185
+        longitude: *id186
+        resolvedAt: *id187
+        resolvedById: *id188
+        createdAt: *id189
+        updatedAt: *id190
+        deletedAt: *id191
+        clientId: *id192
+    TResultMaintenance:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/Maintenance'
+        messages:
+          type: array
+          items:
+            type: string

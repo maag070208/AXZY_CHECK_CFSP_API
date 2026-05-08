@@ -59,7 +59,7 @@ export const vinasDelMarSeed = async (prisma: PrismaClient) => {
     // 4. Create Locations
     // 10 Houses in SECCION 1
     for (let i = 1; i <= 10; i++) {
-        const locName = `CASA ${i}`;
+        const locName = `Vinas - SECCION 1 - CASA ${i}`;
         const zone = zoneRecords["SECCION 1"];
         await prisma.location.upsert({
             where: { name_zoneId: { name: locName, zoneId: zone.id } },
@@ -74,7 +74,7 @@ export const vinasDelMarSeed = async (prisma: PrismaClient) => {
 
     // 10 Houses in SECCION 2
     for (let i = 1; i <= 10; i++) {
-        const locName = `CASA ${i}`;
+        const locName = `Vinas - SECCION 2 - CASA ${i}`;
         const zone = zoneRecords["SECCION 2"];
         await prisma.location.upsert({
             where: { name_zoneId: { name: locName, zoneId: zone.id } },
@@ -89,7 +89,8 @@ export const vinasDelMarSeed = async (prisma: PrismaClient) => {
 
     // 5 Points in PARQUE
     const parquePoints = ["ENTRADA", "AREA JUEGOS", "CANCHA", "KOSKO", "SALIDA"];
-    for (const locName of parquePoints) {
+    for (const point of parquePoints) {
+        const locName = `Vinas - PARQUE - ${point}`;
         const zone = zoneRecords["PARQUE"];
         await prisma.location.upsert({
             where: { name_zoneId: { name: locName, zoneId: zone.id } },

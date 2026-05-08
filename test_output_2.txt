@@ -1,0 +1,128 @@
+yarn run v1.22.22
+$ jest test/modules/rounds/rounds.routes.test.ts --verbose
+2026-05-07 20:40:51 [info]: AUDIT_LOG: [CLIENTS] CREATE | User: SYSTEM | Resource: b2be0933-3eaa-4d93-9c69-5ee6dfc326ba
+::ffff:127.0.0.1 - - [08/May/2026:03:40:51 +0000] "POST /api/v1/clients HTTP/1.1" 201 326 "-" "-"
+::ffff:127.0.0.1 - - [08/May/2026:03:40:51 +0000] "POST /api/v1/locations HTTP/1.1" 201 370 "-" "-"
+2026-05-07 20:40:53 [info]: AUDIT_LOG: [USERS] CREATE | User: d77aa2ec-c2d1-41d6-ad5f-d9f16afaba1d | Resource: d77aa2ec-c2d1-41d6-ad5f-d9f16afaba1d
+::ffff:127.0.0.1 - - [08/May/2026:03:40:53 +0000] "POST /api/v1/users HTTP/1.1" 201 1029 "-" "-"
+2026-05-07 20:40:53 [warn]: POST /api/v1/rounds/start - Error de base de datos: Foreign key constraint failed on the field: `Round_guardId_fkey (index)`
+::ffff:127.0.0.1 - - [08/May/2026:03:40:53 +0000] "POST /api/v1/rounds/start HTTP/1.1" 400 141 "-" "-"
+::ffff:127.0.0.1 - - [08/May/2026:03:40:54 +0000] "POST /api/v1/kardex HTTP/1.1" 201 451 "-" "-"
+2026-05-07 20:40:54 [warn]: Validation error:
+2026-05-07 20:40:54 [warn]: PUT /api/v1/rounds/undefined/end - Error de validación
+::ffff:127.0.0.1 - - [08/May/2026:03:40:54 +0000] "PUT /api/v1/rounds/undefined/end HTTP/1.1" 400 91 "-" "-"
+::ffff:127.0.0.1 - - [08/May/2026:03:40:55 +0000] "POST /api/v1/rounds/datatable HTTP/1.1" 200 68 "-" "-"
+2026-05-07 20:40:55 [warn]: Validation error:
+2026-05-07 20:40:55 [warn]: GET /api/v1/rounds/undefined - Error de validación
+::ffff:127.0.0.1 - - [08/May/2026:03:40:55 +0000] "GET /api/v1/rounds/undefined HTTP/1.1" 400 91 "-" "-"
+2026-05-07 20:40:55 [warn]: Validation error:
+2026-05-07 20:40:55 [warn]: GET /api/v1/rounds/undefined/report - Error de validación
+::ffff:127.0.0.1 - - [08/May/2026:03:40:55 +0000] "GET /api/v1/rounds/undefined/report HTTP/1.1" 400 91 "-" "-"
+FAIL test/modules/rounds/rounds.routes.test.ts (10.84 s)
+  Rutas de Historial de Rondas (Integración Total)
+    Ciclo de Vida de una Ronda
+      ✕ debe iniciar una ronda correctamente (297 ms)
+      ✓ debe permitir al guardia registrar actividad en la ronda (566 ms)
+      ✕ debe finalizar la ronda (6 ms)
+      ✕ debe aparecer en el datatable con filtros (893 ms)
+      ✕ debe mostrar el detalle completo con la línea de tiempo (4 ms)
+      ✕ debe generar el reporte en PDF de la ronda (6 ms)
+
+  ● Rutas de Historial de Rondas (Integración Total) › Ciclo de Vida de una Ronda › debe iniciar una ronda correctamente
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 400
+
+      76 |         });
+      77 |
+    > 78 |       expect(response.status).toBe(200);
+         |                               ^
+      79 |       expect(response.body.data.status).toBe("IN_PROGRESS");
+      80 |       createdRoundId = response.body.data.id;
+      81 |     });
+
+      at test/modules/rounds/rounds.routes.test.ts:78:31
+      at fulfilled (test/modules/rounds/rounds.routes.test.ts:5:58)
+
+  ● Rutas de Historial de Rondas (Integración Total) › Ciclo de Vida de una Ronda › debe finalizar la ronda
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 400
+
+       96 |     it("debe finalizar la ronda", async () => {
+       97 |       const response = await request(app).put(`/api/v1/rounds/${createdRoundId}/end`);
+    >  98 |       expect(response.status).toBe(200);
+          |                               ^
+       99 |       expect(response.body.data.status).toBe("COMPLETED");
+      100 |     });
+      101 |
+
+      at test/modules/rounds/rounds.routes.test.ts:98:31
+      at fulfilled (test/modules/rounds/rounds.routes.test.ts:5:58)
+
+  ● Rutas de Historial de Rondas (Integración Total) › Ciclo de Vida de una Ronda › debe aparecer en el datatable con filtros
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      112 |
+      113 |       expect(response.status).toBe(200);
+    > 114 |       expect(response.body.data.rows.some((r: any) => r.id === createdRoundId)).toBe(true);
+          |                                                                                 ^
+      115 |     });
+      116 |
+      117 |     it("debe mostrar el detalle completo con la línea de tiempo", async () => {
+
+      at test/modules/rounds/rounds.routes.test.ts:114:81
+      at fulfilled (test/modules/rounds/rounds.routes.test.ts:5:58)
+
+  ● Rutas de Historial de Rondas (Integración Total) › Ciclo de Vida de una Ronda › debe mostrar el detalle completo con la línea de tiempo
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 400
+
+      118 |       const response = await request(app).get(`/api/v1/rounds/${createdRoundId}`);
+      119 |
+    > 120 |       expect(response.status).toBe(200);
+          |                               ^
+      121 |       expect(response.body.data.round.id).toBe(createdRoundId);
+      122 |       expect(response.body.data.timeline.length).toBeGreaterThanOrEqual(3); // Start, Scan, End
+      123 |       expect(response.body.data.timeline.some((t: any) => t.type === "SCAN")).toBe(true);
+
+      at test/modules/rounds/rounds.routes.test.ts:120:31
+      at fulfilled (test/modules/rounds/rounds.routes.test.ts:5:58)
+
+  ● Rutas de Historial de Rondas (Integración Total) › Ciclo de Vida de una Ronda › debe generar el reporte en PDF de la ronda
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 200
+    Received: 400
+
+      127 |       const response = await request(app).get(`/api/v1/rounds/${createdRoundId}/report`);
+      128 |       
+    > 129 |       expect(response.status).toBe(200);
+          |                               ^
+      130 |       expect(response.header["content-type"]).toBe("application/pdf");
+      131 |     });
+      132 |   });
+
+      at test/modules/rounds/rounds.routes.test.ts:129:31
+      at fulfilled (test/modules/rounds/rounds.routes.test.ts:5:58)
+
+Test Suites: 1 failed, 1 total
+Tests:       5 failed, 1 passed, 6 total
+Snapshots:   0 total
+Time:        10.957 s
+Ran all test suites matching test/modules/rounds/rounds.routes.test.ts.
+Force exiting Jest: Have you considered using `--detectOpenHandles` to detect async operations that kept running after all tests finished?
+error Command failed with exit code 1.
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command.
