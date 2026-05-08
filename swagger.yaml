@@ -153,6 +153,56 @@ paths:
       responses:
         "200": { description: OK }
 
+  /users/{id}/password:
+    put:
+      tags: [users]
+      summary: Cambiar contraseña (Usuario propio)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [oldPassword, newPassword]
+              properties:
+                oldPassword: { type: string }
+                newPassword: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /users/{id}/reset-password:
+    put:
+      tags: [users]
+      summary: Resetear contraseña (Administrador)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [newPassword]
+              properties:
+                newPassword: { type: string }
+      responses:
+        "200": { description: OK }
+
+  /users/logout:
+    post:
+      tags: [auth]
+      summary: Cerrar sesión
+      responses:
+        "200": { description: OK }
+
   # --- CLIENTS ---
   /clients:
     get:
@@ -349,6 +399,26 @@ paths:
           schema: { type: string, format: uuid }
       responses:
         "200": { description: OK }
+
+  /locations/print-bulk-qr:
+    post:
+      tags: [locations]
+      summary: Generar PDF masivo con códigos QR
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids: { type: array, items: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Archivo PDF
+          content:
+            application/pdf:
+              schema: { type: string, format: binary }
   /assignments:
     get:
       tags: [assignments]
@@ -1141,3 +1211,128 @@ components:
         startTime: { type: string, example: "08:00" }
         endTime: { type: string, example: "17:00" }
         active: { type: boolean }
+
+    Round:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        guardId: { type: string, format: uuid }
+        clientId: { type: string, format: uuid }
+        startTime: { type: string, format: date-time }
+        endTime: { type: string, format: date-time }
+        status: { type: string, enum: [IN_PROGRESS, COMPLETED] }
+        recurringConfigurationId: { type: string, format: uuid }
+
+    RecurringConfiguration:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        clientId: { type: string, format: uuid }
+        active: { type: boolean }
+        recurringLocations:
+          type: array
+          items: { $ref: "#/components/schemas/RecurringLocation" }
+
+    RecurringLocation:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        locationId: { type: string, format: uuid }
+        order: { type: integer }
+        tasks:
+          type: array
+          items: { $ref: "#/components/schemas/RecurringTask" }
+
+    RecurringTask:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        description: { type: string }
+        reqPhoto: { type: boolean }
+
+    RecurringConfigurationCreate:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string }
+        clientId: { type: string, format: uuid }
+        guardIds: { type: array, items: { type: string, format: uuid } }
+        locations:
+          type: array
+          items:
+            type: object
+            properties:
+              locationId: { type: string, format: uuid }
+              order: { type: integer }
+              tasks:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    description: { type: string }
+                    reqPhoto: { type: boolean }
+
+    RecurringConfigurationUpdate:
+      type: object
+      properties:
+        title: { type: string }
+        active: { type: boolean }
+        guardIds: { type: array, items: { type: string, format: uuid } }
+        locations:
+          type: array
+          items:
+            type: object
+            properties:
+              locationId: { type: string, format: uuid }
+              order: { type: integer }
+              tasks:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id: { type: string, format: uuid }
+                    description: { type: string }
+                    reqPhoto: { type: boolean }
+
+    Incident:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string }
+        status: { type: string, enum: [PENDING, ATTENDED] }
+        categoryId: { type: string, format: uuid }
+        typeId: { type: string, format: uuid }
+        guardId: { type: string, format: uuid }
+        clientId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+
+    Maintenance:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string }
+        status: { type: string, enum: [PENDING, ATTENDED] }
+        guardId: { type: string, format: uuid }
+        clientId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+
+    Kardex:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        locationId: { type: string, format: uuid }
+        timestamp: { type: string, format: date-time }
+        scanType: { type: string, enum: [FREE, RECURRING, ASSIGNMENT] }
+        notes: { type: string }
+        media: { type: array, items: { type: string } }
+
+    TResult:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { type: object }
+        messages: { type: array, items: { type: string } }
