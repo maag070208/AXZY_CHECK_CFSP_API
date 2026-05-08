@@ -2,3 +2,7 @@ node_modules
 # Keep environment variables out of version control
 dist
 .env
+
+# AXZY Autodoc
+react_llm_reference.txt
+scripts/autodoc_prisma.py

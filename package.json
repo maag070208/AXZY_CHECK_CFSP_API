@@ -16,7 +16,8 @@
     "prisma:migrate": "npx prisma migrate dev",
     "prisma:restore": "npx prisma migrate reset",
     "prisma:regenerate": "yarn prisma:generate && yarn prisma:migrate && yarn prisma:seed",
-    "test": "jest"
+    "test": "jest",
+    "swagger": "python3 scripts/autodoc_prisma.py"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
