@@ -16,11 +16,16 @@ export const getDataTableClients = async (
 ): Promise<ITDataTableResponse<IClientResponse>> => {
   const { page = 1, limit = 10, filters } = params;
   const filter = (filters as any)?.search || (filters as any)?.name || "";
+  const isActive = (filters as any)?.active;
 
   const where: Prisma.ClientWhereInput = {
     softDelete: false,
     name: { contains: filter, mode: "insensitive" },
   };
+
+  if (isActive !== undefined) {
+    where.active = isActive === "true" || isActive === true;
+  }
 
   const [rows, total] = await Promise.all([
     prisma.client.findMany({
