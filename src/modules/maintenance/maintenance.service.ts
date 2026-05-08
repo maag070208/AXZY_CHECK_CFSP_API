@@ -9,9 +9,11 @@ import {
   MAINTENANCE_STATUS_PENDING,
 } from "@src/core/config/constants";
 
+import { IMaintenanceResponse } from "./maintenance.response";
+
 export const getDataTableMaintenances = async (
   params: ITDataTableFetchParams,
-): Promise<ITDataTableResponse<any>> => {
+): Promise<ITDataTableResponse<IMaintenanceResponse>> => {
   const prismaParams = getPrismaPaginationParams(params);
   
   // Handle combined search
@@ -31,20 +33,36 @@ export const getDataTableMaintenances = async (
   const [rows, total] = await Promise.all([
     prismaClient.maintenance.findMany({
       ...prismaParams,
-      include: {
-        guard: true,
-        resolvedBy: true,
-        client: true,
-        categoryRel: true,
-        type: true,
+      select: {
+        id: true,
+        guardId: true,
+        title: true,
+        categoryId: true,
+        typeId: true,
+        category: true,
+        description: true,
+        media: true,
+        latitude: true,
+        longitude: true,
+        createdAt: true,
+        resolvedAt: true,
+        resolvedById: true,
+        status: true,
+        clientId: true,
+        guard: { select: { id: true, name: true, lastName: true, username: true } },
+        resolvedBy: { select: { id: true, name: true, lastName: true } },
+        categoryRel: { select: { id: true, name: true } },
+        type: { select: { id: true, name: true } },
+        client: { select: { id: true, name: true } },
       },
+      orderBy: prismaParams.orderBy || { createdAt: "desc" },
     }),
     prismaClient.maintenance.count({
       where: prismaParams.where,
     }),
   ]);
 
-  return { rows, total };
+  return { rows: rows as IMaintenanceResponse[], total };
 };
 
 import {

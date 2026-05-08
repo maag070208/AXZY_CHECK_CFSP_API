@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { ZodError } from "zod";
-import { createTResult } from "../mappers/tresult.mapper";
+import { AppError } from "../errors/AppError";
 import { logger } from "../utils/logger";
 
 export const validate =
@@ -18,10 +18,8 @@ export const validate =
           (err) => `${err.path.join(".")}: ${err.message}`,
         );
         logger.warn("Validation error:", { errors, path: req.path });
-        return res.status(400).json(createTResult(null, errors));
+        return next(new AppError("Error de validación", 400, errors));
       }
-      return res
-        .status(500)
-        .json(createTResult(null, ["Internal server error during validation"]));
+      return next(new AppError("Error interno durante la validación", 500));
     }
   };

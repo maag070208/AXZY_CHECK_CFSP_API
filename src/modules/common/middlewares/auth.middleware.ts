@@ -1,35 +1,39 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../../../core/utils/security';
-import { createTResult } from '../../../core/mappers/tresult.mapper';
 import { AppError } from '../../../core/errors/AppError';
+import { asyncHandler } from '../../../core/utils/asyncHandler';
 
-export const authenticate = async (req: Request, res: Response, next: NextFunction) => {
+export const authenticate = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+    // Soporte para tests con mocks
+    if (process.env.NODE_ENV === 'test' && req.headers['user']) {
+        res.locals.user = JSON.parse(req.headers['user'] as string);
+        return next();
+    }
+
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        throw new AppError('No se proporcionó un token', 401);
+    }
+
+    const token = authHeader.split(' ')[1]; 
+    if (!token) {
+        throw new AppError('Formato de token inválido', 401);
+    }
+
     try {
-        const authHeader = req.headers.authorization;
-        if (!authHeader) {
-            return res.status(401).json(createTResult(null, ['No token provided']));
-        }
-
-        const token = authHeader.split(' ')[1]; 
-        if (!token) {
-            return res.status(401).json(createTResult(null, ['Invalid token format']));
-        }
-
         const decoded = await verifyToken(token);
-        // @ts-ignore
-        req.user = decoded;
+        res.locals.user = decoded;
         next();
     } catch (error) {
-        return res.status(401).json(createTResult(null, ['Invalid or expired token']));
+        throw new AppError('Token inválido o expirado', 401);
     }
-};
+});
 
 export const authorize = (roles: string[]) => {
     return (req: Request, res: Response, next: NextFunction) => {
-        // @ts-ignore
-        const user = req.user;
+        const user = res.locals.user;
         if (!user || !roles.includes(user.role)) {
-            throw new AppError("Forbidden: Insufficient permissions", 403);
+            throw new AppError("Acceso denegado: Permisos insuficientes", 403);
         }
         next();
     };

@@ -12,9 +12,11 @@ import {
 import { logger } from "@src/core/utils/logger";
 import { now } from "@src/core/utils/date-time.utils";
 
+import { IIncidentResponse } from "./incident.response";
+
 export const getDataTableIncidents = async (
   params: ITDataTableFetchParams,
-): Promise<ITDataTableResponse<any>> => {
+): Promise<ITDataTableResponse<IIncidentResponse>> => {
   const prismaParams = getPrismaPaginationParams(params);
 
   // Handle combined search (if any)
@@ -24,8 +26,8 @@ export const getDataTableIncidents = async (
     prismaParams.where.OR = [
       { title: { contains: searchVal, mode: "insensitive" } },
       { description: { contains: searchVal, mode: "insensitive" } },
-      { category: { value: { contains: searchVal, mode: "insensitive" } } },
-      { type: { value: { contains: searchVal, mode: "insensitive" } } },
+      { category: { name: { contains: searchVal, mode: "insensitive" } } },
+      { type: { name: { contains: searchVal, mode: "insensitive" } } },
     ];
   }
 
@@ -37,12 +39,26 @@ export const getDataTableIncidents = async (
   const [rows, total] = await Promise.all([
     prismaClient.incident.findMany({
       ...prismaParams,
-      include: {
-        guard: true,
-        resolvedBy: true,
-        category: true,
-        type: true,
-        client: true,
+      select: {
+        id: true,
+        guardId: true,
+        title: true,
+        categoryId: true,
+        typeId: true,
+        description: true,
+        media: true,
+        latitude: true,
+        longitude: true,
+        createdAt: true,
+        resolvedAt: true,
+        resolvedById: true,
+        status: true,
+        clientId: true,
+        guard: { select: { id: true, name: true, lastName: true, username: true } },
+        resolvedBy: { select: { id: true, name: true, lastName: true } },
+        category: { select: { id: true, name: true } },
+        type: { select: { id: true, name: true } },
+        client: { select: { id: true, name: true } },
       },
       orderBy: prismaParams.orderBy || { createdAt: "desc" },
     }),
@@ -51,7 +67,7 @@ export const getDataTableIncidents = async (
     }),
   ]);
 
-  return { rows, total };
+  return { rows: rows as IIncidentResponse[], total };
 };
 
 export const createIncident = async (data: {

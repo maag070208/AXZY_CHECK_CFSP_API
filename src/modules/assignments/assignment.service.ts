@@ -11,7 +11,9 @@ import { AppError } from "@src/core/errors/AppError";
 
 const prisma = prismaClient;
 
-export const getDataTableAssignments = async (params: ITDataTableFetchParams): Promise<ITDataTableResponse<any>> => {
+import { IAssignmentResponse } from "./assignment.response";
+
+export const getDataTableAssignments = async (params: ITDataTableFetchParams): Promise<ITDataTableResponse<IAssignmentResponse>> => {
   const prismaParams = getPrismaPaginationParams(params);
 
   // Map clientId to location relation
@@ -25,10 +27,33 @@ export const getDataTableAssignments = async (params: ITDataTableFetchParams): P
   const [rows, total] = await Promise.all([
     prisma.assignment.findMany({
       ...prismaParams,
-      include: {
-        location: true,
-        guard: { select: { id: true, name: true, lastName: true } },
-        tasks: true,
+      select: {
+        id: true,
+        guardId: true,
+        locationId: true,
+        status: true,
+        assignedBy: true,
+        notes: true,
+        createdAt: true,
+        location: {
+          select: {
+            id: true,
+            name: true,
+            clientId: true
+          }
+        },
+        guard: {
+          select: { id: true, name: true, lastName: true }
+        },
+        tasks: {
+          select: {
+            id: true,
+            description: true,
+            reqPhoto: true,
+            completed: true,
+            completedAt: true
+          }
+        },
       }
     }),
     prisma.assignment.count({
@@ -36,7 +61,7 @@ export const getDataTableAssignments = async (params: ITDataTableFetchParams): P
     })
   ]);
 
-  return { rows, total };
+  return { rows: rows as IAssignmentResponse[], total };
 };
 
 // Create a new assignment

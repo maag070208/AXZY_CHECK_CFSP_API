@@ -53,3 +53,7 @@ export const TIMELINE_EVENT_START = "START";
 export const TIMELINE_EVENT_END = "END";
 export const TIMELINE_EVENT_SCAN = "SCAN";
 export const TIMELINE_EVENT_INCIDENT = "INCIDENT";
+
+// Security
+export const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutos
+export const RATE_LIMIT_MAX_REQUESTS = 100; // Máximo 100 req por IP

@@ -18,10 +18,12 @@ import { TRoundDetailResult } from "./round.dto";
 import { generateRoundPDFBuffer } from "./round.pdf.service";
 import { getStartOfDay, getEndOfDay, now } from "@src/core/utils/date-time.utils";
 
+import { IRoundResponse } from "./round.response";
+
 export const getDataTableRounds = async (
   params: ITDataTableFetchParams,
   user?: any,
-): Promise<ITDataTableResponse<any>> => {
+): Promise<ITDataTableResponse<IRoundResponse>> => {
   const customFilters = params.filters || {};
   const cleanFilters: any = {};
 
@@ -72,18 +74,37 @@ export const getDataTableRounds = async (
   const [rows, total] = await Promise.all([
     prisma.round.findMany({
       ...prismaParams,
-      include: {
-        guard: { include: { client: true } },
-        client: true,
-        recurringConfiguration: {
-          include: { client: true },
+      select: {
+        id: true,
+        guardId: true,
+        clientId: true,
+        startTime: true,
+        endTime: true,
+        status: true,
+        recurringConfigurationId: true,
+        guard: {
+          select: {
+            id: true,
+            name: true,
+            lastName: true,
+            username: true,
+            client: { select: { name: true } }
+          }
         },
-      },
+        client: { select: { id: true, name: true } },
+        recurringConfiguration: {
+          select: {
+            id: true,
+            title: true,
+            client: { select: { name: true } }
+          }
+        }
+      }
     }),
     prisma.round.count({ where: prismaParams.where }),
   ]);
 
-  return { rows, total };
+  return { rows: rows as IRoundResponse[], total };
 };
 
 export const startRound = async (
@@ -91,7 +112,6 @@ export const startRound = async (
   clientId?: string,
   recurringConfigurationId?: string,
 ): Promise<TResult<any>> => {
-  try {
     let targetClientId = clientId;
 
     if (!targetClientId && recurringConfigurationId) {
@@ -112,21 +132,14 @@ export const startRound = async (
       },
     });
     return { success: true, data: round, messages: [] };
-  } catch (error: any) {
-    return { success: false, data: null, messages: [error.message] };
-  }
 };
 
 export const endRound = async (id: string): Promise<TResult<any>> => {
-  try {
     const round = await prisma.round.update({
       where: { id },
       data: { status: ROUND_STATUS_COMPLETED, endTime: now() },
     });
     return { success: true, data: round, messages: [] };
-  } catch (error: any) {
-    return { success: false, data: null, messages: [error.message] };
-  }
 };
 
 export const getCurrentRound = async (

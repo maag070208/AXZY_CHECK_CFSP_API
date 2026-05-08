@@ -6,7 +6,9 @@ import { ROLE_GUARD } from "@src/core/config/constants";
 jest.mock("@src/modules/common/middlewares/auth.middleware", () => ({
   authenticate: (req: any, res: any, next: any) => {
     if (req.headers["user"]) {
-      req.user = JSON.parse(req.headers["user"]);
+      const user = JSON.parse(req.headers["user"]);
+      req.user = user;
+      res.locals.user = user;
     }
     next();
   },
@@ -17,7 +19,9 @@ jest.mock("@src/core/middlewares/token-validator.middleware", () => ({
   __esModule: true,
   default: (req: any, res: any, next: any) => {
     if (req.headers["user"]) {
-      req.user = JSON.parse(req.headers["user"]);
+      const user = JSON.parse(req.headers["user"]);
+      req.user = user;
+      res.locals.user = user;
     }
     next();
   },

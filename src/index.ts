@@ -9,15 +9,33 @@ import { logger } from "@src/core/utils/logger";
 import { errorMiddleware } from "@src/core/middlewares/error.middleware";
 import apiRouter from "@src/modules/api.router";
 
+import { RATE_LIMIT_MAX_REQUESTS, RATE_LIMIT_WINDOW_MS } from "@src/core/config/constants";
+import rateLimit from "express-rate-limit";
+
 // Load swagger once
 const swaggerDocument = YAML.load("./swagger.yaml");
 
 export const app = express();
 
+const limiter = rateLimit({
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  max: RATE_LIMIT_MAX_REQUESTS,
+  message: {
+    success: false,
+    messages: ["Demasiadas peticiones desde esta IP, por favor intente de nuevo más tarde."],
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 app.use([
   express.json(),
-  helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }),
+  helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+    contentSecurityPolicy: env.NODE_ENV === "production" ? undefined : false,
+  }),
   cors(),
+  limiter,
   morgan(env.NODE_ENV === "development" ? "dev" : "combined"),
 ]);
 

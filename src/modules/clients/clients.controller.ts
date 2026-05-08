@@ -8,62 +8,64 @@ import {
   getDataTableClients,
   updateClient,
 } from "./clients.service";
+import { asyncHandler } from "@src/core/utils/asyncHandler";
+import { createAuditLog } from "../audit/audit.service";
 
-export const getDataTable = async (req: Request, res: Response) => {
-  try {
-    const result = await getDataTableClients(req.body);
-    return res.status(200).json(createTResult(result));
-  } catch (error: any) {
-    return res.status(500).json(createTResult(null, error.message));
-  }
-};
+export const getDataTable = asyncHandler(async (req: Request, res: Response) => {
+  const result = await getDataTableClients(req.body);
+  return res.status(200).json(createTResult(result));
+});
 
-export const getClients = async (req: Request, res: Response) => {
-  try {
-    const clients = await getAllClients();
-    return res.status(200).json(createTResult(clients));
-  } catch (error: any) {
-    return res.status(500).json(createTResult(null, error.message));
-  }
-};
+export const getClients = asyncHandler(async (req: Request, res: Response) => {
+  const clients = await getAllClients();
+  return res.status(200).json(createTResult(clients));
+});
 
-export const getById = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const result = await getClientById(id);
-    return res.status(200).json(createTResult(result));
-  } catch (error: any) {
-    return res.status(500).json(createTResult(null, error.message));
-  }
-};
+export const getById = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const result = await getClientById(id);
+  return res.status(200).json(createTResult(result));
+});
 
-export const addClient = async (req: Request, res: Response) => {
-  try {
-    const client = await createClient(req.body);
-    return res.status(201).json(createTResult(client));
-  } catch (error: any) {
-    return res.status(500).json(createTResult(null, error.message));
-  }
-};
+export const addClient = asyncHandler(async (req: Request, res: Response) => {
+  const client = await createClient(req.body);
 
-export const putClient = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const client = await updateClient(id, req.body);
-    return res.status(200).json(createTResult(client));
-  } catch (error: any) {
-    return res.status(500).json(createTResult(null, error.message));
-  }
-};
+  await createAuditLog({
+    userId: res.locals.user?.id || "SYSTEM",
+    module: "CLIENTS",
+    action: "CREATE",
+    resourceId: client.id,
+    details: { name: client.name }
+  });
 
-export const removeClient = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const client = await deleteClient(id);
-    return res.status(200).json(createTResult(client));
-  } catch (error: any) {
-    return res
-      .status(500)
-      .json(createTResult(null, error.message || "Error eliminando cliente"));
-  }
-};
+  return res.status(201).json(createTResult(client));
+});
+
+export const putClient = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const client = await updateClient(id, req.body);
+
+  await createAuditLog({
+    userId: res.locals.user?.id || id,
+    module: "CLIENTS",
+    action: "UPDATE",
+    resourceId: id,
+    details: req.body
+  });
+
+  return res.status(200).json(createTResult(client));
+});
+
+export const removeClient = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const client = await deleteClient(id);
+
+  await createAuditLog({
+    userId: res.locals.user?.id || "SYSTEM",
+    module: "CLIENTS",
+    action: "DELETE",
+    resourceId: id
+  });
+
+  return res.status(200).json(createTResult(client));
+});

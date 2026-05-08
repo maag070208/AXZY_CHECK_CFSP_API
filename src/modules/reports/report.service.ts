@@ -38,14 +38,14 @@ export const getGuardGeneralStats = async (filters: IGuardReportFilters): Promis
             prisma.incident.count({
                 where: {
                     ...(guardId ? { guardId } : {}),
-                    ...(clientId ? { location: { clientId } } : {}),
+                    ...(clientId ? { clientId } : {}),
                     createdAt: { gte: start, lte: end }
                 }
             }),
             prisma.maintenance.count({
                 where: {
                     ...(guardId ? { guardId } : {}),
-                    ...(clientId ? { location: { clientId } } : {}),
+                    ...(clientId ? { clientId } : {}),
                     createdAt: { gte: start, lte: end }
                 }
             }),
@@ -183,7 +183,7 @@ export const getWorkloadComparison = async (filters: IGuardReportFilters): Promi
                 where: { 
                     guardId: { in: guardIds }, 
                     createdAt: { gte: start, lte: end },
-                    ...(clientId ? { location: { clientId } } : {})
+                    ...(clientId ? { clientId } : {})
                 },
                 _count: { _all: true }
             }),
@@ -192,7 +192,7 @@ export const getWorkloadComparison = async (filters: IGuardReportFilters): Promi
                 where: { 
                     guardId: { in: guardIds }, 
                     createdAt: { gte: start, lte: end },
-                    ...(clientId ? { location: { clientId } } : {})
+                    ...(clientId ? { clientId } : {})
                 },
                 _count: { _all: true }
             }),

@@ -1,6 +1,10 @@
 import { prismaClient } from "@src/core/config/database";
 import { AssignmentStatus, ScanType } from "@prisma/client";
-import { ASSIGNMENT_STATUS_PENDING, ROUND_STATUS_IN_PROGRESS } from "@src/core/config/constants";
+import {
+  ASSIGNMENT_STATUS_PENDING,
+  ROUND_STATUS_IN_PROGRESS,
+} from "@src/core/config/constants";
+import { IKardexResponse } from "./kardex.response";
 
 // New Core Logic: Register Check with Automatic Classification
 export const registerCheck = async (data: {
@@ -246,7 +250,6 @@ export const getDataTableKardex = async (params: {
 
   const orderBy: any = [];
   if (sort && sort.key) {
-    // Basic mapping for related fields if needed
     if (sort.key === "user") {
       orderBy.push({ user: { name: sort.order } });
     } else if (sort.key === "location") {
@@ -257,7 +260,6 @@ export const getDataTableKardex = async (params: {
   } else {
     orderBy.push({ timestamp: "desc" });
   }
-  // Primary key as secondary sort for stability
   orderBy.push({ id: "desc" });
 
   const [rows, total] = await Promise.all([
@@ -265,18 +267,39 @@ export const getDataTableKardex = async (params: {
       skip,
       take,
       where,
-      include: {
+      select: {
+        id: true,
+        userId: true,
+        locationId: true,
+        timestamp: true,
+        notes: true,
+        media: true,
+        latitude: true,
+        longitude: true,
+        assignmentId: true,
+        scanType: true,
         user: {
           select: {
             id: true,
             name: true,
             lastName: true,
             username: true,
-            role: true,
+            role: { select: { name: true } },
           },
         },
-        location: true,
-        assignment: true,
+        location: {
+          select: {
+            id: true,
+            name: true,
+            clientId: true,
+          },
+        },
+        assignment: {
+          select: {
+            id: true,
+            status: true,
+          },
+        },
       },
       orderBy,
     }),
@@ -284,7 +307,7 @@ export const getDataTableKardex = async (params: {
   ]);
 
   return {
-    data: rows,
+    data: rows as unknown as IKardexResponse[],
     total,
   };
 };

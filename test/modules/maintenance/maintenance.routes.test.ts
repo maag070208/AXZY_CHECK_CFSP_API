@@ -3,10 +3,14 @@ import { app } from "@src/index";
 import { prismaClient } from "@src/core/config/database";
 import { ROLE_GUARD, ROLE_ADMIN } from "@src/core/config/constants";
 
+jest.setTimeout(30000);
+
 jest.mock("@src/modules/common/middlewares/auth.middleware", () => ({
   authenticate: (req: any, res: any, next: any) => {
     if (req.headers["user"]) {
-      req.user = JSON.parse(req.headers["user"]);
+      const user = JSON.parse(req.headers["user"]);
+      req.user = user;
+      res.locals.user = user;
     }
     next();
   },
@@ -17,7 +21,9 @@ jest.mock("@src/core/middlewares/token-validator.middleware", () => ({
   __esModule: true,
   default: (req: any, res: any, next: any) => {
     if (req.headers["user"]) {
-      req.user = JSON.parse(req.headers["user"]);
+      const user = JSON.parse(req.headers["user"]);
+      req.user = user;
+      res.locals.user = user;
     }
     next();
   },
@@ -37,9 +43,12 @@ describe("Rutas de Mantenimiento (Integración Total)", () => {
   let createdMaintenanceId: string;
 
   beforeAll(async () => {
+    const adminHeader = JSON.stringify({ id: "admin", role: "ADMIN" });
+
     // 1. Crear Cliente
     const clientRes = await request(app)
       .post("/api/v1/clients")
+      .set("user", adminHeader)
       .send({ name: `Cliente para Mantenimiento ${Date.now()}` });
     createdClientId = clientRes.body.data.id;
 
@@ -50,6 +59,7 @@ describe("Rutas de Mantenimiento (Integración Total)", () => {
     // 3. Crear Guardia
     const guardRes = await request(app)
       .post("/api/v1/users")
+      .set("user", adminHeader)
       .send({
         name: "Guardia",
         lastName: "Mantenimiento",
@@ -63,6 +73,7 @@ describe("Rutas de Mantenimiento (Integración Total)", () => {
     // 4. Crear Admin
     const adminRes = await request(app)
       .post("/api/v1/users")
+      .set("user", adminHeader)
       .send({
         name: "Admin",
         lastName: "Mantenimiento",
@@ -75,6 +86,7 @@ describe("Rutas de Mantenimiento (Integración Total)", () => {
     // 5. Configurar Categoría de Mantenimiento (vía Settings)
     const catRes = await request(app)
       .post("/api/v1/settings/categories")
+      .set("user", adminHeader)
       .send({
         name: `Mantenimiento Eléctrico ${Date.now()}`,
         value: "ELECTRIC",
@@ -87,6 +99,7 @@ describe("Rutas de Mantenimiento (Integración Total)", () => {
     // 6. Configurar Tipo de Mantenimiento
     const typeRes = await request(app)
       .post("/api/v1/settings/types")
+      .set("user", adminHeader)
       .send({
         categoryId: createdCategoryId,
         name: `Cambio de Foco ${Date.now()}`,

@@ -14,14 +14,14 @@ export const errorMiddleware = (
 
   if (!(err instanceof AppError)) {
     statusCode = 500;
-    message = env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message;
+    message = env.NODE_ENV === 'production' ? 'Error interno del servidor' : err.message;
 
     // Handle Prisma/DB errors
     if (err.code?.startsWith('P') || err.message?.includes('prisma')) {
       statusCode = 400;
       message = env.NODE_ENV === 'production' 
-        ? 'Database error' 
-        : `Database error: ${err.message.split('\n').pop() || err.message}`;
+        ? 'Error de base de datos' 
+        : `Error de base de datos: ${err.message.split('\n').pop() || err.message}`;
     }
   }
 

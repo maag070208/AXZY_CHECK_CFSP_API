@@ -85,6 +85,7 @@ model User {
   recurringConfigurations  RecurringConfiguration[]
   createdAssignments       Assignment[]             @relation("AssignedByAssignments")
   assignmentLogs           AssignmentLog[]
+  auditLogs                AuditLog[]
 }
 
 model AssignmentLog {
@@ -97,6 +98,18 @@ model AssignmentLog {
   
   guard     User     @relation(fields: [guardId], references: [id])
   client    Client?  @relation(fields: [clientId], references: [id])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String
+  module     String
+  action     String   // CREATE, UPDATE, DELETE, LOGIN, etc.
+  resourceId String?
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  user       User     @relation(fields: [userId], references: [id])
 }
 
 model Schedule {

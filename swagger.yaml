@@ -85,6 +85,21 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/TResultLogin" }
+        "401":
+          description: No autorizado (Credenciales inválidas)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResultError" }
+        "403":
+          description: Prohibido (Cuenta inactiva o fuera de horario)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResultError" }
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResultError" }
 
   # --- USERS ---
   /users:
@@ -114,7 +129,22 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/DataTableFetchParams" }
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResult" }
+        "400":
+          description: Error en filtros o paginación
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResultError" }
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResultError" }
+
 
   /users/{id}:
     get:
@@ -209,7 +239,12 @@ paths:
       tags: [clients]
       summary: Listar clientes
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResult" }
+
     post:
       tags: [clients]
       summary: Crear cliente
@@ -219,7 +254,22 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/ClientCreate" }
       responses:
-        "201": { description: Creado }
+        "201":
+          description: Creado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResult" }
+        "400":
+          description: Datos inválidos o cliente duplicado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResultError" }
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResultError" }
+
 
   /clients/datatable:
     post:
@@ -231,7 +281,17 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/DataTableFetchParams" }
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResult" }
+        "400":
+          description: Error en filtros
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResultError" }
+
 
   /clients/{id}:
     get:
@@ -281,7 +341,17 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/ZoneCreate" }
       responses:
-        "201": { description: Creado }
+        "201":
+          description: Creado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResult" }
+        "400":
+          description: Datos inválidos
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResultError" }
+
 
   /zones/client/{clientId}:
     get:
@@ -293,7 +363,12 @@ paths:
           required: true
           schema: { type: string, format: uuid }
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResult" }
+
 
   /zones/datatable:
     post:
@@ -305,7 +380,17 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/DataTableFetchParams" }
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResult" }
+        "400":
+          description: Error en filtros
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResultError" }
+
 
   /zones/{id}:
     put:
@@ -339,7 +424,12 @@ paths:
       tags: [locations]
       summary: Listar ubicaciones
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResult" }
+
     post:
       tags: [locations]
       summary: Crear ubicación
@@ -349,7 +439,17 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/LocationCreate" }
       responses:
-        "201": { description: Creado }
+        "201":
+          description: Creado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResult" }
+        "400":
+          description: Datos inválidos
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResultError" }
+
 
   /locations/datatable:
     post:
@@ -524,10 +624,17 @@ paths:
           description: Ronda iniciada exitosamente
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Round"
+              schema: { $ref: "#/components/schemas/TResult" }
         "400":
           description: Error en la solicitud (ej. ya existe una ronda activa)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResultError" }
+        "500":
+          description: Error interno del servidor
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResultError" }
 
   /rounds/{id}/end:
     put:
@@ -539,14 +646,24 @@ paths:
           required: true
           schema: { type: string, format: uuid }
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResult" }
+
 
   /rounds/current:
     get:
       tags: [rounds]
       summary: Rondín actual en curso
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResult" }
+
 
   /rounds/datatable:
     post:
@@ -558,7 +675,17 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/DataTableFetchParams" }
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResult" }
+        "400":
+          description: Error en filtros
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResultError" }
+
 
   /rounds:
     get:
@@ -582,9 +709,7 @@ paths:
           description: OK
           content:
             application/json:
-              schema:
-                type: array
-                items: { $ref: "#/components/schemas/Round" }
+              schema: { $ref: "#/components/schemas/TResult" }
 
   /rounds/{id}:
     get:
@@ -596,7 +721,12 @@ paths:
           required: true
           schema: { type: string, format: uuid }
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResult" }
+
 
   /rounds/{id}/report:
     get:
@@ -616,7 +746,12 @@ paths:
       tags: [incidents]
       summary: Listar incidencias
       responses:
-        "200": { description: OK }
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResult" }
+
     post:
       tags: [incidents]
       summary: Crear reporte de incidencia
@@ -626,7 +761,17 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/IncidentCreate" }
       responses:
-        "201": { description: Creado }
+        "201":
+          description: Creado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResult" }
+        "400":
+          description: Datos inválidos
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResultError" }
+
 
   /incidents/pending-count:
     get:
@@ -682,7 +827,17 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/MaintenanceCreate" }
       responses:
-        "201": { description: Creado }
+        "201":
+          description: Creado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResult" }
+        "400":
+          description: Datos inválidos
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResultError" }
+
 
   /maintenance/pending-count:
     get:
@@ -738,7 +893,17 @@ paths:
           application/json:
             schema: { $ref: "#/components/schemas/ScheduleCreate" }
       responses:
-        "201": { description: Creado }
+        "201":
+          description: Creado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResult" }
+        "400":
+          description: Datos inválidos
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResultError" }
+
 
   /schedules/datatable:
     post:
@@ -812,7 +977,12 @@ paths:
           description: Creado
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/RecurringConfiguration" }
+              schema: { $ref: "#/components/schemas/TResult" }
+        "400":
+          description: Datos inválidos
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/TResultError" }
 
   /recurring/datatable:
     post:
@@ -1332,7 +1502,52 @@ components:
 
     TResult:
       type: object
+      description: Estructura de respuesta estándar AXZY
       properties:
-        success: { type: boolean }
-        data: { type: object }
-        messages: { type: array, items: { type: string } }
+        success: 
+          type: boolean
+          description: Indica si la operación fue exitosa
+          example: true
+        data: 
+          type: object
+          description: Datos de la respuesta
+          example: { id: "uuid", name: "Ejemplo" }
+        messages: 
+          type: array
+          description: Lista de mensajes informativos o de éxito
+          items: { type: string }
+          example: ["Operación realizada con éxito"]
+
+    TResultError:
+      type: object
+      description: Estructura de respuesta de error estándar
+      properties:
+        success: 
+          type: boolean
+          example: false
+        data: 
+          type: object
+          nullable: true
+          example: null
+        messages: 
+          type: array
+          description: Detalles del error o validación
+          items: { type: string }
+          example: ["Credenciales inválidas", "El campo nombre es obligatorio"]
+        stack:
+          type: string
+          description: Traza del error (solo en desarrollo)
+          example: "Error: Stack trace sample..."
+
+    AppError:
+      type: object
+      properties:
+        message: 
+          type: string
+          example: "Usuario no encontrado"
+        statusCode: 
+          type: integer
+          example: 404
+        isOperational: 
+          type: boolean
+          example: true

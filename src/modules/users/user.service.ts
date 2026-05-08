@@ -8,7 +8,9 @@ import { OPERATIONAL_ROLES, ROLE_CLIENT } from "@src/core/config/constants";
 import { IUserCreateRequest, IUserUpdateRequest } from "./user.dto";
 import { deleteClientDataCascade } from "../clients/clients.cascade";
 
-export const getUsers = async (search?: string) => {
+import { IUserResponse } from "./user.response";
+
+export const getUsers = async (search?: string): Promise<IUserResponse[]> => {
   const where = {
     role: { name: { not: ROLE_CLIENT } },
     ...(search && {
@@ -20,7 +22,7 @@ export const getUsers = async (search?: string) => {
     }),
   };
 
-  return prismaClient.user.findMany({
+  const users = await prismaClient.user.findMany({
     where,
     orderBy: { name: "asc" },
     select: {
@@ -42,11 +44,13 @@ export const getUsers = async (search?: string) => {
       },
     },
   });
+
+  return users as IUserResponse[];
 };
 
 export const getDataTableUsers = async (
   params: ITDataTableFetchParams,
-): Promise<ITDataTableResponse<any>> => {
+): Promise<ITDataTableResponse<IUserResponse>> => {
   const prismaParams = getPrismaPaginationParams(params);
 
   // If there's a name filter, convert it to a global OR search (name, lastName, username)

@@ -6,7 +6,9 @@ import { ROLE_GUARD } from "@src/core/config/constants";
 jest.mock("@src/modules/common/middlewares/auth.middleware", () => ({
   authenticate: (req: any, res: any, next: any) => {
     if (req.headers["user"]) {
-      req.user = JSON.parse(req.headers["user"]);
+      const user = JSON.parse(req.headers["user"]);
+      req.user = user;
+      res.locals.user = user;
     }
     next();
   },
@@ -17,7 +19,9 @@ jest.mock("@src/core/middlewares/token-validator.middleware", () => ({
   __esModule: true,
   default: (req: any, res: any, next: any) => {
     if (req.headers["user"]) {
-      req.user = JSON.parse(req.headers["user"]);
+      const user = JSON.parse(req.headers["user"]);
+      req.user = user;
+      res.locals.user = user;
     }
     next();
   },
@@ -32,7 +36,7 @@ describe("Rutas de Reportes (Integración Total)", () => {
     // 1. Crear Cliente
     const clientRes = await request(app)
       .post("/api/v1/clients")
-      .set("user", JSON.stringify({ id: "admin" }))
+      .set("user", JSON.stringify({ id: "admin", role: "ADMIN" }))
       .send({ name: `Cliente Reportes ${Date.now()}` });
     createdClientId = clientRes.body.data.id;
 
@@ -42,7 +46,7 @@ describe("Rutas de Reportes (Integración Total)", () => {
     // 3. Crear Guardia
     const guardRes = await request(app)
       .post("/api/v1/users")
-      .set("user", JSON.stringify({ id: "admin" }))
+      .set("user", JSON.stringify({ id: "admin", role: "ADMIN" }))
       .send({
         name: "Guardia",
         lastName: "Reporteador",
@@ -53,7 +57,7 @@ describe("Rutas de Reportes (Integración Total)", () => {
       });
     createdGuardId = guardRes.body.data.id;
     
-    adminUserId = "admin-id"; // Dummy for mock
+    adminUserId = "admin-id";
   });
 
   afterAll(async () => {
@@ -62,13 +66,14 @@ describe("Rutas de Reportes (Integración Total)", () => {
   });
 
   describe("Endpoints de Analítica y Reportes", () => {
-    const filters = `startDate=2024-01-01&endDate=2026-12-31&clientId=${createdClientId}`;
+    const getFilters = () => `startDate=2024-01-01&endDate=2026-12-31&clientId=${createdClientId}`;
 
     it("debe retornar estadísticas generales de guardias", async () => {
       const response = await request(app)
-        .get(`/api/v1/reports/guards/stats?${filters}`)
-        .set("user", JSON.stringify({ id: adminUserId }));
+        .get(`/api/v1/reports/guards/stats?${getFilters()}`)
+        .set("user", JSON.stringify({ id: adminUserId, role: "ADMIN", clientId: createdClientId }));
 
+      if (!response.body.success) console.log("DEBUG ERROR:", response.body);
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.data).toHaveProperty("totalScans");
@@ -76,8 +81,8 @@ describe("Rutas de Reportes (Integración Total)", () => {
 
     it("debe retornar el top de desempeño de guardias", async () => {
       const response = await request(app)
-        .get(`/api/v1/reports/guards/top-performance?${filters}`)
-        .set("user", JSON.stringify({ id: adminUserId }));
+        .get(`/api/v1/reports/guards/top-performance?${getFilters()}`)
+        .set("user", JSON.stringify({ id: adminUserId, role: "ADMIN", clientId: createdClientId }));
 
       expect(response.status).toBe(200);
       expect(Array.isArray(response.body.data)).toBe(true);
@@ -85,24 +90,24 @@ describe("Rutas de Reportes (Integración Total)", () => {
 
     it("debe retornar la distribución de actividad", async () => {
       const response = await request(app)
-        .get(`/api/v1/reports/guards/distribution?${filters}`)
-        .set("user", JSON.stringify({ id: adminUserId }));
+        .get(`/api/v1/reports/guards/distribution?${getFilters()}`)
+        .set("user", JSON.stringify({ id: adminUserId, role: "ADMIN", clientId: createdClientId }));
 
       expect(response.status).toBe(200);
     });
 
     it("debe retornar el reporte detallado de guardias", async () => {
       const response = await request(app)
-        .get(`/api/v1/reports/guards/detail?${filters}`)
-        .set("user", JSON.stringify({ id: adminUserId }));
+        .get(`/api/v1/reports/guards/detail?${getFilters()}`)
+        .set("user", JSON.stringify({ id: adminUserId, role: "ADMIN", clientId: createdClientId }));
 
       expect(response.status).toBe(200);
     });
 
     it("debe retornar el desglose por guardia específico", async () => {
       const response = await request(app)
-        .get(`/api/v1/reports/guards/detail-breakdown/${createdGuardId}?${filters}`)
-        .set("user", JSON.stringify({ id: adminUserId }));
+        .get(`/api/v1/reports/guards/detail-breakdown/${createdGuardId}?${getFilters()}`)
+        .set("user", JSON.stringify({ id: adminUserId, role: "ADMIN", clientId: createdClientId }));
 
       expect(response.status).toBe(200);
       expect(response.body.data).toHaveProperty("missedPoints");
@@ -110,10 +115,10 @@ describe("Rutas de Reportes (Integración Total)", () => {
 
     it("debe retornar la comparación de carga de trabajo", async () => {
         const response = await request(app)
-          .get(`/api/v1/reports/guards/workload?${filters}`)
-          .set("user", JSON.stringify({ id: adminUserId }));
+          .get(`/api/v1/reports/guards/workload?${getFilters()}`)
+          .set("user", JSON.stringify({ id: adminUserId, role: "ADMIN", clientId: createdClientId }));
   
         expect(response.status).toBe(200);
-      });
+    });
   });
 });
