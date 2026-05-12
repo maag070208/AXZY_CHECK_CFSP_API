@@ -29,12 +29,15 @@ const limiter = rateLimit({
 });
 
 app.use([
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  }),
   express.json(),
   helmet({
-    crossOriginResourcePolicy: { policy: "cross-origin" },
-    contentSecurityPolicy: env.NODE_ENV === "production" ? undefined : false,
+    crossOriginResourcePolicy: false,
+    contentSecurityPolicy: false,
   }),
-  cors(),
   limiter,
   morgan(env.NODE_ENV === "development" ? "dev" : "combined"),
 ]);

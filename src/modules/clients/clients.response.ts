@@ -4,7 +4,12 @@ export interface IClientResponse {
   active: boolean;
   address?: string | null;
   contactPhone?: string | null;
+  rfc?: string | null;
+  contactName?: string | null;
+  softDelete?: boolean;
   createdAt: Date;
+  updatedAt?: Date;
+  deletedAt?: Date | null;
   _count?: {
     locations: number;
   };
@@ -13,3 +18,4 @@ export interface IClientResponse {
     username: string;
   }[];
 }
+
