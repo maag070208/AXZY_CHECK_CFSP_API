@@ -50,8 +50,13 @@ export const getUsers = async (search?: string): Promise<IUserResponse[]> => {
 
 export const getDataTableUsers = async (
   params: ITDataTableFetchParams,
+  user?: any,
 ): Promise<ITDataTableResponse<IUserResponse>> => {
   const prismaParams = getPrismaPaginationParams(params);
+
+  if (user?.role === ROLE_CLIENT && user.clientId) {
+    prismaParams.where.clientId = user.clientId;
+  }
 
   // If there's a name filter, convert it to a global OR search (name, lastName, username)
   if (prismaParams.where.name && typeof prismaParams.where.name === 'object' && prismaParams.where.name.contains) {
@@ -209,10 +214,6 @@ export const updateUser = async (id: string, data: IUserUpdateRequest) => {
       data: userData as any,
       include: { schedule: true, role: true, client: true },
     });
-
-    if (updatedUser.role?.name === ROLE_CLIENT) {
-        throw new Error("No puedes asignar el rol CLIENTE desde este módulo.");
-    }
 
     return updatedUser;
   });

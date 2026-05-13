@@ -14,10 +14,17 @@ import { now } from "@src/core/utils/date-time.utils";
 
 import { IIncidentResponse } from "./incident.response";
 
+import { ROLE_CLIENT } from "@src/core/config/constants";
+
 export const getDataTableIncidents = async (
   params: ITDataTableFetchParams,
+  user?: any,
 ): Promise<ITDataTableResponse<IIncidentResponse>> => {
   const prismaParams = getPrismaPaginationParams(params);
+
+  if (user?.role === ROLE_CLIENT && user.clientId) {
+    prismaParams.where.clientId = user.clientId;
+  }
 
   // Handle combined search (if any)
   const searchVal = String(params.filters.search || "").trim();

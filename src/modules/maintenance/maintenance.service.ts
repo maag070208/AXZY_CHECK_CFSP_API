@@ -11,10 +11,17 @@ import {
 
 import { IMaintenanceResponse } from "./maintenance.response";
 
+import { ROLE_CLIENT } from "@src/core/config/constants";
+
 export const getDataTableMaintenances = async (
   params: ITDataTableFetchParams,
+  user?: any,
 ): Promise<ITDataTableResponse<IMaintenanceResponse>> => {
   const prismaParams = getPrismaPaginationParams(params);
+
+  if (user?.role === ROLE_CLIENT && user.clientId) {
+    prismaParams.where.clientId = user.clientId;
+  }
   
   // Handle combined search
   const searchVal = String(params.filters.search || "").trim();

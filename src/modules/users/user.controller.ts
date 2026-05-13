@@ -14,7 +14,7 @@ import { createAuditLog } from "../audit/audit.service";
 
 
 export const getDataTable = asyncHandler(async (req: Request, res: Response) => {
-  const result = await userService.getDataTableUsers(req.body);
+  const result = await userService.getDataTableUsers(req.body, res.locals.user);
   return res.status(200).json(createTResult(result));
 });
 

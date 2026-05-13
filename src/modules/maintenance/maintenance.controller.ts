@@ -6,7 +6,7 @@ import { AppError } from "@src/core/errors/AppError";
 import { createAuditLog } from "../audit/audit.service";
 
 export const getDataTable = asyncHandler(async (req: Request, res: Response) => {
-  const result = await maintenanceService.getDataTableMaintenances(req.body);
+  const result = await maintenanceService.getDataTableMaintenances(req.body, res.locals.user);
   return res.status(200).json(createTResult(result));
 });
 
