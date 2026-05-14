@@ -9,19 +9,22 @@ export const getDataTable = asyncHandler(async (req: Request, res: Response) => 
 });
 
 export const postRecurring = asyncHandler(async (req: Request, res: Response) => {
-  const result = await recurringService.createRecurring(req.body);
+  const user = res.locals.user;
+  const result = await recurringService.createRecurring(req.body, user.id);
   return res.status(201).json(createTResult(result));
 });
 
 export const putRecurring = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
-    const result = await recurringService.updateRecurring(id, req.body);
+    const user = res.locals.user;
+    const result = await recurringService.updateRecurring(id, req.body, user.id);
     return res.status(200).json(createTResult(result));
 });
 
 export const deleteRecurring = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const result = await recurringService.deleteRecurring(id);
+  const user = res.locals.user;
+  const result = await recurringService.deleteRecurring(id, user.id);
   return res.status(200).json(createTResult(result));
 });
 
