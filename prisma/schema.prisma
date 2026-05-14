@@ -19,97 +19,97 @@ model Role {
 }
 
 model Client {
-  id           String    @id @default(uuid())
-  name         String    @unique
-  address      String?
-  rfc          String?
-  contactName  String?
-  contactPhone String?
-  active       Boolean   @default(true)
-  softDelete   Boolean   @default(false)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  deletedAt    DateTime?
-  locations    Location[]
-  rounds       Round[]
-  users        User[]
-  zones        Zone[]
-  incidents    Incident[]
-  maintenances Maintenance[]
+  id                      String                   @id @default(uuid())
+  name                    String                   @unique
+  address                 String?
+  rfc                     String?
+  contactName             String?
+  contactPhone            String?
+  active                  Boolean                  @default(true)
+  softDelete              Boolean                  @default(false)
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  deletedAt               DateTime?
+  locations               Location[]
+  rounds                  Round[]
+  users                   User[]
+  zones                   Zone[]
+  incidents               Incident[]
+  maintenances            Maintenance[]
   recurringConfigurations RecurringConfiguration[]
-  assignmentLogs AssignmentLog[]
+  assignmentLogs          AssignmentLog[]
 }
 
 model Zone {
-  id         String    @id @default(uuid())
+  id         String     @id @default(uuid())
   clientId   String
   name       String
-  active     Boolean   @default(true)
-  softDelete Boolean   @default(false)
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  active     Boolean    @default(true)
+  softDelete Boolean    @default(false)
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
   deletedAt  DateTime?
-  client     Client    @relation(fields: [clientId], references: [id])
+  client     Client     @relation(fields: [clientId], references: [id])
   locations  Location[]
 
   @@unique([name, clientId])
 }
 
 model User {
-  id                       String                   @id @default(uuid())
-  name                     String
-  lastName                 String?
-  username                 String                   @unique
-  password                 String
-  active                   Boolean                  @default(true)
-  softDelete               Boolean                  @default(false)
-  shiftStart               String?
-  shiftEnd                 String?
-  createdAt                DateTime                 @default(now())
-  updatedAt                DateTime                 @updatedAt
-  deletedAt                DateTime?
-  isLoggedIn               Boolean                  @default(false)
-  scheduleId               String?
-  clientId                 String?
-  roleId                   String
-  assignments              Assignment[]             @relation("GuardAssignments")
-  incidents                Incident[]
-  resolvedIncidents        Incident[]               @relation("IncidentResolver")
-  kardexEntries            Kardex[]
-  maintenances             Maintenance[]
-  resolvedMaintenances     Maintenance[]            @relation("MaintenanceResolver")
-  rounds                   Round[]                  @relation("GuardRounds")
-  client                   Client?                  @relation(fields: [clientId], references: [id])
-  role                     Role                     @relation(fields: [roleId], references: [id])
-  schedule                 Schedule?                @relation(fields: [scheduleId], references: [id])
-  recurringConfigurations  RecurringConfiguration[]
-  createdAssignments       Assignment[]             @relation("AssignedByAssignments")
-  assignmentLogs           AssignmentLog[]
-  auditLogs                AuditLog[]
+  id                      String                   @id @default(uuid())
+  name                    String
+  lastName                String?
+  username                String                   @unique
+  password                String
+  active                  Boolean                  @default(true)
+  softDelete              Boolean                  @default(false)
+  shiftStart              String?
+  shiftEnd                String?
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  deletedAt               DateTime?
+  isLoggedIn              Boolean                  @default(false)
+  scheduleId              String?
+  clientId                String?
+  roleId                  String
+  assignments             Assignment[]             @relation("GuardAssignments")
+  incidents               Incident[]
+  resolvedIncidents       Incident[]               @relation("IncidentResolver")
+  kardexEntries           Kardex[]
+  maintenances            Maintenance[]
+  resolvedMaintenances    Maintenance[]            @relation("MaintenanceResolver")
+  rounds                  Round[]                  @relation("GuardRounds")
+  client                  Client?                  @relation(fields: [clientId], references: [id])
+  role                    Role                     @relation(fields: [roleId], references: [id])
+  schedule                Schedule?                @relation(fields: [scheduleId], references: [id])
+  recurringConfigurations RecurringConfiguration[]
+  createdAssignments      Assignment[]             @relation("AssignedByAssignments")
+  assignmentLogs          AssignmentLog[]
+  auditLogs               AuditLog[]
 }
 
 model AssignmentLog {
   id        String   @id @default(uuid())
   guardId   String
   clientId  String?
-  type      String   // ASIGNADO, REMOVIDO
+  type      String // ASIGNADO, REMOVIDO
   notes     String?
   createdAt DateTime @default(now())
-  
-  guard     User     @relation(fields: [guardId], references: [id])
-  client    Client?  @relation(fields: [clientId], references: [id])
+
+  guard  User    @relation(fields: [guardId], references: [id])
+  client Client? @relation(fields: [clientId], references: [id])
 }
 
 model AuditLog {
   id         String   @id @default(uuid())
   userId     String
   module     String
-  action     String   // CREATE, UPDATE, DELETE, LOGIN, etc.
+  action     String // CREATE, UPDATE, DELETE, LOGIN, etc.
   resourceId String?
   details    Json?
   createdAt  DateTime @default(now())
 
-  user       User     @relation(fields: [userId], references: [id])
+  user User @relation(fields: [userId], references: [id])
 }
 
 model Schedule {
@@ -181,23 +181,24 @@ model Kardex {
   @@index([userId])
   @@index([locationId])
   @@index([timestamp])
+  @@index([scanType])
 }
 
 model Assignment {
-  id         String           @id @default(uuid())
-  guardId    String
-  locationId String
-  status     AssignmentStatus @default(PENDING)
-  assignedBy String
+  id             String           @id @default(uuid())
+  guardId        String
+  locationId     String
+  status         AssignmentStatus @default(PENDING)
+  assignedBy     String
   assignedByUser User?            @relation("AssignedByAssignments", fields: [assignedBy], references: [id])
-  notes      String?
-  createdAt  DateTime         @default(now())
-  updatedAt  DateTime         @updatedAt
-  deletedAt  DateTime?
-  guard      User             @relation("GuardAssignments", fields: [guardId], references: [id])
-  location   Location         @relation(fields: [locationId], references: [id])
-  tasks      AssignmentTask[]
-  kardex     Kardex[]
+  notes          String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  deletedAt      DateTime?
+  guard          User             @relation("GuardAssignments", fields: [guardId], references: [id])
+  location       Location         @relation(fields: [locationId], references: [id])
+  tasks          AssignmentTask[]
+  kardex         Kardex[]
 
   @@index([guardId])
   @@index([locationId])
@@ -268,6 +269,11 @@ model Incident {
   type         IncidentType?     @relation(fields: [typeId], references: [id])
   guard        User              @relation(fields: [guardId], references: [id])
   resolvedBy   User?             @relation("IncidentResolver", fields: [resolvedById], references: [id])
+
+  @@index([guardId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([clientId])
 }
 
 model Round {
@@ -284,6 +290,11 @@ model Round {
   guard                    User                    @relation("GuardRounds", fields: [guardId], references: [id])
   client                   Client?                 @relation(fields: [clientId], references: [id])
   recurringConfiguration   RecurringConfiguration? @relation(fields: [recurringConfigurationId], references: [id])
+
+  @@index([guardId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([clientId])
 }
 
 model SysConfig {
@@ -301,7 +312,7 @@ model RecurringConfiguration {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   deletedAt  DateTime?
-  
+
   client             Client?             @relation(fields: [clientId], references: [id])
   recurringLocations RecurringLocation[]
   guards             User[]
@@ -355,6 +366,11 @@ model Maintenance {
   type         IncidentType?     @relation(fields: [typeId], references: [id])
   clientId     String?
   client       Client?           @relation(fields: [clientId], references: [id])
+
+  @@index([guardId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([clientId])
 }
 
 enum AssignmentStatus {

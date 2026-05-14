@@ -179,9 +179,24 @@ export const getMaintenances = async (filters: {
 
   return prismaClient.maintenance.findMany({
     where: whereClause,
-    include: {
-      guard: true,
-      resolvedBy: true,
+    select: {
+      id: true,
+      guardId: true,
+      title: true,
+      categoryId: true,
+      typeId: true,
+      category: true,
+      description: true,
+      media: true,
+      latitude: true,
+      longitude: true,
+      createdAt: true,
+      resolvedAt: true,
+      resolvedById: true,
+      status: true,
+      clientId: true,
+      guard: { select: { id: true, name: true, lastName: true, username: true } },
+      resolvedBy: { select: { id: true, name: true, lastName: true, username: true } },
     },
     orderBy: { createdAt: "desc" },
   });

@@ -170,9 +170,23 @@ export const getIncidents = async (filters: {
 
   return prismaClient.incident.findMany({
     where: whereClause,
-    include: {
-      guard: true,
-      resolvedBy: true,
+    select: {
+      id: true,
+      guardId: true,
+      title: true,
+      categoryId: true,
+      typeId: true,
+      description: true,
+      media: true,
+      latitude: true,
+      longitude: true,
+      createdAt: true,
+      resolvedAt: true,
+      resolvedById: true,
+      status: true,
+      clientId: true,
+      guard: { select: { id: true, name: true, lastName: true, username: true } },
+      resolvedBy: { select: { id: true, name: true, lastName: true, username: true } },
     },
     orderBy: { createdAt: "desc" },
   });
