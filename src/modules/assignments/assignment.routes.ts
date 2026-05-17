@@ -4,11 +4,11 @@ import { createAssignment, getAllAssignments, getMyAssignments, updateStatus, to
 import { authenticate, authorize } from "../common/middlewares/auth.middleware";
 import { validate } from "../../core/middlewares/validate.middleware";
 import { createAssignmentSchema } from "./schemas/assignment.schema";
-import { ROLE_ADMIN, ROLE_SHIFT } from "../../core/config/constants";
+import { ROLE_ADMIN, ROLE_SHIFT, ROLE_CLIENT } from "../../core/config/constants";
 
 const router = Router();
 
-// Admin / Shift Guard Routes
+// Admin / Shift Guard / Client Routes
 router.post(
   "/",
   authenticate,
@@ -25,13 +25,13 @@ router.post(
 router.get(
   "/",
   authenticate,
-  authorize([ROLE_ADMIN, ROLE_SHIFT]),
+  authorize([ROLE_ADMIN, ROLE_SHIFT, ROLE_CLIENT]),
   getAllAssignments
 );
 router.get(
   "/all",
   authenticate,
-  authorize([ROLE_ADMIN, ROLE_SHIFT]),
+  authorize([ROLE_ADMIN, ROLE_SHIFT, ROLE_CLIENT]),
   getAllAssignments
 );
 
