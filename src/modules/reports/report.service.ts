@@ -402,3 +402,65 @@ export const getGuardDetailBreakdown = async (filters: IGuardReportFilters): Pro
         return { success: false, data: null, messages: [error.message] };
     }
 };
+
+import { AdministrativeReportParams } from "./report.dto";
+import { generateAdministrativeMatrixPDFBuffer, MatrixLocationRow } from "./report.pdf.service";
+import dayjs from "dayjs";
+import timezone from "dayjs/plugin/timezone";
+import utc from "dayjs/plugin/utc";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
+
+export const generateAdministrativeMatrixReport = async (params: AdministrativeReportParams): Promise<Buffer> => {
+    const { recurringConfigurationIds, startDate, endDate } = params;
+    const start = getStartOfDay(startDate);
+    const end = getEndOfDay(endDate);
+
+    const recurringLocations = await prisma.recurringLocation.findMany({
+        where: { recurringConfigurationId: { in: recurringConfigurationIds } },
+        include: { location: true },
+        orderBy: { location: { name: 'asc' } }
+    });
+
+    const locationMap = new Map<string, any>();
+    recurringLocations.forEach(rl => {
+        if (rl.location && !locationMap.has(rl.location.id)) {
+            locationMap.set(rl.location.id, rl.location);
+        }
+    });
+
+    const locations = Array.from(locationMap.values());
+    const locationIds = locations.map(l => l.id);
+
+    const scans = await prisma.kardex.findMany({
+        where: {
+            locationId: { in: locationIds },
+            timestamp: { gte: start, lte: end }
+        },
+        select: {
+            locationId: true,
+            timestamp: true,
+            media: true
+        }
+    });
+
+    const rows: MatrixLocationRow[] = locations.map(loc => {
+        const row: MatrixLocationRow = {
+            locationId: loc.id,
+            name: loc.name,
+            scansByDay: {}
+        };
+
+        const locScans = scans.filter(s => s.locationId === loc.id);
+
+        locScans.forEach(scan => {
+            const dayStr = dayjs(scan.timestamp).tz("America/Tijuana").format("YYYY-MM-DD");
+            row.scansByDay[dayStr] = true;
+        });
+
+        return row;
+    });
+
+    return generateAdministrativeMatrixPDFBuffer(startDate, endDate, rows);
+};

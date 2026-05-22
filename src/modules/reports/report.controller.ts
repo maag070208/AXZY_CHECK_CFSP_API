@@ -77,3 +77,18 @@ export const getWorkloadComparison = asyncHandler(async (req: Request, res: Resp
     const result = await ReportService.getWorkloadComparison(filters);
     res.json(result);
 });
+
+export const generateAdministrativeReport = asyncHandler(async (req: Request, res: Response) => {
+    const params = req.body;
+    try {
+        const buffer = await ReportService.generateAdministrativeMatrixReport(params);
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader(
+            "Content-Disposition",
+            `inline; filename=Matriz_Administrativa_${new Date().getTime()}.pdf`
+        );
+        res.status(200).send(buffer);
+    } catch (error: any) {
+        res.status(500).json({ success: false, messages: [error.message], data: null });
+    }
+});

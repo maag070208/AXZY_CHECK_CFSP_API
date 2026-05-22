@@ -38,6 +38,7 @@ model Client {
   maintenances            Maintenance[]
   recurringConfigurations RecurringConfiguration[]
   assignmentLogs          AssignmentLog[]
+  reportConfigurations    ReportConfiguration[]
 }
 
 model Zone {
@@ -400,4 +401,20 @@ enum RoundStatus {
 enum MaintenanceStatus {
   PENDING
   ATTENDED
+}
+
+model ReportConfiguration {
+  id              String   @id @default(uuid())
+  name            String
+  description     String?
+  reportType      String   // e.g., 'ADMINISTRATIVE_MATRIX', 'INCIDENTS'
+  clientId        String?
+  client          Client?  @relation(fields: [clientId], references: [id])
+  configuration   Json     // stores specific config like recurringConfigurationIds, specific roles, etc.
+  cronExpression  String?  // if we want to schedule it later
+  active          Boolean  @default(true)
+  softDelete      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
 }

@@ -1,23 +1,24 @@
 import { Router } from "express";
 
-import indexRoute from "./index.routes";
-import userRoute from "./users/user.routes";
-import locationsRoute from "./locations/locations.routes";
-import uploadRoute from "./common/upload.routes";
-import kardexRoute from "./kardex/kardex.routes";
 import assignmentsRoute from "./assignments/assignment.routes";
-import incidentRoute from "./incidents/incident.routes";
-import roundRoute from "./rounds/round.routes";
-import scheduleRoute from "./schedules/schedule.routes";
-import maintenanceRoute from "./maintenance/maintenance.routes";
-import reportRoute from "./reports/report.routes";
 import catalogRoute from "./catalog/catalog.routes";
 import clientsRoute from "./clients/clients.routes";
-import zonesRoute from "./zones/zones.routes";
+import uploadRoute from "./common/upload.routes";
+import homeRoute from "./home/home.routes";
+import incidentRoute from "./incidents/incident.routes";
+import indexRoute from "./index.routes";
+import kardexRoute from "./kardex/kardex.routes";
+import locationsRoute from "./locations/locations.routes";
+import maintenanceRoute from "./maintenance/maintenance.routes";
 import recurringRoute from "./recurring/recurring.routes";
+import reportConfigurationsRoute from "./report-configurations/report-configurations.routes";
+import reportRoute from "./reports/report.routes";
+import roundRoute from "./rounds/round.routes";
+import scheduleRoute from "./schedules/schedule.routes";
 import settingsRoute from "./settings/settings.routes";
 import syncRoute from "./sync/sync.routes";
-import homeRoute from "./home/home.routes";
+import userRoute from "./users/user.routes";
+import zonesRoute from "./zones/zones.routes";
 
 const apiRouter = Router();
 
@@ -39,5 +40,6 @@ apiRouter.use("/zones", zonesRoute);
 apiRouter.use("/recurring", recurringRoute);
 apiRouter.use("/settings", settingsRoute);
 apiRouter.use("/sync", syncRoute);
+apiRouter.use("/report-configurations", reportConfigurationsRoute);
 
 export default apiRouter;

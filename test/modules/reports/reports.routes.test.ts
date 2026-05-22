@@ -120,5 +120,20 @@ describe("Rutas de Reportes (Integración Total)", () => {
   
         expect(response.status).toBe(200);
     });
+
+    it("debe generar un reporte administrativo en PDF (Matriz)", async () => {
+      const response = await request(app)
+        .post(`/api/v1/reports/administrative/matrix/pdf`)
+        .set("user", JSON.stringify({ id: adminUserId, role: "ADMIN", clientId: createdClientId }))
+        .send({
+          recurringConfigurationIds: [],
+          startDate: "2024-01-01",
+          endDate: "2026-12-31"
+        });
+
+      // Incluso si mandamos arreglo vacío, debe generar el PDF vacío correctamente
+      expect(response.status).toBe(200);
+      expect(response.header['content-type']).toBe('application/pdf');
+    });
   });
 });
