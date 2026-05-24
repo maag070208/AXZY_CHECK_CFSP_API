@@ -57,3 +57,6 @@ export const TIMELINE_EVENT_INCIDENT = "INCIDENT";
 // Security
 export const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutos
 export const RATE_LIMIT_MAX_REQUESTS = 100; // Máximo 100 req por IP
+
+// Versión de la API / App
+export const API_VERSION = "1.0.0";

@@ -2345,6 +2345,14 @@ paths:
       tags:
       - sync
       summary: Pull data (Offline)
+      parameters:
+      - in: query
+        name: last_pulled_at
+        required: false
+        schema:
+          type: string
+          pattern: '^\d+$'
+        description: Timestamp numérico de milisegundos para sincronización incremental
       responses:
         '200':
           description: OK
@@ -2368,6 +2376,39 @@ paths:
       tags:
       - sync
       summary: Push data (Offline)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - changes
+              properties:
+                changes:
+                  type: object
+                  additionalProperties:
+                    type: object
+                    required:
+                      - created
+                      - updated
+                      - deleted
+                    properties:
+                      created:
+                        type: array
+                        items:
+                          type: object
+                        description: Registros creados localmente en el cliente
+                      updated:
+                        type: array
+                        items:
+                          type: object
+                        description: Registros modificados localmente en el cliente
+                      deleted:
+                        type: array
+                        items:
+                          type: string
+                        description: IDs de registros eliminados localmente
       responses:
         '200':
           description: OK
