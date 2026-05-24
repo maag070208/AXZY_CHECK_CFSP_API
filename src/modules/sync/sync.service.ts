@@ -1,5 +1,6 @@
 import { prismaClient } from "@src/core/config/database";
 import { createAuditLog } from "../audit/audit.service";
+import { logger } from "@src/core/utils/logger";
 
 export interface SyncPullParams {
   lastPulledAt?: number;
@@ -94,6 +95,13 @@ export const pushChanges = async (params: SyncPushParams) => {
 
     // Apply created
     for (const record of change.created) {
+      if (record.media && typeof record.media === "string") {
+        try {
+          record.media = JSON.parse(record.media);
+        } catch (e) {
+          logger.warn(`Failed to parse media JSON: ${record.media}`);
+        }
+      }
       await prisma[table].create({
         data: record,
       });
@@ -102,6 +110,13 @@ export const pushChanges = async (params: SyncPushParams) => {
     // Apply updated
     for (const record of change.updated) {
       const { id, ...data } = record;
+      if (data.media && typeof data.media === "string") {
+        try {
+          data.media = JSON.parse(data.media);
+        } catch (e) {
+          logger.warn(`Failed to parse media JSON: ${data.media}`);
+        }
+      }
       await prisma[table].update({
         where: { id },
         data,
