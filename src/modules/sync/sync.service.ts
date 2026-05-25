@@ -16,6 +16,7 @@ export interface SyncPushParams {
     };
   };
   userId: string;
+  lastPulledAt?: number;
 }
 
 const MODELS_TO_SYNC = [
@@ -87,8 +88,9 @@ export const pullChanges = async (params: SyncPullParams) => {
 };
 
 export const pushChanges = async (params: SyncPushParams) => {
-  const { changes, userId } = params;
+  const { changes, userId, lastPulledAt } = params;
   const prisma = prismaClient as any;
+  const lastPulledAtDate = lastPulledAt ? new Date(lastPulledAt) : new Date(Date.now() - 5000);
 
   for (const [table, change] of Object.entries(changes)) {
     if (!MODELS_TO_SYNC.includes(table)) continue;
@@ -102,9 +104,29 @@ export const pushChanges = async (params: SyncPushParams) => {
           logger.warn(`Failed to parse media JSON: ${record.media}`);
         }
       }
-      await prisma[table].create({
-        data: record,
+      
+      const existing = await prisma[table].findUnique({
+        where: { id: record.id },
       });
+
+      if (existing) {
+        const { id, ...data } = record;
+        await prisma[table].update({
+          where: { id },
+          data: {
+            ...data,
+            updatedAt: lastPulledAtDate,
+          },
+        });
+      } else {
+        await prisma[table].create({
+          data: {
+            ...record,
+            createdAt: lastPulledAtDate,
+            updatedAt: lastPulledAtDate,
+          },
+        });
+      }
     }
 
     // Apply updated
@@ -119,7 +141,10 @@ export const pushChanges = async (params: SyncPushParams) => {
       }
       await prisma[table].update({
         where: { id },
-        data,
+        data: {
+          ...data,
+          updatedAt: lastPulledAtDate,
+        },
       });
     }
 

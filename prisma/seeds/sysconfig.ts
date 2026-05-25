@@ -11,6 +11,18 @@ export const sysConfigSeed = async (prisma: PrismaClient) => {
         { key: 'MAINTENANCE_EMAIL', value: 'maag070208@gmail.com|asael070208@gmail.com' },
         { key: 'INCIDENT_WHATSAPP', value: '526645102632' },
         { key: 'MAINTENANCE_WHATSAPP', value: '526645102632' },
+        { key: 'APP_UPDATE_URL', value: 'https://axzy.dev/checkapp/download' },
+        { key: 'VERSION_LOGS', value: JSON.stringify([
+          {
+            version: '1.0.1',
+            changes: [
+              'Edición de clientes y locaciones',
+              'Creación y asignación de guardias',
+              'Optimización de rutas y horarios',
+              'Historial detallado de versiones'
+            ]
+          }
+        ])},
     ];
 
     for (const config of configs) {

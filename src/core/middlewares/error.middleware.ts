@@ -32,7 +32,13 @@ export const errorMiddleware = (
     logger.warn(`${req.method} ${req.originalUrl} - ${message}`);
   }
 
-  const response = createTResult(null, [message, ...(errors || [])]);
+  let responseData = null;
+  if (err instanceof AppError && errors && errors.versionMismatch) {
+    responseData = errors;
+    errors = []; // Limpiar para que no se duplique en mensajes
+  }
+
+  const response = createTResult(responseData, [message, ...(errors || [])]);
   
   res.status(statusCode).json(response);
 };
