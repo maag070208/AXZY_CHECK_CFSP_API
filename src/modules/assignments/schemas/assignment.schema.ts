@@ -28,3 +28,35 @@ export const createAssignmentSchema = z.object({
 export type CreateAssignmentSchema = z.infer<
   typeof createAssignmentSchema
 >["body"];
+
+export const UpdateAssignmentStatusSchema = z.object({
+  params: z.object({
+    id: z.string().uuid("ID de asignación inválido"),
+  }),
+  body: z.object({
+    status: z.enum(['PENDING', 'CHECKING', 'UNDER_REVIEW', 'REVIEWED', 'ANOMALY'], {
+      message: "Estado de asignación inválido",
+    }),
+  }),
+});
+
+export const ToggleTaskSchema = z.object({
+  params: z.object({
+    taskId: z.string().uuid("ID de tarea inválido"),
+  }),
+});
+
+export const GetAllAssignmentsQuerySchema = z.object({
+  query: z.object({
+    id: z.string().uuid("ID inválido").optional(),
+    guardId: z.string().uuid("ID de guardia inválido").optional(),
+    status: z.enum(['PENDING', 'CHECKING', 'UNDER_REVIEW', 'REVIEWED', 'ANOMALY']).optional(),
+  }),
+});
+
+export const GetMyAssignmentsQuerySchema = z.object({
+  query: z.object({
+    guardId: z.string().uuid("ID de guardia inválido").optional(),
+  }),
+});
+

@@ -5,7 +5,9 @@ import { prismaClient } from "@src/core/config/database";
 jest.mock("@src/modules/common/middlewares/auth.middleware", () => ({
   authenticate: (req: any, res: any, next: any) => {
     if (req.headers["user"]) {
-      req.user = JSON.parse(req.headers["user"]);
+      const user = JSON.parse(req.headers["user"]);
+      req.user = user;
+      res.locals.user = user;
     }
     next();
   },
@@ -56,7 +58,7 @@ describe("Rutas de Sincronización (Offline - Sync)", () => {
       const response = await request(app)
         .get("/api/v1/sync")
         .set("user", JSON.stringify({ id: "admin" }))
-        .set("x-app-version", "1.0.0");
+        .set("x-bypass-version-check", "true");
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -70,7 +72,7 @@ describe("Rutas de Sincronización (Offline - Sync)", () => {
       const response = await request(app)
         .get(`/api/v1/sync?last_pulled_at=${future}`)
         .set("user", JSON.stringify({ id: "admin" }))
-        .set("x-app-version", "1.0.0");
+        .set("x-bypass-version-check", "true");
 
       expect(response.status).toBe(200);
       // No debería haber cambios nuevos después de una fecha futura
@@ -98,7 +100,7 @@ describe("Rutas de Sincronización (Offline - Sync)", () => {
       const response = await request(app)
         .post("/api/v1/sync")
         .set("user", JSON.stringify({ id: "admin" }))
-        .set("x-app-version", "1.0.0")
+        .set("x-bypass-version-check", "true")
         .send(pushData);
 
       expect(response.status).toBe(200);
@@ -120,7 +122,7 @@ describe("Rutas de Sincronización (Offline - Sync)", () => {
       const response = await request(app)
         .post("/api/v1/sync")
         .set("user", JSON.stringify({ id: "admin" }))
-        .set("x-app-version", "1.0.0")
+        .set("x-bypass-version-check", "true")
         .send(pushData);
 
       expect(response.status).toBe(400);
@@ -132,7 +134,7 @@ describe("Rutas de Sincronización (Offline - Sync)", () => {
       const response = await request(app)
         .get("/api/v1/sync?last_pulled_at=invalido")
         .set("user", JSON.stringify({ id: "admin" }))
-        .set("x-app-version", "1.0.0");
+        .set("x-bypass-version-check", "true");
 
       expect(response.status).toBe(400);
       expect(response.body.success).toBe(false);

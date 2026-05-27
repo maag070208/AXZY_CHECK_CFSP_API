@@ -143,6 +143,8 @@ describe("Rutas de Mantenimiento (Integración Total)", () => {
       const response = await request(app)
         .post("/api/v1/maintenance/datatable")
         .send({
+          page: 1,
+          limit: 10,
           filters: { search: "luminaria" }
         });
 

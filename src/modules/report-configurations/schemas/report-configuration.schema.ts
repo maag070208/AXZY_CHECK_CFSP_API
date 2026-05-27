@@ -27,3 +27,10 @@ export const updateReportConfigurationSchema = z.object({
     id: z.string().uuid("ID inválido"),
   }),
 });
+
+export const DeleteReportConfigurationSchema = z.object({
+  params: z.object({
+    id: z.string().uuid("ID inválido"),
+  }),
+});
+

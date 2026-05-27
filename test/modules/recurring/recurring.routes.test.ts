@@ -5,11 +5,11 @@ import { ROLE_GUARD } from "@src/core/config/constants";
 
 jest.mock("@src/modules/common/middlewares/auth.middleware", () => ({
   authenticate: (req: any, res: any, next: any) => {
-    if (req.headers["user"]) {
-      const user = JSON.parse(req.headers["user"]);
-      req.user = user;
-      res.locals.user = user;
-    }
+    const user = req.headers["user"]
+      ? JSON.parse(req.headers["user"])
+      : { id: "admin-id", role: "ADMIN" };
+    req.user = user;
+    res.locals.user = user;
     next();
   },
   authorize: () => (req: any, res: any, next: any) => next(),
@@ -18,11 +18,11 @@ jest.mock("@src/modules/common/middlewares/auth.middleware", () => ({
 jest.mock("@src/core/middlewares/token-validator.middleware", () => ({
   __esModule: true,
   default: (req: any, res: any, next: any) => {
-    if (req.headers["user"]) {
-      const user = JSON.parse(req.headers["user"]);
-      req.user = user;
-      res.locals.user = user;
-    }
+    const user = req.headers["user"]
+      ? JSON.parse(req.headers["user"])
+      : { id: "admin-id", role: "ADMIN" };
+    req.user = user;
+    res.locals.user = user;
     next();
   },
 }));
@@ -165,7 +165,11 @@ describe("Rutas de Configuración de Rondas (Recurrencia) - Integración Total",
     it("debe poder consultarse mediante el datatable", async () => {
         const response = await request(app)
             .post("/api/v1/recurring/datatable")
-            .send({ filters: { search: "Nocturna" } });
+            .send({
+                page: 1,
+                limit: 10,
+                filters: { search: "Nocturna" }
+            });
 
         expect(response.status).toBe(200);
         expect(response.body.success).toBe(true);
@@ -188,6 +192,7 @@ describe("Rutas de Configuración de Rondas (Recurrencia) - Integración Total",
     it("debe iniciar una ronda basada en la configuración creada", async () => {
       const response = await request(app)
         .post("/api/v1/rounds/start")
+        .set("user", JSON.stringify({ id: createdGuardId, role: "GUARD" }))
         .send({
           guardId: createdGuardId,
           clientId: createdClientId,

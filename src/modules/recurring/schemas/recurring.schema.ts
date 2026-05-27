@@ -29,3 +29,16 @@ export const updateRecurringSchema = z.object({
     active: z.boolean().optional(),
   })
 });
+
+export const RecurringIdParamSchema = z.object({
+  params: z.object({
+    id: z.string().uuid("ID de tarea recurrente inválido"),
+  }),
+});
+
+export const RecurringGuardIdParamSchema = z.object({
+  params: z.object({
+    guardId: z.string().uuid("ID de guardia inválido"),
+  }),
+});
+

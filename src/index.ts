@@ -2,6 +2,7 @@ import cors from "cors";
 import express from "express";
 import helmet from "helmet";
 import morgan from "morgan";
+import path from "path";
 import swaggerUi from "swagger-ui-express";
 import YAML from "yamljs";
 import { env } from "@src/core/config/env.config";
@@ -50,6 +51,10 @@ app.use([
 // Documentation
 app.use("/swagger", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.get("/swagger.json", (req, res) => res.json(swaggerDocument));
+app.get("/swagger.yaml", (req, res) => {
+  res.setHeader("Content-Type", "text/yaml");
+  res.sendFile(path.resolve("./swagger.yaml"));
+});
 
 // Routes
 app.use("/api/v1", apiRouter);

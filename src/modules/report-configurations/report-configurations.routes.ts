@@ -9,11 +9,13 @@ import {
 import {
   createReportConfigurationSchema,
   updateReportConfigurationSchema,
+  DeleteReportConfigurationSchema,
 } from "./schemas/report-configuration.schema";
+import { DataTableFetchParamsSchema } from "../../core/dto/datatable.schema";
 
 const router = Router();
 
-router.post("/datatable", getConfigurations);
+router.post("/datatable", validate(DataTableFetchParamsSchema), getConfigurations);
 router.post(
   "/",
   validate(createReportConfigurationSchema),
@@ -24,6 +26,6 @@ router.put(
   validate(updateReportConfigurationSchema),
   updateConfiguration,
 );
-router.delete("/:id", deleteConfiguration);
+router.delete("/:id", validate(DeleteReportConfigurationSchema), deleteConfiguration);
 
 export default router;

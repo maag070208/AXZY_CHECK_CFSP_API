@@ -30,3 +30,22 @@ export const KardexIdParamSchema = z.object({
     id: z.string().uuid(),
   }),
 });
+
+export const GetKardexQuerySchema = z.object({
+  query: z.object({
+    userId: z.string().uuid("ID de usuario inválido").optional(),
+    locationId: z.string().uuid("ID de ubicación inválido").optional(),
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+  }),
+});
+
+export const DeleteKardexMediaSchema = z.object({
+  params: z.object({
+    id: z.string().uuid("ID de registro inválido"),
+  }),
+  query: z.object({
+    key: z.string().min(1, "El key del archivo es requerido"),
+  }),
+});
+

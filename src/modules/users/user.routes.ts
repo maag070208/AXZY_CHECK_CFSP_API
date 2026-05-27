@@ -13,7 +13,15 @@ import {
 } from "./user.controller";
 
 import { validate } from "@src/core/middlewares/validate.middleware";
-import { loginSchema, createUserSchema } from "./user.schema";
+import { 
+  loginSchema, 
+  createUserSchema,
+  userIdParamSchema,
+  updateUserSchema,
+  updatePasswordSchema,
+  resetPasswordSchema
+} from "./user.schema";
+import { DataTableFetchParamsSchema } from "../../core/dto/datatable.schema";
 
 import { authenticate } from "@src/modules/common/middlewares/auth.middleware";
 
@@ -23,14 +31,14 @@ router.post("/login", validate(loginSchema), login);
 
 router.use(authenticate);
 
-router.post("/datatable", getDataTable);
+router.post("/datatable", validate(DataTableFetchParamsSchema), getDataTable);
 router.get("/", getAllUsers);
-router.get("/:id", getUserById);
+router.get("/:id", validate(userIdParamSchema), getUserById);
 router.post("/", validate(createUserSchema), createUser);
-router.put("/:id", updateUserProfile);
-router.put("/:id/password", changePassword);
-router.put("/:id/reset-password", resetPassword);
+router.put("/:id", validate(updateUserSchema), updateUserProfile);
+router.put("/:id/password", validate(updatePasswordSchema), changePassword);
+router.put("/:id/reset-password", validate(resetPasswordSchema), resetPassword);
 router.post("/logout", logout);
-router.delete("/:id", deleteUser);
+router.delete("/:id", validate(userIdParamSchema), deleteUser);
 
 export default router;
