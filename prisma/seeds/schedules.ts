@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import { hackerLog } from "./logger";
 
 export const schedulesSeed = async (prisma: PrismaClient) => {
-  hackerLog.info('SCHEDULE', 'Configuring Operational timelines');
+  hackerLog.info("SCHEDULE", "Configuring Operational timelines");
   const schedules = [
     {
       name: "Matutino",
@@ -19,6 +19,11 @@ export const schedulesSeed = async (prisma: PrismaClient) => {
       startTime: "23:00",
       endTime: "07:00",
     },
+    {
+      name: "Administracion",
+      startTime: "00:00",
+      endTime: "23:59",
+    },
   ];
 
   for (const schedule of schedules) {
@@ -28,5 +33,5 @@ export const schedulesSeed = async (prisma: PrismaClient) => {
       create: schedule,
     });
   }
-  hackerLog.success('SCHEDULE', 'Time intervals synchronized');
+  hackerLog.success("SCHEDULE", "Time intervals synchronized");
 };

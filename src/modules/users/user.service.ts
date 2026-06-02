@@ -267,6 +267,9 @@ export const deleteUser = async (id: string) => {
 
     if (user?.clientId && user.role?.name === ROLE_CLIENT) {
       await deleteClientDataCascade(tx, user.clientId, id);
+      await tx.client.delete({
+        where: { id: user.clientId },
+      });
     }
 
     return tx.user.delete({
