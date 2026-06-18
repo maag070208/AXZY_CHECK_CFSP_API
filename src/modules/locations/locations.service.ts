@@ -126,6 +126,19 @@ export const getAllLocations = async (clientId?: string) => {
   });
 };
 
+export const getLocationsByGuard = async (guardId: string) => {
+  const guard = await prisma.user.findUnique({
+    where: { id: guardId },
+    select: { clientId: true },
+  });
+  if (!guard?.clientId) return [];
+  return await prisma.location.findMany({
+    where: { softDelete: false, clientId: guard.clientId },
+    orderBy: { createdAt: "desc" },
+    include: { client: { select: { name: true } }, tasks: true },
+  });
+};
+
 export const createLocation = async (data: {
   clientId: string;
   zoneId?: string;

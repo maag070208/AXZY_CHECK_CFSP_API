@@ -2,6 +2,8 @@ import { Router } from "express";
 
 import assignmentsRoute from "./assignments/assignment.routes";
 import catalogRoute from "./catalog/catalog.routes";
+import guardDisciplineRoute from "./guard-discipline/discipline.routes";
+import guardLogsRoute from "./guard-logs/guardLog.routes";
 import clientsRoute from "./clients/clients.routes";
 import uploadRoute from "./common/upload.routes";
 import homeRoute from "./home/home.routes";
@@ -37,6 +39,8 @@ apiRouter.use("/reports", reportRoute);
 apiRouter.use("/catalog", catalogRoute);
 apiRouter.use("/clients", clientsRoute);
 apiRouter.use("/zones", zonesRoute);
+apiRouter.use("/guard-logs", guardLogsRoute);
+apiRouter.use("/guard-discipline", guardDisciplineRoute);
 apiRouter.use("/recurring", recurringRoute);
 apiRouter.use("/settings", settingsRoute);
 apiRouter.use("/sync", syncRoute);

@@ -42,6 +42,9 @@ export const uploadFile = asyncHandler(async (req: Request, res: Response) => {
   } else if (locationName.toLowerCase() === "maintenance") {
     subfolder = "mantenimiento";
     isRound = false;
+  } else if (locationName.toLowerCase() === "guard-discipline") {
+    subfolder = "incidencias_guardias";
+    isRound = false;
   }
 
   // Format: YYYYMMDDHHmmss

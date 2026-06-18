@@ -10,7 +10,8 @@ export const createAssignmentSchema = z.object({
       .uuid("El id de la ubicación debe ser un UUID"),
     assignedBy: z
       .string("Ingrese el id de quien asigna")
-      .uuid("El id de quien asigna debe ser un UUID"),
+      .uuid("El id de quien asigna debe ser un UUID")
+      .optional(),
     notes: z.string("Ingrese notas").optional(),
     tasks: z
       .array(

@@ -205,10 +205,18 @@ export const getRecurringById = async (id: string) => {
 };
 
 export const getRecurringByGuard = async (guardId: string) => {
+    const guard = await prisma.user.findUnique({
+        where: { id: guardId },
+        select: { clientId: true },
+    });
+
+    if (!guard?.clientId) return [];
+
     return prisma.recurringConfiguration.findMany({
         where: {
             softDelete: false,
             active: true,
+            clientId: guard.clientId,
             guards: {
                 some: { id: guardId }
             }

@@ -1,5 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import { catalogsSeed } from "./seeds/catalogs";
+import { disciplineCatalogsSeed } from "./seeds/discipline";
+import { guardLogsSeed } from "./seeds/guard-logs";
 import { incidentCatalogsSeed } from "./seeds/incidents";
 import { hackerLog } from "./seeds/logger";
 import { maintenanceCatalogsSeed } from "./seeds/maintenance";
@@ -20,6 +22,8 @@ async function main() {
   await seedPlaza2000Full();
   await securitySeed(prisma);
   await sysConfigSeed(prisma);
+  await disciplineCatalogsSeed(prisma);
+  await guardLogsSeed(prisma);
 
   hackerLog.divider();
   hackerLog.success("SYSTEM", "Master Seeding Complete");

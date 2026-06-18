@@ -13,6 +13,7 @@ router.use(authenticate);
 router.post("/datatable", validate(DataTableFetchParamsSchema), locationsController.getDataTable);
 
 router.get("/", validate(GetLocationsQuerySchema), locationsController.getLocations);
+router.get("/by-guard/:guardId", locationsController.getLocationsByGuard);
 router.post("/", validate(CreateLocationSchema), locationsController.addLocation);
 router.post("/print-qrs", validate(PrintBulkQRSchema), locationsController.printBulkQR);
 router.put("/:id", validate(UpdateLocationSchema), locationsController.putLocation);

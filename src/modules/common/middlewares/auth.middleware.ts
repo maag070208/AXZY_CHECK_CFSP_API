@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../../../core/utils/security';
 import { AppError } from '../../../core/errors/AppError';
 import { asyncHandler } from '../../../core/utils/asyncHandler';
+import { prismaClient } from '../../../core/config/database';
 
 export const authenticate = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     // Soporte para tests con mocks
@@ -10,23 +11,39 @@ export const authenticate = asyncHandler(async (req: Request, res: Response, nex
         return next();
     }
 
+    let token: string | undefined;
+
     const authHeader = req.headers.authorization;
-    if (!authHeader) {
+    if (authHeader) {
+        token = authHeader.split(' ')[1];
+    }
+
+    if (!token) {
+        token = req.query.token as string | undefined;
+    }
+
+    if (!token) {
         throw new AppError('No se proporcionó un token', 401);
     }
 
-    const token = authHeader.split(' ')[1]; 
-    if (!token) {
-        throw new AppError('Formato de token inválido', 401);
-    }
-
+    let decoded: any;
     try {
-        const decoded = await verifyToken(token);
-        res.locals.user = decoded;
-        next();
+        decoded = await verifyToken(token);
     } catch (error) {
         throw new AppError('Token inválido o expirado', 401);
     }
+
+    const user = await prismaClient.user.findUnique({
+        where: { id: decoded.id },
+        select: { id: true, active: true, softDelete: true },
+    });
+
+    if (!user || !user.active || user.softDelete) {
+        throw new AppError('Usuario no encontrado o desactivado', 401);
+    }
+
+    res.locals.user = decoded;
+    next();
 });
 
 export const authorize = (roles: string[]) => {

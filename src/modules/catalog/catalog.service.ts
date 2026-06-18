@@ -9,6 +9,8 @@ export enum CatalogKey {
   GUARD = "guard",
   INCIDENT_CATEGORY = "incident_category",
   INCIDENT_TYPE = "incident_type",
+  DISCIPLINE_CATEGORY = "discipline_category",
+  DISCIPLINE_TYPE = "discipline_type",
 }
 
 export const getCatalog = async (key: string) => {
@@ -44,6 +46,14 @@ export const getCatalog = async (key: string) => {
           name: l.name,
           value: l.name,
         }));
+      case CatalogKey.DISCIPLINE_CATEGORY:
+        return prismaClient.disciplineCategory.findMany({
+          select: { ...selectFields, color: true, icon: true },
+        });
+      case CatalogKey.DISCIPLINE_TYPE:
+        return prismaClient.disciplineType.findMany({
+          select: { ...selectFields, categoryId: true },
+        });
       case CatalogKey.GUARD:
         const guards = await prismaClient.user.findMany({
           where: {

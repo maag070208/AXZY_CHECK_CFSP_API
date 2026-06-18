@@ -18,5 +18,6 @@ router.get('/', validate(GetRoundsQuerySchema), roundController.getRounds);
 router.get('/:id', validate(RoundIdParamSchema), roundController.getRoundDetail);
 router.get('/:id/report', validate(RoundIdParamSchema), roundController.generateReport);
 router.get('/:id/share', validate(RoundIdParamSchema), roundController.shareReport);
+router.delete('/:id', validate(RoundIdParamSchema), roundController.deleteRound);
 
 export default router;

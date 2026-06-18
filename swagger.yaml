@@ -1100,6 +1100,38 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
+  '/assignments/{id}':
+    delete:
+      tags:
+        - assignments
+      summary: 'Eliminar asignación'
+      parameters:
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Eliminada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '404':
+          description: 'No encontrada'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
   /rounds/start:
     post:
       tags:
@@ -1256,6 +1288,37 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultDatatableRound'
+    delete:
+      tags:
+        - rounds
+      summary: 'Eliminar rondín'
+      parameters:
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Eliminado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '404':
+          description: 'No encontrado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
   '/rounds/{id}/report':
     get:
       tags:

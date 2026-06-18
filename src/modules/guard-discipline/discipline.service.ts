@@ -1,0 +1,198 @@
+import { prismaClient } from "@src/core/config/database";
+import { AppError } from "@src/core/errors/AppError";
+import { ITDataTableFetchParams, ITDataTableResponse } from "@src/core/dto/datatable.dto";
+import { getPrismaPaginationParams } from "@src/core/utils/prisma-pagination.utils";
+import { createAuditLog } from "../audit/audit.service";
+
+const prisma = prismaClient;
+
+// ── Discipline Categories ──
+export const getPaginatedCategories = async (params: ITDataTableFetchParams): Promise<ITDataTableResponse<any>> => {
+  const prismaParams = getPrismaPaginationParams(params);
+  const searchVal = String(params.filters?.search || "").trim();
+  delete prismaParams.where.search;
+  if (searchVal.length > 0) {
+    prismaParams.where.OR = [
+      { name: { contains: searchVal, mode: "insensitive" } },
+      { value: { contains: searchVal, mode: "insensitive" } },
+    ];
+  }
+  const [rows, total] = await Promise.all([
+    prisma.disciplineCategory.findMany({ ...prismaParams }),
+    prisma.disciplineCategory.count({ where: prismaParams.where }),
+  ]);
+  return { rows, total };
+};
+
+export const createCategory = async (data: any) => {
+  return prisma.disciplineCategory.create({ data });
+};
+
+export const updateCategory = async (id: string, data: any) => {
+  return prisma.disciplineCategory.update({ where: { id }, data });
+};
+
+export const deleteCategory = async (id: string) => {
+  return prisma.disciplineCategory.delete({ where: { id } });
+};
+
+// ── Discipline Types ──
+export const getPaginatedTypes = async (params: ITDataTableFetchParams): Promise<ITDataTableResponse<any>> => {
+  const prismaParams = getPrismaPaginationParams(params);
+  const searchVal = String(params.filters?.search || "").trim();
+  delete prismaParams.where.search;
+  if (searchVal.length > 0) {
+    prismaParams.where.OR = [
+      { name: { contains: searchVal, mode: "insensitive" } },
+      { value: { contains: searchVal, mode: "insensitive" } },
+    ];
+  }
+  const [rows, total] = await Promise.all([
+    prisma.disciplineType.findMany({ ...prismaParams, include: { category: true } }),
+    prisma.disciplineType.count({ where: prismaParams.where }),
+  ]);
+  return { rows, total };
+};
+
+export const createType = async (data: any) => {
+  return prisma.disciplineType.create({ data });
+};
+
+export const updateType = async (id: string, data: any) => {
+  return prisma.disciplineType.update({ where: { id }, data });
+};
+
+export const deleteType = async (id: string) => {
+  return prisma.disciplineType.delete({ where: { id } });
+};
+
+// ── Guard Discipline (Notices) ──
+const OPERATIONAL_ROLE_NAMES = ["GUARD", "SHIFT", "MAINT"];
+
+export const getPaginatedDisciplines = async (params: ITDataTableFetchParams, userId: string, userRole: string, userClientId: string | null): Promise<ITDataTableResponse<any>> => {
+  const prismaParams = getPrismaPaginationParams(params);
+  const searchVal = String(params.filters?.search || "").trim();
+  delete prismaParams.where.search;
+
+  const where: any = { deletedAt: null };
+
+  if (params.filters?.clientId) {
+    where.clientId = params.filters.clientId;
+  } else if (userRole === "RESDN" && userClientId) {
+    where.clientId = userClientId;
+  }
+
+  if (params.filters?.status) {
+    where.status = params.filters.status;
+  }
+
+  if (params.filters?.guardId) {
+    where.guardId = params.filters.guardId;
+  }
+
+  if (searchVal.length > 0) {
+    where.guard = {
+      OR: [
+        { name: { contains: searchVal, mode: "insensitive" } },
+        { lastName: { contains: searchVal, mode: "insensitive" } },
+        { username: { contains: searchVal, mode: "insensitive" } },
+      ],
+    };
+  }
+
+  const orderBy = prismaParams.orderBy || { createdAt: "desc" as const };
+
+  const [rows, total] = await Promise.all([
+    prisma.guardDiscipline.findMany({
+      skip: prismaParams.skip,
+      take: prismaParams.take,
+      where,
+      orderBy,
+      select: {
+        id: true,
+        guardId: true,
+        title: true,
+        description: true,
+        media: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        guard: { select: { id: true, name: true, lastName: true, username: true } },
+        createdBy: { select: { id: true, name: true, lastName: true, username: true } },
+        category: { select: { id: true, name: true, color: true } },
+        type: { select: { id: true, name: true } },
+        client: { select: { id: true, name: true } },
+      },
+    }),
+    prisma.guardDiscipline.count({ where }),
+  ]);
+
+  return { rows, total };
+};
+
+export const createDiscipline = async (data: any, createdById: string) => {
+  const guard = await prisma.user.findUnique({
+    where: { id: data.guardId },
+    include: { role: true },
+  });
+
+  if (!guard || !OPERATIONAL_ROLE_NAMES.includes(guard.role.name)) {
+    throw new AppError("El usuario seleccionado no es un guardia operativo", 400);
+  }
+
+  const record = await prisma.guardDiscipline.create({
+    data: {
+      guardId: data.guardId,
+      title: data.title,
+      categoryId: data.categoryId || null,
+      typeId: data.typeId || null,
+      description: data.description || null,
+      media: data.media || [],
+      clientId: data.clientId || guard.clientId || null,
+      createdById,
+    },
+    include: {
+      guard: { select: { id: true, name: true, lastName: true, username: true } },
+      createdBy: { select: { id: true, name: true, lastName: true, username: true } },
+      category: { select: { id: true, name: true, color: true } },
+      type: { select: { id: true, name: true } },
+    },
+  });
+
+  await createAuditLog({
+    userId: createdById,
+    module: "GUARD_DISCIPLINE",
+    action: "CREATE",
+    resourceId: record.id,
+  });
+
+  return record;
+};
+
+export const resolveDiscipline = async (id: string, data: { description?: string | null; status: "RESOLVED" | "DISMISSED" }) => {
+  const record = await prisma.guardDiscipline.findUnique({ where: { id } });
+  if (!record || record.deletedAt) {
+    throw new AppError("Registro no encontrado", 404);
+  }
+
+  return prisma.guardDiscipline.update({
+    where: { id },
+    data: {
+      status: data.status,
+      description: data.description !== undefined ? data.description : record.description,
+    },
+    include: {
+      guard: { select: { id: true, name: true, lastName: true, username: true } },
+      category: { select: { id: true, name: true, color: true } },
+      type: { select: { id: true, name: true } },
+    },
+  });
+};
+
+export const deleteDiscipline = async (id: string) => {
+  const record = await prisma.guardDiscipline.findUnique({ where: { id } });
+  if (!record) throw new AppError("Registro no encontrado", 404);
+
+  await prisma.guardDiscipline.update({ where: { id }, data: { deletedAt: new Date() } });
+  return { id };
+};

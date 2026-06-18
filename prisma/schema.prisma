@@ -39,6 +39,7 @@ model Client {
   recurringConfigurations RecurringConfiguration[]
   assignmentLogs          AssignmentLog[]
   reportConfigurations    ReportConfiguration[]
+  guardDisciplines        GuardDiscipline[]
 }
 
 model Zone {
@@ -87,6 +88,9 @@ model User {
   createdAssignments      Assignment[]             @relation("AssignedByAssignments")
   assignmentLogs          AssignmentLog[]
   auditLogs               AuditLog[]
+  guardLoginLogs          GuardLoginLog[]
+  guardDisciplines        GuardDiscipline[]     @relation("GuardDisciplineTarget")
+  createdGuardDisciplines GuardDiscipline[]     @relation("GuardDisciplineCreator")
 }
 
 model AssignmentLog {
@@ -401,6 +405,79 @@ enum RoundStatus {
 enum MaintenanceStatus {
   PENDING
   ATTENDED
+}
+
+model GuardLoginLog {
+  id        String   @id @default(uuid())
+  userId    String
+  loginAt   DateTime @default(now())
+  logoutAt  DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([loginAt])
+  @@index([logoutAt])
+}
+
+enum GuardDisciplineStatus {
+  PENDING
+  RESOLVED
+  DISMISSED
+}
+
+model DisciplineCategory {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  value     String
+  color     String?
+  icon      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  types     DisciplineType[]
+  notices   GuardDiscipline[]
+}
+
+model DisciplineType {
+  id         String             @id @default(uuid())
+  categoryId String
+  name       String             @unique
+  value      String
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  deletedAt  DateTime?
+  category   DisciplineCategory @relation(fields: [categoryId], references: [id])
+  notices    GuardDiscipline[]
+}
+
+model GuardDiscipline {
+  id           String                 @id @default(uuid())
+  guardId      String
+  title        String
+  categoryId   String?
+  typeId       String?
+  description  String?
+  media        Json?
+  status       GuardDisciplineStatus  @default(PENDING)
+  createdById  String
+  clientId     String?
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  deletedAt    DateTime?
+
+  guard      User                @relation("GuardDisciplineTarget", fields: [guardId], references: [id])
+  createdBy  User                @relation("GuardDisciplineCreator", fields: [createdById], references: [id])
+  category   DisciplineCategory? @relation(fields: [categoryId], references: [id])
+  type       DisciplineType?     @relation(fields: [typeId], references: [id])
+  client     Client?             @relation(fields: [clientId], references: [id])
+
+  @@index([guardId])
+  @@index([clientId])
+  @@index([status])
+  @@index([createdAt])
 }
 
 model ReportConfiguration {

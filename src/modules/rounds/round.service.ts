@@ -1,4 +1,6 @@
 import {
+  ASSIGNMENT_STATUS_PENDING,
+  OPERATIONAL_ROLES,
   ROLE_CLIENT,
   ROUND_STATUS_COMPLETED,
   ROUND_STATUS_IN_PROGRESS,
@@ -26,6 +28,7 @@ export const getDataTableRounds = async (
 ): Promise<ITDataTableResponse<IRoundResponse>> => {
   const customFilters = params.filters || {};
   const cleanFilters: any = {};
+  let clientIdFilter: string | undefined;
 
   if (params.filters) {
     for (const [key, value] of Object.entries(params.filters)) {
@@ -33,8 +36,8 @@ export const getDataTableRounds = async (
 
       if (key === "guard") {
         cleanFilters["guardId"] = value;
-      } else if (key === "client") {
-        cleanFilters["clientId"] = value;
+      } else if (key === "client" || key === "clientId") {
+        clientIdFilter = value as string;
       } else if (key === "search") {
         cleanFilters.guard = {
           OR: [
@@ -68,7 +71,28 @@ export const getDataTableRounds = async (
   }
 
   if (user?.role === ROLE_CLIENT && user.clientId) {
-    prismaParams.where.clientId = user.clientId;
+    prismaParams.where.OR = [
+      { clientId: user.clientId },
+      { recurringConfiguration: { clientId: user.clientId } },
+    ];
+  } else if (OPERATIONAL_ROLES.includes(user?.role)) {
+    if (user.clientId) {
+      prismaParams.where.OR = [
+        { clientId: user.clientId },
+        { recurringConfiguration: { clientId: user.clientId } },
+      ];
+    } else {
+      prismaParams.where.id = "NO_CLIENT";
+    }
+  }
+
+  if (clientIdFilter) {
+    const existingOR = prismaParams.where.OR || [];
+    prismaParams.where.OR = [
+      ...existingOR,
+      { clientId: clientIdFilter },
+      { recurringConfiguration: { clientId: clientIdFilter } },
+    ];
   }
 
   const [rows, total] = await Promise.all([
@@ -152,7 +176,7 @@ export const getCurrentRound = async (
         recurringConfiguration: {
           include: {
             recurringLocations: {
-              include: { location: { include: { zone: true } } },
+              include: { location: { include: { zone: true } }, tasks: true },
               orderBy: { order: "asc" },
             },
           },
@@ -192,8 +216,21 @@ export const getRounds = async (
     }
     if (guardId) where.guardId = guardId;
     if (status) where.status = status;
-    if (user?.role === ROLE_CLIENT && user.clientId)
-      where.clientId = user.clientId;
+    if (user?.role === ROLE_CLIENT && user.clientId) {
+      where.OR = [
+        { clientId: user.clientId },
+        { recurringConfiguration: { clientId: user.clientId } },
+      ];
+    } else if (OPERATIONAL_ROLES.includes(user?.role)) {
+      if (user.clientId) {
+        where.OR = [
+          { clientId: user.clientId },
+          { recurringConfiguration: { clientId: user.clientId } },
+        ];
+      } else {
+        where.id = "NO_CLIENT";
+      }
+    }
 
     const rounds = await prisma.round.findMany({
       where,
@@ -231,32 +268,56 @@ export const getRoundDetail = async (
     if (!round)
       return { success: false, data: null, messages: ["Ronda no encontrada"] };
 
-    if (
-      user?.role === ROLE_CLIENT &&
-      user.clientId &&
-      round.clientId !== user.clientId
-    ) {
-      return {
-        success: false,
-        data: null,
-        messages: ["No tienes permiso para ver los detalles de esta ronda."],
-      };
+    if (user?.role === ROLE_CLIENT && user.clientId) {
+      const roundClientId =
+        round.clientId ||
+        (round as any).recurringConfiguration?.clientId ||
+        (round as any).recurringConfiguration?.client?.id;
+      if (roundClientId && roundClientId !== user.clientId) {
+        return {
+          success: false,
+          data: null,
+          messages: ["No tienes permiso para ver los detalles de esta ronda."],
+        };
+      }
     }
 
     const start = round.startTime;
     const end = round.endTime || now();
 
-    const [scans, incidents] = await Promise.all([
-      prisma.kardex.findMany({
-        where: { timestamp: { gte: start, lte: end }, userId: round.guardId },
-        include: { location: true, assignment: { include: { tasks: true } } },
-        orderBy: { timestamp: "asc" },
-      }),
-      prisma.incident.findMany({
-        where: { createdAt: { gte: start, lte: end }, guardId: round.guardId },
-        orderBy: { createdAt: "asc" },
-      }),
-    ]);
+    let scans = await prisma.kardex.findMany({
+      where: { timestamp: { gte: start, lte: end }, userId: round.guardId },
+      include: { location: true, assignment: { include: { tasks: true } } },
+      orderBy: { timestamp: "asc" },
+    });
+
+    scans = await Promise.all(scans.map(async (s) => {
+      if (!s.assignment && s.scanType === "RECURRING") {
+        const recurringTask = await prisma.recurringLocation.findFirst({
+          where: { locationId: s.locationId },
+          include: { tasks: true },
+          orderBy: { createdAt: "desc" },
+        });
+        if (recurringTask && recurringTask.tasks.length > 0) {
+          (s as any).assignment = {
+            id: "0",
+            status: ASSIGNMENT_STATUS_PENDING,
+            tasks: recurringTask.tasks.map((t: any) => ({
+              id: t.id,
+              description: t.description,
+              completed: false,
+              reqPhoto: t.reqPhoto,
+            })),
+          };
+        }
+      }
+      return s;
+    }));
+
+    const incidents = await prisma.incident.findMany({
+      where: { createdAt: { gte: start, lte: end }, guardId: round.guardId },
+      orderBy: { createdAt: "asc" },
+    });
 
     const timeline: any[] = [];
     timeline.push({
@@ -296,6 +357,24 @@ export const getRoundDetail = async (
     timeline.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
     return { success: true, data: { round, timeline }, messages: [] };
+  } catch (error: any) {
+    return { success: false, data: null, messages: [error.message] };
+  }
+};
+
+export const deleteRound = async (id: string): Promise<TResult<any>> => {
+  try {
+    const round = await prisma.round.findUnique({ where: { id } });
+    if (!round) {
+      return { success: false, data: null, messages: ["Ronda no encontrada"] };
+    }
+
+    await prisma.round.update({
+      where: { id },
+      data: { deletedAt: now() },
+    });
+
+    return { success: true, data: null, messages: [] };
   } catch (error: any) {
     return { success: false, data: null, messages: [error.message] };
   }

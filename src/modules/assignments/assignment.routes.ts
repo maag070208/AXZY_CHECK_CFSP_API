@@ -1,6 +1,6 @@
 
 import { Router } from "express";
-import { createAssignment, getAllAssignments, getMyAssignments, updateStatus, toggleTask, getDataTable } from "./assignment.controller";
+import { createAssignment, getAllAssignments, getMyAssignments, updateStatus, toggleTask, getDataTable, deleteAssignment } from "./assignment.controller";
 import { authenticate, authorize } from "../common/middlewares/auth.middleware";
 import { validate } from "../../core/middlewares/validate.middleware";
 import { 
@@ -51,5 +51,8 @@ router.get("/me", authenticate, validate(GetMyAssignmentsQuerySchema), getMyAssi
 // Shared / System
 router.patch("/:id/status", authenticate, validate(UpdateAssignmentStatusSchema), updateStatus);
 router.patch("/tasks/:taskId/toggle", authenticate, validate(ToggleTaskSchema), toggleTask);
+
+// Delete
+router.delete("/:id", authenticate, authorize([ROLE_ADMIN, ROLE_SHIFT]), deleteAssignment);
 
 export default router;
