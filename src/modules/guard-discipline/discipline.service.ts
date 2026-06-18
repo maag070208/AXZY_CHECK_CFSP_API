@@ -121,7 +121,7 @@ export const getPaginatedDisciplines = async (params: ITDataTableFetchParams, us
         updatedAt: true,
         guard: { select: { id: true, name: true, lastName: true, username: true } },
         createdBy: { select: { id: true, name: true, lastName: true, username: true } },
-        category: { select: { id: true, name: true, color: true } },
+        category: { select: { id: true, name: true, color: true, icon: true } },
         type: { select: { id: true, name: true } },
         client: { select: { id: true, name: true } },
       },
@@ -156,7 +156,7 @@ export const createDiscipline = async (data: any, createdById: string) => {
     include: {
       guard: { select: { id: true, name: true, lastName: true, username: true } },
       createdBy: { select: { id: true, name: true, lastName: true, username: true } },
-      category: { select: { id: true, name: true, color: true } },
+      category: { select: { id: true, name: true, color: true, icon: true } },
       type: { select: { id: true, name: true } },
     },
   });
@@ -185,7 +185,7 @@ export const resolveDiscipline = async (id: string, data: { description?: string
     },
     include: {
       guard: { select: { id: true, name: true, lastName: true, username: true } },
-      category: { select: { id: true, name: true, color: true } },
+      category: { select: { id: true, name: true, color: true, icon: true } },
       type: { select: { id: true, name: true } },
     },
   });
