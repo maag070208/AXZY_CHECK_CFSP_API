@@ -100,10 +100,10 @@ describe("Rutas de Incidencias a Guardias (GuardDiscipline)", () => {
       await prismaClient.guardDiscipline.delete({ where: { id: createdDisciplineId } }).catch(() => {});
     }
     if (createdTypeId) {
-      await prismaClient.disciplineType.delete({ where: { id: createdTypeId } }).catch(() => {});
+      await prismaClient.incidentType.delete({ where: { id: createdTypeId } }).catch(() => {});
     }
     if (createdCategoryId) {
-      await prismaClient.disciplineCategory.delete({ where: { id: createdCategoryId } }).catch(() => {});
+      await prismaClient.incidentCategory.delete({ where: { id: createdCategoryId } }).catch(() => {});
     }
     if (createdGuardId) await prismaClient.user.delete({ where: { id: createdGuardId } }).catch(() => {});
     if (createdAdminId) await prismaClient.user.delete({ where: { id: createdAdminId } }).catch(() => {});

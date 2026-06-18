@@ -6,11 +6,12 @@ import { createAuditLog } from "../audit/audit.service";
 
 const prisma = prismaClient;
 
-// ── Discipline Categories ──
+// ── Discipline Categories (stored in IncidentCategory with type="DISCIPLINE") ──
 export const getPaginatedCategories = async (params: ITDataTableFetchParams): Promise<ITDataTableResponse<any>> => {
   const prismaParams = getPrismaPaginationParams(params);
   const searchVal = String(params.filters?.search || "").trim();
   delete prismaParams.where.search;
+  prismaParams.where.type = "DISCIPLINE";
   if (searchVal.length > 0) {
     prismaParams.where.OR = [
       { name: { contains: searchVal, mode: "insensitive" } },
@@ -18,25 +19,25 @@ export const getPaginatedCategories = async (params: ITDataTableFetchParams): Pr
     ];
   }
   const [rows, total] = await Promise.all([
-    prisma.disciplineCategory.findMany({ ...prismaParams }),
-    prisma.disciplineCategory.count({ where: prismaParams.where }),
+    prisma.incidentCategory.findMany({ ...prismaParams }),
+    prisma.incidentCategory.count({ where: prismaParams.where }),
   ]);
   return { rows, total };
 };
 
 export const createCategory = async (data: any) => {
-  return prisma.disciplineCategory.create({ data });
+  return prisma.incidentCategory.create({ data: { ...data, type: "DISCIPLINE" } });
 };
 
 export const updateCategory = async (id: string, data: any) => {
-  return prisma.disciplineCategory.update({ where: { id }, data });
+  return prisma.incidentCategory.update({ where: { id }, data });
 };
 
 export const deleteCategory = async (id: string) => {
-  return prisma.disciplineCategory.delete({ where: { id } });
+  return prisma.incidentCategory.delete({ where: { id } });
 };
 
-// ── Discipline Types ──
+// ── Discipline Types (stored in IncidentType, category must be type="DISCIPLINE") ──
 export const getPaginatedTypes = async (params: ITDataTableFetchParams): Promise<ITDataTableResponse<any>> => {
   const prismaParams = getPrismaPaginationParams(params);
   const searchVal = String(params.filters?.search || "").trim();
@@ -47,23 +48,24 @@ export const getPaginatedTypes = async (params: ITDataTableFetchParams): Promise
       { value: { contains: searchVal, mode: "insensitive" } },
     ];
   }
+  prismaParams.where.category = { type: "DISCIPLINE" };
   const [rows, total] = await Promise.all([
-    prisma.disciplineType.findMany({ ...prismaParams, include: { category: true } }),
-    prisma.disciplineType.count({ where: prismaParams.where }),
+    prisma.incidentType.findMany({ ...prismaParams, include: { category: true } }),
+    prisma.incidentType.count({ where: prismaParams.where }),
   ]);
   return { rows, total };
 };
 
 export const createType = async (data: any) => {
-  return prisma.disciplineType.create({ data });
+  return prisma.incidentType.create({ data });
 };
 
 export const updateType = async (id: string, data: any) => {
-  return prisma.disciplineType.update({ where: { id }, data });
+  return prisma.incidentType.update({ where: { id }, data });
 };
 
 export const deleteType = async (id: string) => {
-  return prisma.disciplineType.delete({ where: { id } });
+  return prisma.incidentType.delete({ where: { id } });
 };
 
 // ── Guard Discipline (Notices) ──

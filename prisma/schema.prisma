@@ -228,7 +228,7 @@ model IncidentCategory {
   id           String         @id @default(uuid())
   name         String         @unique
   value        String
-  type         String         @default("INCIDENT") // INCIDENT or MAINTENANCE
+  type         String         @default("INCIDENT") // INCIDENT, MAINTENANCE, or DISCIPLINE
   color        String?
   icon         String?
   createdAt    DateTime       @default(now())
@@ -237,6 +237,7 @@ model IncidentCategory {
   types        IncidentType[]
   incidents    Incident[]
   maintenances Maintenance[]
+  disciplines  GuardDiscipline[]
 }
 
 model IncidentType {
@@ -250,6 +251,7 @@ model IncidentType {
   category     IncidentCategory @relation(fields: [categoryId], references: [id])
   incidents    Incident[]
   maintenances Maintenance[]
+  disciplines  GuardDiscipline[]
 }
 
 model Incident {
@@ -427,32 +429,6 @@ enum GuardDisciplineStatus {
   RESOLVED
   DISMISSED
 }
-
-model DisciplineCategory {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  value     String
-  color     String?
-  icon      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  deletedAt DateTime?
-  types     DisciplineType[]
-  notices   GuardDiscipline[]
-}
-
-model DisciplineType {
-  id         String             @id @default(uuid())
-  categoryId String
-  name       String             @unique
-  value      String
-  createdAt  DateTime           @default(now())
-  updatedAt  DateTime           @updatedAt
-  deletedAt  DateTime?
-  category   DisciplineCategory @relation(fields: [categoryId], references: [id])
-  notices    GuardDiscipline[]
-}
-
 model GuardDiscipline {
   id           String                 @id @default(uuid())
   guardId      String
@@ -468,10 +444,10 @@ model GuardDiscipline {
   updatedAt    DateTime               @updatedAt
   deletedAt    DateTime?
 
-  guard      User                @relation("GuardDisciplineTarget", fields: [guardId], references: [id])
-  createdBy  User                @relation("GuardDisciplineCreator", fields: [createdById], references: [id])
-  category   DisciplineCategory? @relation(fields: [categoryId], references: [id])
-  type       DisciplineType?     @relation(fields: [typeId], references: [id])
+  guard      User              @relation("GuardDisciplineTarget", fields: [guardId], references: [id])
+  createdBy  User              @relation("GuardDisciplineCreator", fields: [createdById], references: [id])
+  category   IncidentCategory? @relation(fields: [categoryId], references: [id])
+  type       IncidentType?     @relation(fields: [typeId], references: [id])
   client     Client?             @relation(fields: [clientId], references: [id])
 
   @@index([guardId])

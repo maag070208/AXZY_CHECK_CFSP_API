@@ -4,7 +4,7 @@ export const CreateIncidentCategorySchema = z.object({
   body: z.object({
     name: z.string().min(1, "El nombre es obligatorio"),
     value: z.string().min(1, "El valor es obligatorio"),
-    type: z.enum(["INCIDENT", "MAINTENANCE"]).optional().default("INCIDENT"),
+    type: z.enum(["INCIDENT", "MAINTENANCE", "DISCIPLINE"]).optional().default("INCIDENT"),
     color: z.string().optional().nullable(),
     icon: z.string().optional().nullable(),
   }),
@@ -17,7 +17,7 @@ export const UpdateIncidentCategorySchema = z.object({
   body: z.object({
     name: z.string().min(1).optional(),
     value: z.string().min(1).optional(),
-    type: z.enum(["INCIDENT", "MAINTENANCE"]).optional(),
+    type: z.enum(["INCIDENT", "MAINTENANCE", "DISCIPLINE"]).optional(),
     color: z.string().optional().nullable(),
     icon: z.string().optional().nullable(),
   }),

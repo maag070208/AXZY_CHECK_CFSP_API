@@ -51,7 +51,7 @@ export async function disciplineCatalogsSeed(prisma: PrismaClient) {
   hackerLog.header("Discipline Catalogs");
 
   for (const cat of CATEGORIES) {
-    const existing = await prisma.disciplineCategory.findUnique({
+    const existing = await prisma.incidentCategory.findUnique({
       where: { name: cat.name },
     });
     if (existing) {
@@ -59,20 +59,20 @@ export async function disciplineCatalogsSeed(prisma: PrismaClient) {
       continue;
     }
 
-    const category = await prisma.disciplineCategory.create({ data: cat });
+    const category = await prisma.incidentCategory.create({ data: { ...cat, type: "DISCIPLINE" } });
     hackerLog.success("CAT", `Created category: ${cat.name}`);
 
     const typesDef = TYPES.find((t) => t.categoryName === cat.name);
     if (typesDef) {
       for (const t of typesDef.types) {
-        const existingType = await prisma.disciplineType.findUnique({
+        const existingType = await prisma.incidentType.findUnique({
           where: { name: t.name },
         });
         if (existingType) {
           hackerLog.info("SKIP", `Type "${t.name}" already exists`);
           continue;
         }
-        await prisma.disciplineType.create({
+        await prisma.incidentType.create({
           data: { name: t.name, value: t.value, categoryId: category.id },
         });
         hackerLog.success("TYPE", `Created type: ${t.name}`);

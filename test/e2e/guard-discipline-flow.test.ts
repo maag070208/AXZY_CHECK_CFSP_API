@@ -95,8 +95,8 @@ describe("E2E: Flujo completo de Incidencias a Guardias", () => {
     for (const id of createdIds.reverse()) {
       await prismaClient.guardDiscipline.delete({ where: { id } }).catch(() => {});
     }
-    if (typeId) await prismaClient.disciplineType.delete({ where: { id: typeId } }).catch(() => {});
-    if (catId) await prismaClient.disciplineCategory.delete({ where: { id: catId } }).catch(() => {});
+    if (typeId) await prismaClient.incidentType.delete({ where: { id: typeId } }).catch(() => {});
+    if (catId) await prismaClient.incidentCategory.delete({ where: { id: catId } }).catch(() => {});
     if (shiftId) await prismaClient.user.delete({ where: { id: shiftId } }).catch(() => {});
     if (adminId) await prismaClient.user.delete({ where: { id: adminId } }).catch(() => {});
     if (guardId) await prismaClient.user.delete({ where: { id: guardId } }).catch(() => {});

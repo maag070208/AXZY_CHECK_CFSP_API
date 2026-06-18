@@ -47,11 +47,13 @@ export const getCatalog = async (key: string) => {
           value: l.name,
         }));
       case CatalogKey.DISCIPLINE_CATEGORY:
-        return prismaClient.disciplineCategory.findMany({
+        return prismaClient.incidentCategory.findMany({
+          where: { type: "DISCIPLINE" },
           select: { ...selectFields, color: true, icon: true },
         });
       case CatalogKey.DISCIPLINE_TYPE:
-        return prismaClient.disciplineType.findMany({
+        return prismaClient.incidentType.findMany({
+          where: { category: { type: "DISCIPLINE" } },
           select: { ...selectFields, categoryId: true },
         });
       case CatalogKey.GUARD:
