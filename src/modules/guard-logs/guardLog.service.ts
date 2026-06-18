@@ -19,14 +19,6 @@ export const clockIn = async (guardId: string) => {
     throw new AppError("El usuario no es un guardia operativo", 400);
   }
 
-  const existingOpen = await prisma.guardLoginLog.findFirst({
-    where: { userId: guardId, logoutAt: null },
-  });
-
-  if (existingOpen) {
-    throw new AppError("El guardia ya tiene una entrada abierta sin salida registrada", 400);
-  }
-
   const log = await prisma.guardLoginLog.create({
     data: { userId: guardId },
     include: {
