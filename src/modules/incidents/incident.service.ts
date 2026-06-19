@@ -63,7 +63,7 @@ export const getDataTableIncidents = async (
         clientId: true,
         guard: { select: { id: true, name: true, lastName: true, username: true } },
         resolvedBy: { select: { id: true, name: true, lastName: true } },
-        category: { select: { id: true, name: true } },
+        category: { select: { id: true, name: true, icon: true, color: true } },
         type: { select: { id: true, name: true } },
         client: { select: { id: true, name: true } },
       },

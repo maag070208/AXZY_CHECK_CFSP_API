@@ -29,6 +29,8 @@ export interface IIncidentResponse {
   category?: {
     id: string;
     name: string;
+    icon?: string | null;
+    color?: string | null;
   } | null;
   type?: {
     id: string;

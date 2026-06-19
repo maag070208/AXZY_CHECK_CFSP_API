@@ -63,13 +63,14 @@ export const getCatalog = async (key: string) => {
             softDelete: false,
             active: true,
           },
-          select: { id: true, name: true, lastName: true },
+          select: { id: true, name: true, lastName: true, clientId: true },
           orderBy: { name: "asc" },
         });
         return guards.map((g) => ({
           id: g.id,
           name: g.name,
           value: `${g.name} ${g.lastName}`,
+          clientId: g.clientId,
         }));
       default:
         throw new Error(`Catalog key "${key}" not found`);

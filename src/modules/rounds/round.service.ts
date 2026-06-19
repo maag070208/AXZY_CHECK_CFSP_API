@@ -314,11 +314,6 @@ export const getRoundDetail = async (
       return s;
     }));
 
-    const incidents = await prisma.incident.findMany({
-      where: { createdAt: { gte: start, lte: end }, guardId: round.guardId },
-      orderBy: { createdAt: "asc" },
-    });
-
     const timeline: any[] = [];
     timeline.push({
       type: TIMELINE_EVENT_START,
@@ -333,15 +328,6 @@ export const getRoundDetail = async (
         timestamp: s.timestamp,
         description: `Escaneo: ${(s as any).location?.name || "Punto desconocido"}`,
         data: s,
-      });
-    });
-
-    incidents.forEach((inc) => {
-      timeline.push({
-        type: TIMELINE_EVENT_INCIDENT,
-        timestamp: inc.createdAt,
-        description: `Incidente: ${inc.title}`,
-        data: inc,
       });
     });
 
