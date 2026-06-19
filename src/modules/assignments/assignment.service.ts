@@ -39,7 +39,8 @@ export const getDataTableAssignments = async (params: ITDataTableFetchParams): P
           select: {
             id: true,
             name: true,
-            clientId: true
+            clientId: true,
+            zone: { select: { id: true, name: true, client: { select: { id: true, name: true } } } }
           }
         },
         guard: {
