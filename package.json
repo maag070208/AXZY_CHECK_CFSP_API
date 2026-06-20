@@ -18,7 +18,6 @@
     "prisma:regenerate": "yarn prisma:generate && yarn prisma:migrate && yarn prisma:seed",
     "test": "jest",
     "swagger": "node scripts/autodoc_prisma.js"
-
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
@@ -32,6 +31,7 @@
     "@types/node-cron": "^3.0.11",
     "@types/nodemailer": "^6.4.15",
     "@types/pdfkit": "^0.17.4",
+    "ably": "^2.23.0",
     "aws-sdk": "^2.1658.0",
     "axios": "^1.7.2",
     "bcryptjs": "^2.4.3",

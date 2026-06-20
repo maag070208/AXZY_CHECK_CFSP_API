@@ -25,7 +25,7 @@ router.patch(
 router.post(
   "/datatable",
   authenticate,
-  authorize([ROLE_ADMIN, ROLE_SHIFT, ROLE_CLIENT]),
+  authorize([ROLE_ADMIN, ROLE_SHIFT]),
   validate(DataTableFetchParamsSchema),
   getDataTable
 );
