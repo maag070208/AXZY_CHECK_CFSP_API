@@ -128,7 +128,26 @@ export const getDataTableRounds = async (
     prisma.round.count({ where: prismaParams.where }),
   ]);
 
-  return { rows: rows as IRoundResponse[], total };
+  // Get kardex counts for each round by guard + time range
+  const counts = await Promise.all(
+    rows.map((r) =>
+      prisma.kardex.count({
+        where: {
+          userId: r.guardId,
+          timestamp: {
+            gte: r.startTime,
+            ...(r.endTime ? { lte: r.endTime } : {}),
+          },
+        },
+      }),
+    ),
+  );
+  const enrichedRows = rows.map((r, i) => ({
+    ...r,
+    _count: { kardexEntries: counts[i] },
+  }));
+
+  return { rows: enrichedRows as unknown as IRoundResponse[], total };
 };
 
 export const startRound = async (

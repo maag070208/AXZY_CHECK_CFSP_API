@@ -67,6 +67,9 @@ if (process.env.NODE_ENV !== "test") {
     logger.info(
       `Server is running on port ${env.PORT} in ${env.NODE_ENV} mode`,
     );
+    // Start scheduled notification processor
+    const { startScheduledNotificationProcessor } = require("./core/cron/scheduled-notifications.cron");
+    startScheduledNotificationProcessor();
   });
   server.timeout = 60000; // 1 minute timeout
 }

@@ -13,6 +13,7 @@ import kardexRoute from "./kardex/kardex.routes";
 import locationsRoute from "./locations/locations.routes";
 import maintenanceRoute from "./maintenance/maintenance.routes";
 import notificationsRoute from "./notifications/notifications.routes";
+import scheduledNotificationsRoute from "./scheduled-notifications/scheduled.routes";
 import recurringRoute from "./recurring/recurring.routes";
 import reportConfigurationsRoute from "./report-configurations/report-configurations.routes";
 import reportRoute from "./reports/report.routes";
@@ -46,6 +47,7 @@ apiRouter.use("/recurring", recurringRoute);
 apiRouter.use("/settings", settingsRoute);
 apiRouter.use("/sync", syncRoute);
 apiRouter.use("/notifications", notificationsRoute);
+apiRouter.use("/scheduled-notifications", scheduledNotificationsRoute);
 apiRouter.use("/report-configurations", reportConfigurationsRoute);
 
 export default apiRouter;

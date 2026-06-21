@@ -89,12 +89,22 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
   return res.status(200).json(createTResult(true));
 });
 
+export const registerFCMToken = asyncHandler(async (req: Request, res: Response) => {
+  const { token, platform } = req.body;
+  const userId = res.locals.user?.id;
+
+  if (!token || !userId) {
+    return res.status(400).json(createTResult(null, ["Token y usuario requeridos"]));
+  }
+
+  await userService.updateFCMToken(userId, token);
+  return res.status(200).json(createTResult({ registered: true }));
+});
+
 export const getUserById = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const user = await userService.getUserById(id);
-  if (!user) {
-    throw new AppError("Usuario no encontrado", 404);
-  }
+  if (!user) throw new AppError("Usuario no encontrado", 404);
   return res.status(200).json(createTResult(user));
 });
 

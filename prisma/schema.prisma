@@ -70,6 +70,7 @@ model User {
   createdAt               DateTime                 @default(now())
   updatedAt               DateTime                 @updatedAt
   deletedAt               DateTime?
+  fcmToken                String?
   isLoggedIn              Boolean                  @default(false)
   scheduleId              String?
   clientId                String?
@@ -91,6 +92,8 @@ model User {
   guardLoginLogs          GuardLoginLog[]
   guardDisciplines        GuardDiscipline[]     @relation("GuardDisciplineTarget")
   createdGuardDisciplines GuardDiscipline[]     @relation("GuardDisciplineCreator")
+  scheduledNotifications  ScheduledNotification[] @relation("ScheduledNotificationUser")
+  notificationLogs        NotificationLog[]       @relation("NotificationLogUser")
 }
 
 model AssignmentLog {
@@ -470,4 +473,51 @@ model ReportConfiguration {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
   deletedAt       DateTime?
+}
+
+model ScheduledNotification {
+  id          String    @id @default(uuid())
+  title       String?
+  message     String
+  type        String    @default("info") // info, success, warning, error
+  channel     String    @default("global")
+  persistent  Boolean   @default(false)
+  
+  // Scheduling
+  scheduledAt DateTime?  // one-time: send at this exact time
+  cronExpression String? // recurring: e.g. "0 8 * * *" (cron format)
+  frequency   String?    // alternative: DAILY, WEEKLY, EVERY_2_DAYS, etc.
+  timeOfDay   String?    // HH:mm for recurring
+  daysOfWeek  String?    // comma-separated 0-6 for weekly
+  endsAt      DateTime?  // when recurring schedule ends
+  maxSends    Int?       // max number of sends for recurring
+  
+  // Targets
+  userId      String?    // specific user to notify
+  targetUser  User?      @relation("ScheduledNotificationUser", fields: [userId], references: [id])
+  
+  // Status
+  active      Boolean    @default(true)
+  sendCount   Int        @default(0)
+  lastSentAt  DateTime?
+  nextSendAt  DateTime?
+  
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  deletedAt   DateTime?
+}
+
+model NotificationLog {
+  id        String    @id @default(uuid())
+  userId    String
+  title     String?
+  message   String
+  type      String    @default("info")
+  read      Boolean   @default(false)
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation("NotificationLogUser", fields: [userId], references: [id])
+
+  @@index([userId, read])
+  @@index([createdAt])
 }

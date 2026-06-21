@@ -6,3 +6,4 @@ dist
 # AXZY Autodoc
 react_llm_reference.txt
 scripts/autodoc_prisma.py
+axzyfansalcheck-firebase-adminsdk-fbsvc-*.json

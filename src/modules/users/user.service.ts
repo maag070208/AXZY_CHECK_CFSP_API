@@ -278,3 +278,10 @@ export const deleteUser = async (id: string) => {
   });
 };
 
+export const updateFCMToken = async (userId: string, token: string) => {
+  return prismaClient.user.update({
+    where: { id: userId },
+    data: { fcmToken: token },
+  });
+};
+
