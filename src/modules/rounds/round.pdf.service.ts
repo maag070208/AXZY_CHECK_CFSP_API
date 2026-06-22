@@ -1,4 +1,5 @@
 import { TIMELINE_EVENT_SCAN } from "@src/core/config/constants";
+import { drawTrialWatermark } from "@src/core/utils/pdf.utils";
 import axios from "axios";
 import fs from "fs";
 import path from "path";
@@ -406,6 +407,8 @@ export const generateRoundPDFBuffer = async (
         width: 564,
       });
   }
+
+  await drawTrialWatermark(doc, 612, 792);
 
   doc.end();
   return new Promise<Buffer>((resolve) => {

@@ -1,3 +1,4 @@
+import { drawTrialWatermark } from "@src/core/utils/pdf.utils";
 import { getEndOfDay, getStartOfDay } from "@src/core/utils/date-time.utils";
 import dayjs from "dayjs";
 import fs from "fs";
@@ -241,6 +242,8 @@ export const generateAdministrativeMatrixPDFBuffer = async (
       rowIdx++;
     }
   }
+
+  await drawTrialWatermark(doc, 792, 612);
 
   doc.end();
   return new Promise<Buffer>((resolve) => {

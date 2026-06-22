@@ -40,6 +40,17 @@ model Client {
   assignmentLogs          AssignmentLog[]
   reportConfigurations    ReportConfiguration[]
   guardDisciplines        GuardDiscipline[]
+
+}
+
+model SubscriptionConfig {
+  id                 String   @id @default(uuid())
+  paid               Boolean  @default(false)
+  trialDaysRemaining Int      @default(0)
+  showTrialWatermark Boolean  @default(false)
+  showTrialBadge     Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 }
 
 model Zone {

@@ -18,6 +18,7 @@ import recurringRoute from "./recurring/recurring.routes";
 import reportConfigurationsRoute from "./report-configurations/report-configurations.routes";
 import reportRoute from "./reports/report.routes";
 import roundRoute from "./rounds/round.routes";
+import subscriptionRoute from "./subscription/subscription.routes";
 import scheduleRoute from "./schedules/schedule.routes";
 import settingsRoute from "./settings/settings.routes";
 import syncRoute from "./sync/sync.routes";
@@ -48,6 +49,7 @@ apiRouter.use("/settings", settingsRoute);
 apiRouter.use("/sync", syncRoute);
 apiRouter.use("/notifications", notificationsRoute);
 apiRouter.use("/scheduled-notifications", scheduledNotificationsRoute);
+apiRouter.use("/subscription", subscriptionRoute);
 apiRouter.use("/report-configurations", reportConfigurationsRoute);
 
 export default apiRouter;

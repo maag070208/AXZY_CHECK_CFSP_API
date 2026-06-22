@@ -102,6 +102,12 @@ export const generateReport = asyncHandler(async (req: Request, res: Response) =
 
 export const deleteRound = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
+  const user = res.locals.user;
+
+  if (user?.role === "RESDN") {
+    throw new AppError("No tienes permiso para eliminar rondas", 403);
+  }
+
   const result = await roundService.deleteRound(id);
 
   if (!result.success) {

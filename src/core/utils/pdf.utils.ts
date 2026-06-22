@@ -1,4 +1,37 @@
 import PDFDocument from "pdfkit";
+import { prismaClient as prisma } from "@src/core/config/database";
+
+export const drawTrialWatermark = async (doc: any, pageWidth: number, pageHeight: number) => {
+  const config = await prisma.subscriptionConfig.findFirst({ select: { paid: true, trialDaysRemaining: true, showTrialWatermark: true, showTrialBadge: true } });
+  if (!config || config.paid) return;
+
+  const totalPages = doc.bufferedPageRange().count;
+  for (let i = 0; i < totalPages; i++) {
+    doc.switchToPage(i);
+
+    if (config.showTrialWatermark) {
+      doc.save();
+      doc.opacity(0.12);
+      doc.font("Helvetica-Bold").fontSize(80).fillColor("#EF4444");
+      doc.translate(pageWidth / 2, pageHeight / 2);
+      doc.rotate(-45, { origin: [0, 0] });
+      doc.text("MODO PRUEBA", -250, -40, { width: 500, align: "center" });
+      doc.restore();
+    }
+
+    if (config.showTrialBadge) {
+      doc.save();
+      doc.opacity(1);
+      doc.rect(pageWidth - 140, pageHeight - 30, 130, 20).fillColor("#EF4444").fill();
+      doc.fillColor("#FFFFFF").font("Helvetica-Bold").fontSize(7).text(
+        `${config.trialDaysRemaining} días de prueba restantes`,
+        pageWidth - 140, pageHeight - 24,
+        { width: 130, align: "center" },
+      );
+      doc.restore();
+    }
+  }
+};
 
 export const drawGenericFooter = (
   doc: any,

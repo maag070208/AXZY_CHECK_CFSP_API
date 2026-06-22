@@ -195,6 +195,7 @@ export const getAvailableLocation = async () => {
 
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
+import { drawTrialWatermark } from "@src/core/utils/pdf.utils";
 import { logger } from "@src/core/utils/logger";
 
 export const generateQRPDF = async (ids: string[]) => {
@@ -368,6 +369,8 @@ export const generateQRPDF = async (ids: string[]) => {
       .strokeColor("#E2E8F0") // Slate-200 for subtle cutting guide
       .stroke();
   }
+
+  await drawTrialWatermark(doc, 612, 792);
 
   doc.end();
 
