@@ -58,6 +58,8 @@ export const getDataTableRounds = async (
     sort: params.sort || { key: "startTime", direction: "desc" },
   });
 
+  prismaParams.where.deletedAt = null;
+
   if (customFilters.date) {
     const dateParams = Array.isArray(customFilters.date)
       ? customFilters.date
@@ -190,7 +192,7 @@ export const getCurrentRound = async (
 ): Promise<TResult<any>> => {
   try {
     const round = await prisma.round.findFirst({
-      where: { guardId, status: ROUND_STATUS_IN_PROGRESS },
+      where: { guardId, status: ROUND_STATUS_IN_PROGRESS, deletedAt: null },
       include: {
         recurringConfiguration: {
           include: {
@@ -227,7 +229,7 @@ export const getRounds = async (
   status?: string,
 ): Promise<TResult<any>> => {
   try {
-    const where: any = {};
+    const where: any = { deletedAt: null };
     if (date) {
       const start = getStartOfDay(date);
       const end = getEndOfDay(date);
@@ -268,7 +270,7 @@ export const getRoundDetail = async (
 ): Promise<TRoundDetailResult> => {
   try {
     const round = await prisma.round.findUnique({
-      where: { id },
+      where: { id, deletedAt: null },
       include: {
         guard: { include: { client: true } },
         client: { include: { locations: true } },
@@ -369,7 +371,7 @@ export const getRoundDetail = async (
 
 export const deleteRound = async (id: string): Promise<TResult<any>> => {
   try {
-    const round = await prisma.round.findUnique({ where: { id } });
+    const round = await prisma.round.findUnique({ where: { id, deletedAt: null } });
     if (!round) {
       return { success: false, data: null, messages: ["Ronda no encontrada"] };
     }
