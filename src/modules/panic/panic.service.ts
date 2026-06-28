@@ -1,7 +1,7 @@
 import { prismaClient } from "@src/core/config/database";
 import { logger } from "@src/core/utils/logger";
 import { now } from "@src/core/utils/date-time.utils";
-import { ROLE_ADMIN, ROLE_SHIFT } from "@src/core/config/constants";
+import { ROLE_GUARD } from "@src/core/config/constants";
 
 import * as Ably from "ably";
 
@@ -48,7 +48,7 @@ export interface IPanicAlertInput {
 
 export interface IPanicAlertResult {
   id: string;
-  supervisorsNotified: number;
+  peersNotified: number;
   ablyChannel: string;
   createdAt: Date;
 }
@@ -105,26 +105,24 @@ export const createPanicAlert = async (
   // 3) Fire-and-forget: FCM + Ably
   setImmediate(async () => {
     try {
-      // 3a) FCM push a admins y supervisores del mismo clientId
+      // 3a) FCM push a TODOS los guardias del mismo clientId (compañeros
+      // que pueden estar físicamente cerca para acudir a ayudar).
+      // Excluimos al guardia que disparó la alerta.
       const fcm = getFirebase();
       if (fcm) {
-        const supervisors = await prismaClient.user.findMany({
+        const peerGuards = await prismaClient.user.findMany({
           where: {
             active: true,
             softDelete: false,
             fcmToken: { not: null },
-            OR: [
-              { role: { value: ROLE_ADMIN } },
-              { role: { value: ROLE_SHIFT } },
-            ],
-            ...(guard.clientId
-              ? { clientId: guard.clientId }
-              : {}),
+            id: { not: guard.id },
+            role: { name: ROLE_GUARD },
+            ...(guard.clientId ? { clientId: guard.clientId } : {}),
           },
           select: { fcmToken: true, id: true },
         });
 
-        const tokens = supervisors
+        const tokens = peerGuards
           .map((u) => u.fcmToken)
           .filter(Boolean) as string[];
 
@@ -179,11 +177,11 @@ export const createPanicAlert = async (
           });
 
           // 3b) Persistir en NotificationLog para que aparezca en el feed
-          for (const sup of supervisors) {
+          for (const peer of peerGuards) {
             try {
               await prismaClient.notificationLog.create({
                 data: {
-                  userId: sup.id,
+                  userId: peer.id,
                   title: "🚨 EMERGENCIA",
                   message,
                   type: "panic",
@@ -195,11 +193,11 @@ export const createPanicAlert = async (
           }
 
           logger.info(
-            `[Panic] Alerta creada ${incident.id} - notificada a ${tokens.length} supervisores`,
+            `[Panic] Alerta creada ${incident.id} - notificada a ${tokens.length} guardias del mismo clientId`,
           );
         } else {
           logger.warn(
-            `[Panic] Alerta creada ${incident.id} - sin supervisores con FCM token`,
+            `[Panic] Alerta creada ${incident.id} - sin guardias compañeros con FCM token`,
           );
         }
       }
@@ -228,7 +226,7 @@ export const createPanicAlert = async (
 
   return {
     id: incident.id,
-    supervisorsNotified: 0,
+    peersNotified: 0,
     ablyChannel,
     createdAt: incident.createdAt,
   };
