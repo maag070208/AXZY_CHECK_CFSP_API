@@ -9,6 +9,7 @@ import { seedPlaza2000Full } from "./seeds/plaza2000_full";
 import { schedulesSeed } from "./seeds/schedules";
 import { securitySeed } from "./seeds/security";
 import { sysConfigSeed } from "./seeds/sysconfig";
+import { seedVinasDelMar } from "./seeds/vinas-del-mar";
 
 const prisma = new PrismaClient();
 
@@ -24,6 +25,7 @@ async function main() {
   await sysConfigSeed(prisma);
   await disciplineCatalogsSeed(prisma);
   await guardLogsSeed(prisma);
+  await seedVinasDelMar(prisma);
 
   hackerLog.divider();
   hackerLog.success("SYSTEM", "Master Seeding Complete");
