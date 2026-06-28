@@ -1,7 +1,16 @@
 import { prismaClient } from "@src/core/config/database";
 import { logger } from "@src/core/utils/logger";
 import { now } from "@src/core/utils/date-time.utils";
-import { ROLE_GUARD } from "@src/core/config/constants";
+import { ROLE_GUARD, ROLE_CLIENT } from "@src/core/config/constants";
+import {
+  IPanicAlert,
+  IPanicAlertCreate,
+  IPanicAlertResolve,
+  IPaginatedPanicAlerts,
+  PanicAlertStatus,
+} from "./panic.dto";
+import { ITDataTableFetchParams } from "@src/core/dto/datatable.dto";
+import { getPrismaPaginationParams } from "@src/core/utils/prisma-pagination.utils";
 
 import * as Ably from "ably";
 
@@ -37,77 +46,88 @@ const getFirebase = () => {
   return firebaseApp;
 };
 
-export interface IPanicAlertInput {
-  guardId: string;
-  latitude?: number;
-  longitude?: number;
-  accuracy?: number;
-  source?: "volume_button" | "manual";
-  notes?: string;
-}
+const PANIC_INCLUDE = {
+  guard: { select: { id: true, name: true, lastName: true, username: true } },
+  client: { select: { id: true, name: true } },
+  resolvedBy: { select: { id: true, name: true, lastName: true } },
+};
 
-export interface IPanicAlertResult {
-  id: string;
-  peersNotified: number;
-  ablyChannel: string;
-  createdAt: Date;
-}
+const toDto = (a: any): IPanicAlert => ({
+  id: a.id,
+  guardId: a.guardId,
+  guard: a.guard,
+  clientId: a.clientId,
+  client: a.client,
+  source: a.source,
+  triggerLatitude: a.triggerLatitude,
+  triggerLongitude: a.triggerLongitude,
+  triggerAccuracy: a.triggerAccuracy,
+  message: a.message,
+  status: a.status,
+  resolutionComment: a.resolutionComment,
+  resolvedById: a.resolvedById,
+  resolvedBy: a.resolvedBy,
+  resolvedAt: a.resolvedAt?.toISOString?.() ?? null,
+  createdAt: a.createdAt.toISOString(),
+});
 
 /**
- * Crea una alerta de pánico:
- * 1. Persiste como Incident con título [EMERGENCIA] (aparece en el listado
- *    de pendientes normal pero marcado).
- * 2. Envía FCM push URGENTE a todos los admins y supervisores del
- *    mismo clientId del guardia (canal crítico, prioridad high).
- * 3. Publica en Ably en el canal "panic.{clientId}" para que el dashboard
- *    web se actualice en tiempo real con un overlay rojo.
- * 4. Retorna inmediatamente al guardia (fire-and-forget el resto).
+ * Construye el where clause base filtrado por clientId cuando
+ * el usuario es RESDN/cliente. ADMIN ve todo.
+ */
+const buildClientFilter = (user: any) => {
+  if (user?.role === ROLE_CLIENT && user.clientId) {
+    return { clientId: user.clientId };
+  }
+  return {};
+};
+
+/**
+ * Crea una alerta de pánico como entidad propia.
+ * 1) Persiste en tabla PanicAlert
+ * 2) Fire-and-forget: FCM a todos los guardias del mismo clientId
+ * 3) Publica en Ably (canal global + canal dedicado del cliente)
  */
 export const createPanicAlert = async (
-  input: IPanicAlertInput,
-): Promise<IPanicAlertResult> => {
-  // 1) Resolver clientId del guardia si no viene en el payload
+  input: IPanicAlertCreate,
+): Promise<IPanicAlert> => {
   const guard = await prismaClient.user.findUnique({
     where: { id: input.guardId },
-    select: {
-      id: true,
-      name: true,
-      lastName: true,
-      clientId: true,
-    },
+    select: { id: true, name: true, lastName: true, clientId: true },
   });
 
   if (!guard) {
     throw new Error("Guardia no encontrado");
   }
 
-  // 2) Persistir como Incident
-  const incident = await prismaClient.incident.create({
+  const clientId = input.clientId ?? guard.clientId ?? null;
+
+  const alert = await prismaClient.panicAlert.create({
     data: {
       guardId: guard.id,
-      title: "[EMERGENCIA] Alerta de pánico",
-      description:
-        input.notes ??
-        `Alerta de pánico disparada desde ${
-          input.source === "volume_button"
-            ? "botón de volumen"
-            : "acción manual"
-        }. El guardia requiere apoyo inmediato.`,
-      latitude: input.latitude,
-      longitude: input.longitude,
-      clientId: guard.clientId,
+      clientId,
+      source: input.source ?? "volume_button",
+      triggerLatitude: input.triggerLatitude,
+      triggerLongitude: input.triggerLongitude,
+      triggerAccuracy: input.triggerAccuracy,
+      message: input.message,
       status: "PENDING",
     },
+    include: PANIC_INCLUDE,
   });
 
-  const ablyChannel = `panic.${guard.clientId ?? "global"}`;
+  const dto = toDto(alert);
+  const guardName = `${guard.name} ${guard.lastName ?? ""}`.trim();
+  const lat = input.triggerLatitude;
+  const lng = input.triggerLongitude;
+  const panicMessage =
+    lat != null && lng != null
+      ? `${guardName} requiere apoyo inmediato. Ubicación: https://www.google.com/maps?q=${lat},${lng}`
+      : `${guardName} requiere apoyo inmediato.`;
 
-  // 3) Fire-and-forget: FCM + Ably
+  // Fire-and-forget
   setImmediate(async () => {
     try {
-      // 3a) FCM push a TODOS los guardias del mismo clientId (compañeros
-      // que pueden estar físicamente cerca para acudir a ayudar).
-      // Excluimos al guardia que disparó la alerta.
       const fcm = getFirebase();
       if (fcm) {
         const peerGuards = await prismaClient.user.findMany({
@@ -117,7 +137,7 @@ export const createPanicAlert = async (
             fcmToken: { not: null },
             id: { not: guard.id },
             role: { name: ROLE_GUARD },
-            ...(guard.clientId ? { clientId: guard.clientId } : {}),
+            ...(clientId ? { clientId } : {}),
           },
           select: { fcmToken: true, id: true },
         });
@@ -127,31 +147,20 @@ export const createPanicAlert = async (
           .filter(Boolean) as string[];
 
         if (tokens.length > 0) {
-          const guardName = `${guard.name} ${guard.lastName ?? ""}`.trim();
-          const lat = input.latitude;
-          const lng = input.longitude;
-          const message =
-            lat != null && lng != null
-              ? `${guardName} requiere apoyo inmediato. Ubicación: https://www.google.com/maps?q=${lat},${lng}`
-              : `${guardName} requiere apoyo inmediato.`;
-
           await fcm.messaging().sendEachForMulticast({
             tokens,
-            notification: {
-              title: "🚨 EMERGENCIA",
-              body: message,
-            },
+            notification: { title: "🚨 EMERGENCIA", body: panicMessage },
             data: {
               type: "panic",
-              incidentId: incident.id,
+              alertId: dto.id,
               guardId: guard.id,
               guardName,
-              latitude: String(input.latitude ?? ""),
-              longitude: String(input.longitude ?? ""),
-              accuracy: String(input.accuracy ?? ""),
-              source: input.source ?? "volume_button",
-              timestamp: now().toISOString(),
-              channel: ablyChannel,
+              clientId: clientId ?? "",
+              latitude: String(input.triggerLatitude ?? ""),
+              longitude: String(input.triggerLongitude ?? ""),
+              accuracy: String(input.triggerAccuracy ?? ""),
+              timestamp: dto.createdAt,
+              channel: "global",
               priority: "CRITICAL",
               click_action: "OPEN_PANIC",
             },
@@ -176,45 +185,57 @@ export const createPanicAlert = async (
             },
           });
 
-          // 3b) Persistir en NotificationLog para que aparezca en el feed
           for (const peer of peerGuards) {
             try {
               await prismaClient.notificationLog.create({
                 data: {
                   userId: peer.id,
                   title: "🚨 EMERGENCIA",
-                  message,
+                  message: panicMessage,
                   type: "panic",
                 },
               });
-            } catch (e) {
-              logger.warn("Error guardando notificationLog para pánico:", e);
-            }
+            } catch {}
           }
-
-          logger.info(
-            `[Panic] Alerta creada ${incident.id} - notificada a ${tokens.length} guardias del mismo clientId`,
-          );
-        } else {
-          logger.warn(
-            `[Panic] Alerta creada ${incident.id} - sin guardias compañeros con FCM token`,
-          );
         }
       }
 
-      // 3c) Ably: tiempo real al dashboard
       try {
         const ably = getAbly();
-        const channel = ably.channels.get(ablyChannel);
-        await channel.publish("panic", {
-          incidentId: incident.id,
+
+        const globalChannel = ably.channels.get("global");
+        await globalChannel.publish("notification", {
+          title: "🚨 EMERGENCIA",
+          message: panicMessage,
+          type: "error",
+          timestamp: dto.createdAt,
+          persistent: true,
+          panic: true,
+          alertId: dto.id,
+          incidentId: dto.id, // compat con consumidores legacy
           guardId: guard.id,
-          guardName: `${guard.name} ${guard.lastName ?? ""}`.trim(),
-          latitude: input.latitude,
-          longitude: input.longitude,
-          accuracy: input.accuracy,
-          source: input.source,
-          timestamp: now().toISOString(),
+          guardName,
+          clientId,
+          latitude: input.triggerLatitude,
+          longitude: input.triggerLongitude,
+          accuracy: input.triggerAccuracy,
+        });
+
+        const dedicatedChannelName = clientId
+          ? `panic.${clientId}`
+          : "panic.global";
+        const dedicatedChannel = ably.channels.get(dedicatedChannelName);
+        await dedicatedChannel.publish("panic", {
+          alertId: dto.id,
+          incidentId: dto.id, // compat
+          guardId: guard.id,
+          guardName,
+          clientId,
+          latitude: input.triggerLatitude,
+          longitude: input.triggerLongitude,
+          accuracy: input.triggerAccuracy,
+          source: input.source ?? "volume_button",
+          timestamp: dto.createdAt,
         });
       } catch (e) {
         logger.error("[Panic] Error publicando en Ably:", e);
@@ -224,19 +245,116 @@ export const createPanicAlert = async (
     }
   });
 
+  return dto;
+};
+
+/**
+ * Lista paginada con filtros (server-side). Filtra por scope:
+ * - RESDN: solo su clientId
+ * - ADMIN/SHIFT/LIDER: todos
+ */
+export const getDataTablePanicAlerts = async (
+  params: ITDataTableFetchParams,
+  user: any,
+): Promise<IPaginatedPanicAlerts> => {
+  const prismaParams = getPrismaPaginationParams(params);
+  const clientFilter = buildClientFilter(user);
+
+  const filters: any = {
+    ...prismaParams.where,
+    ...clientFilter,
+  };
+
+  // Filtros específicos de PanicAlerts
+  if (params.filters?.status) filters.status = params.filters.status;
+  if (params.filters?.guardId) filters.guardId = params.filters.guardId;
+  if (params.filters?.clientId) filters.clientId = params.filters.clientId;
+  if (params.filters?.search) {
+    const q = String(params.filters.search).trim();
+    if (q.length > 0) {
+      filters.OR = [
+        { message: { contains: q, mode: "insensitive" } },
+        { guard: { name: { contains: q, mode: "insensitive" } } },
+        { guard: { lastName: { contains: q, mode: "insensitive" } } },
+        { guard: { username: { contains: q, mode: "insensitive" } } },
+        { client: { name: { contains: q, mode: "insensitive" } } },
+      ];
+    }
+  }
+
+  const [rows, total] = await Promise.all([
+    prismaClient.panicAlert.findMany({
+      where: filters,
+      include: PANIC_INCLUDE,
+      orderBy: prismaParams.orderBy || { createdAt: "desc" },
+    }),
+    prismaClient.panicAlert.count({ where: filters }),
+  ]);
+
   return {
-    id: incident.id,
-    peersNotified: 0,
-    ablyChannel,
-    createdAt: incident.createdAt,
+    rows: rows.map(toDto),
+    total,
   };
 };
 
-export const getPanicAlertById = async (id: string) => {
-  return prismaClient.incident.findUnique({
-    where: { id },
-    include: {
-      guard: { select: { id: true, name: true, lastName: true } },
+export const getPanicAlertById = async (
+  id: string,
+  user: any,
+): Promise<IPanicAlert | null> => {
+  const alert = await prismaClient.panicAlert.findFirst({
+    where: {
+      id,
+      ...buildClientFilter(user),
     },
+    include: PANIC_INCLUDE,
+  });
+  return alert ? toDto(alert) : null;
+};
+
+export const resolvePanicAlert = async (
+  id: string,
+  input: IPanicAlertResolve,
+  user: any,
+): Promise<IPanicAlert> => {
+  // Validar que la alerta existe y que el usuario tiene scope
+  const existing = await prismaClient.panicAlert.findFirst({
+    where: { id, ...buildClientFilter(user) },
+  });
+  if (!existing) {
+    throw new Error("Alerta de pánico no encontrada");
+  }
+
+  const updated = await prismaClient.panicAlert.update({
+    where: { id },
+    data: {
+      status: input.status ?? "RESOLVED",
+      resolutionComment: input.resolutionComment,
+      resolvedById: user?.id ?? null,
+      resolvedAt: now(),
+    },
+    include: PANIC_INCLUDE,
+  });
+
+  return toDto(updated);
+};
+
+export const getRecentPanicAlerts = async (
+  user: any,
+  limit: number = 10,
+): Promise<IPanicAlert[]> => {
+  const alerts = await prismaClient.panicAlert.findMany({
+    where: { deletedAt: null, ...buildClientFilter(user) },
+    include: PANIC_INCLUDE,
+    orderBy: { createdAt: "desc" },
+    take: Math.min(Math.max(limit, 1), 50),
+  });
+  return alerts.map(toDto);
+};
+
+export const countPendingPanicAlerts = async (
+  user: any,
+): Promise<number> => {
+  return prismaClient.panicAlert.count({
+    where: { status: "PENDING", ...buildClientFilter(user) },
   });
 };

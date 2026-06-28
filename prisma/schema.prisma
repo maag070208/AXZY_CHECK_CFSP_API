@@ -40,7 +40,7 @@ model Client {
   assignmentLogs          AssignmentLog[]
   reportConfigurations    ReportConfiguration[]
   guardDisciplines        GuardDiscipline[]
-
+  panicAlerts             PanicAlert[]
 }
 
 model SubscriptionConfig {
@@ -101,10 +101,12 @@ model User {
   assignmentLogs          AssignmentLog[]
   auditLogs               AuditLog[]
   guardLoginLogs          GuardLoginLog[]
-  guardDisciplines        GuardDiscipline[]     @relation("GuardDisciplineTarget")
-  createdGuardDisciplines GuardDiscipline[]     @relation("GuardDisciplineCreator")
-  scheduledNotifications  ScheduledNotification[] @relation("ScheduledNotificationUser")
-  notificationLogs        NotificationLog[]       @relation("NotificationLogUser")
+  guardDisciplines        GuardDiscipline[]        @relation("GuardDisciplineTarget")
+  createdGuardDisciplines GuardDiscipline[]        @relation("GuardDisciplineCreator")
+  scheduledNotifications  ScheduledNotification[]  @relation("ScheduledNotificationUser")
+  notificationLogs        NotificationLog[]        @relation("NotificationLogUser")
+  panicAlertsTriggered    PanicAlert[]             @relation("PanicAlertGuard")
+  panicAlertsResolved     PanicAlert[]             @relation("PanicAlertResolver")
 }
 
 model AssignmentLog {
@@ -239,14 +241,14 @@ model AssignmentTask {
 }
 
 model IncidentCategory {
-  id           String         @id @default(uuid())
-  name         String         @unique
+  id           String            @id @default(uuid())
+  name         String            @unique
   value        String
-  type         String         @default("INCIDENT") // INCIDENT, MAINTENANCE, or DISCIPLINE
+  type         String            @default("INCIDENT") // INCIDENT, MAINTENANCE, or DISCIPLINE
   color        String?
   icon         String?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
   deletedAt    DateTime?
   types        IncidentType[]
   incidents    Incident[]
@@ -255,14 +257,14 @@ model IncidentCategory {
 }
 
 model IncidentType {
-  id           String           @id @default(uuid())
+  id           String            @id @default(uuid())
   categoryId   String
-  name         String           @unique
+  name         String            @unique
   value        String
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
   deletedAt    DateTime?
-  category     IncidentCategory @relation(fields: [categoryId], references: [id])
+  category     IncidentCategory  @relation(fields: [categoryId], references: [id])
   incidents    Incident[]
   maintenances Maintenance[]
   disciplines  GuardDiscipline[]
@@ -424,12 +426,12 @@ enum MaintenanceStatus {
 }
 
 model GuardLoginLog {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   userId    String
-  loginAt   DateTime @default(now())
+  loginAt   DateTime  @default(now())
   logoutAt  DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id])
 
@@ -443,26 +445,34 @@ enum GuardDisciplineStatus {
   RESOLVED
   DISMISSED
 }
-model GuardDiscipline {
-  id           String                 @id @default(uuid())
-  guardId      String
-  title        String
-  categoryId   String?
-  typeId       String?
-  description  String?
-  media        Json?
-  status       GuardDisciplineStatus  @default(PENDING)
-  createdById  String
-  clientId     String?
-  createdAt    DateTime               @default(now())
-  updatedAt    DateTime               @updatedAt
-  deletedAt    DateTime?
 
-  guard      User              @relation("GuardDisciplineTarget", fields: [guardId], references: [id])
-  createdBy  User              @relation("GuardDisciplineCreator", fields: [createdById], references: [id])
-  category   IncidentCategory? @relation(fields: [categoryId], references: [id])
-  type       IncidentType?     @relation(fields: [typeId], references: [id])
-  client     Client?             @relation(fields: [clientId], references: [id])
+enum PanicAlertStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+  DISMISSED
+}
+
+model GuardDiscipline {
+  id          String                @id @default(uuid())
+  guardId     String
+  title       String
+  categoryId  String?
+  typeId      String?
+  description String?
+  media       Json?
+  status      GuardDisciplineStatus @default(PENDING)
+  createdById String
+  clientId    String?
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  deletedAt   DateTime?
+
+  guard     User              @relation("GuardDisciplineTarget", fields: [guardId], references: [id])
+  createdBy User              @relation("GuardDisciplineCreator", fields: [createdById], references: [id])
+  category  IncidentCategory? @relation(fields: [categoryId], references: [id])
+  type      IncidentType?     @relation(fields: [typeId], references: [id])
+  client    Client?           @relation(fields: [clientId], references: [id])
 
   @@index([guardId])
   @@index([clientId])
@@ -471,51 +481,51 @@ model GuardDiscipline {
 }
 
 model ReportConfiguration {
-  id              String   @id @default(uuid())
-  name            String
-  description     String?
-  reportType      String   // e.g., 'ADMINISTRATIVE_MATRIX', 'INCIDENTS'
-  clientId        String?
-  client          Client?  @relation(fields: [clientId], references: [id])
-  configuration   Json     // stores specific config like recurringConfigurationIds, specific roles, etc.
-  cronExpression  String?  // if we want to schedule it later
-  active          Boolean  @default(true)
-  softDelete      Boolean  @default(false)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  deletedAt       DateTime?
+  id             String    @id @default(uuid())
+  name           String
+  description    String?
+  reportType     String // e.g., 'ADMINISTRATIVE_MATRIX', 'INCIDENTS'
+  clientId       String?
+  client         Client?   @relation(fields: [clientId], references: [id])
+  configuration  Json // stores specific config like recurringConfigurationIds, specific roles, etc.
+  cronExpression String? // if we want to schedule it later
+  active         Boolean   @default(true)
+  softDelete     Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
 }
 
 model ScheduledNotification {
-  id          String    @id @default(uuid())
-  title       String?
-  message     String
-  type        String    @default("info") // info, success, warning, error
-  channel     String    @default("global")
-  persistent  Boolean   @default(false)
-  
+  id         String  @id @default(uuid())
+  title      String?
+  message    String
+  type       String  @default("info") // info, success, warning, error
+  channel    String  @default("global")
+  persistent Boolean @default(false)
+
   // Scheduling
-  scheduledAt DateTime?  // one-time: send at this exact time
+  scheduledAt    DateTime? // one-time: send at this exact time
   cronExpression String? // recurring: e.g. "0 8 * * *" (cron format)
-  frequency   String?    // alternative: DAILY, WEEKLY, EVERY_2_DAYS, etc.
-  timeOfDay   String?    // HH:mm for recurring
-  daysOfWeek  String?    // comma-separated 0-6 for weekly
-  endsAt      DateTime?  // when recurring schedule ends
-  maxSends    Int?       // max number of sends for recurring
-  
+  frequency      String? // alternative: DAILY, WEEKLY, EVERY_2_DAYS, etc.
+  timeOfDay      String? // HH:mm for recurring
+  daysOfWeek     String? // comma-separated 0-6 for weekly
+  endsAt         DateTime? // when recurring schedule ends
+  maxSends       Int? // max number of sends for recurring
+
   // Targets
-  userId      String?    // specific user to notify
-  targetUser  User?      @relation("ScheduledNotificationUser", fields: [userId], references: [id])
-  
+  userId     String? // specific user to notify
+  targetUser User?   @relation("ScheduledNotificationUser", fields: [userId], references: [id])
+
   // Status
-  active      Boolean    @default(true)
-  sendCount   Int        @default(0)
-  lastSentAt  DateTime?
-  nextSendAt  DateTime?
-  
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  deletedAt   DateTime?
+  active     Boolean   @default(true)
+  sendCount  Int       @default(0)
+  lastSentAt DateTime?
+  nextSendAt DateTime?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
 }
 
 model NotificationLog {
@@ -530,5 +540,32 @@ model NotificationLog {
   user      User      @relation("NotificationLogUser", fields: [userId], references: [id])
 
   @@index([userId, read])
+  @@index([createdAt])
+}
+
+model PanicAlert {
+  id                String           @id @default(uuid())
+  guardId           String
+  clientId          String?
+  source            String           @default("volume_button")
+  triggerLatitude   Float?
+  triggerLongitude  Float?
+  triggerAccuracy   Float?
+  message           String?
+  status            PanicAlertStatus @default(PENDING)
+  resolutionComment String?
+  resolvedById      String?
+  resolvedAt        DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  deletedAt         DateTime?
+
+  guard      User    @relation("PanicAlertGuard", fields: [guardId], references: [id])
+  resolvedBy User?   @relation("PanicAlertResolver", fields: [resolvedById], references: [id])
+  client     Client? @relation(fields: [clientId], references: [id])
+
+  @@index([guardId])
+  @@index([clientId])
+  @@index([status])
   @@index([createdAt])
 }

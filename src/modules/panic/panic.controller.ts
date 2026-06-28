@@ -16,37 +16,64 @@ export const createPanicAlert = asyncHandler(
       throw new AppError("Usuario no autenticado", 401);
     }
 
-    // Solo guardias (y roles operativos) pueden disparar pánico
     if (role && role !== ROLE_GUARD && role !== "SHIFT" && role !== "MAINT") {
       throw new AppError("Rol no autorizado para alertas de pánico", 403);
     }
 
-    const { latitude, longitude, accuracy, source, notes } = req.body;
+    const { source, triggerLatitude, triggerLongitude, triggerAccuracy, message } =
+      req.body;
 
     logger.warn(
-      `[Panic] Alerta de pánico recibida - guardId=${guardId} lat=${latitude} lng=${longitude}`,
+      `[Panic] Alerta de pánico recibida - guardId=${guardId} lat=${triggerLatitude} lng=${triggerLongitude}`,
     );
 
     const result = await panicService.createPanicAlert({
       guardId: guardId as string,
-      latitude,
-      longitude,
-      accuracy,
       source,
-      notes,
+      triggerLatitude,
+      triggerLongitude,
+      triggerAccuracy,
+      message,
     });
 
     return res.status(201).json(createTResult(result));
   },
 );
 
+export const getDataTable = asyncHandler(
+  async (req: Request, res: Response) => {
+    const user = res.locals.user;
+    const result = await panicService.getDataTablePanicAlerts(req.body, user);
+    return res.status(200).json(createTResult(result));
+  },
+);
+
 export const getPanicAlert = asyncHandler(
   async (req: Request, res: Response) => {
     const { id } = req.params;
-    const alert = await panicService.getPanicAlertById(id);
+    const user = res.locals.user;
+    const alert = await panicService.getPanicAlertById(id, user);
     if (!alert) {
       throw new AppError("Alerta de pánico no encontrada", 404);
     }
     return res.status(200).json(createTResult(alert));
+  },
+);
+
+export const resolvePanicAlert = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const user = res.locals.user;
+    const result = await panicService.resolvePanicAlert(id, req.body, user);
+    return res.status(200).json(createTResult(result));
+  },
+);
+
+export const getRecent = asyncHandler(
+  async (req: Request, res: Response) => {
+    const user = res.locals.user;
+    const limit = Number(req.query.limit) || 10;
+    const result = await panicService.getRecentPanicAlerts(user, limit);
+    return res.status(200).json(createTResult(result));
   },
 );
