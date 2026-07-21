@@ -1,4 +1,5 @@
 import { prismaClient as prisma } from "@src/core/config/database";
+import { createAuditLog } from "../audit/audit.service";
 
 export const getRecurringDataTable = async (body: any) => {
     const { page = 1, limit = 10, filters } = body;
@@ -42,33 +43,31 @@ export const getRecurringDataTable = async (body: any) => {
     return { rows, total };
 };
 
-export const createRecurring = async (data: any) => {
-    const { title, locations, guardIds, clientId } = data;
+export const createRecurring = async (data: any, userId: string) => {
+    const { title, locations, guardIds, clientId, active = true } = data;
 
-    return prisma.$transaction(async (tx) => {
-        const config = await tx.recurringConfiguration.create({
+    const config = await prisma.$transaction(async (tx) => {
+        const newConfig = await tx.recurringConfiguration.create({
             data: {
                 title,
                 clientId: clientId as string,
+                active,
                 guards: {
                     connect: (guardIds || []).map((id: string) => ({ id }))
                 }
             }
         });
 
-        // Use createManyAndReturn for high performance (Prisma 5.14+)
         const createdLocs = await (tx.recurringLocation as any).createManyAndReturn({
             data: locations.map((loc: any) => ({
-                recurringConfigurationId: config.id,
+                recurringConfigurationId: newConfig.id,
                 locationId: loc.locationId as string,
             }))
         });
 
-        // Collect all tasks to create in bulk
         const tasksData: any[] = [];
         locations.forEach((loc: any) => {
             if (loc.tasks && loc.tasks.length > 0) {
-                // Find the corresponding created recurring location to get its ID
                 const rLoc = createdLocs.find((rl: any) => rl.locationId === (loc.locationId as string));
                 if (rLoc) {
                     loc.tasks.forEach((t: any) => {
@@ -86,18 +85,27 @@ export const createRecurring = async (data: any) => {
             await tx.recurringTask.createMany({ data: tasksData });
         }
 
-        return config;
+        return newConfig;
     }, {
         maxWait: 10000,
         timeout: 30000
     });
+
+    await createAuditLog({
+        userId,
+        module: "RECURRING",
+        action: "CREATE",
+        resourceId: config.id,
+        details: { title, clientId, active }
+    });
+
+    return config;
 };
 
-export const updateRecurring = async (id: string, data: any) => {
-    const { title, locations, guardIds, clientId } = data;
+export const updateRecurring = async (id: string, data: any, userId: string) => {
+    const { title, locations, guardIds, clientId, active } = data;
 
-    return prisma.$transaction(async (tx) => {
-        // Bulk delete old relations
+    const config = await prisma.$transaction(async (tx) => {
         const oldLocations = await tx.recurringLocation.findMany({
             where: { recurringConfigurationId: id },
             select: { id: true }
@@ -107,22 +115,21 @@ export const updateRecurring = async (id: string, data: any) => {
         await tx.recurringTask.deleteMany({ where: { recurringLocationId: { in: oldLocIds } } });
         await tx.recurringLocation.deleteMany({ where: { recurringConfigurationId: id } });
 
-        // Update config
-        const config = await tx.recurringConfiguration.update({
+        const updatedConfig = await tx.recurringConfiguration.update({
             where: { id },
             data: {
                 title,
                 clientId: clientId as string,
+                active,
                 guards: {
                     set: (guardIds || []).map((id: string) => ({ id }))
                 }
             }
         });
 
-        // Bulk create new locations
         const createdLocs = await (tx.recurringLocation as any).createManyAndReturn({
             data: locations.map((loc: any) => ({
-                recurringConfigurationId: config.id,
+                recurringConfigurationId: updatedConfig.id,
                 locationId: loc.locationId as string,
             }))
         });
@@ -147,18 +154,37 @@ export const updateRecurring = async (id: string, data: any) => {
             await tx.recurringTask.createMany({ data: tasksData });
         }
 
-        return config;
+        return updatedConfig;
     }, {
         maxWait: 10000,
         timeout: 30000
     });
+
+    await createAuditLog({
+        userId,
+        module: "RECURRING",
+        action: "UPDATE",
+        resourceId: id,
+        details: { title, clientId, active }
+    });
+
+    return config;
 };
 
-export const deleteRecurring = async (id: string) => {
-    return prisma.recurringConfiguration.update({
+export const deleteRecurring = async (id: string, userId: string) => {
+    const config = await prisma.recurringConfiguration.update({
         where: { id },
         data: { softDelete: true, active: false }
     });
+
+    await createAuditLog({
+        userId,
+        module: "RECURRING",
+        action: "DELETE",
+        resourceId: id
+    });
+
+    return config;
 };
 
 export const getRecurringById = async (id: string) => {
@@ -179,10 +205,18 @@ export const getRecurringById = async (id: string) => {
 };
 
 export const getRecurringByGuard = async (guardId: string) => {
+    const guard = await prisma.user.findUnique({
+        where: { id: guardId },
+        select: { clientId: true },
+    });
+
+    if (!guard?.clientId) return [];
+
     return prisma.recurringConfiguration.findMany({
         where: {
             softDelete: false,
             active: true,
+            clientId: guard.clientId,
             guards: {
                 some: { id: guardId }
             }

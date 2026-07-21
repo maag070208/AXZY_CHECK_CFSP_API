@@ -1,53 +1,70 @@
 openapi: 3.0.3
 info:
-  title: AXZY CHECK API
-  description: Documentación técnica completa de la API de AXZY CHECK. Cubre gestión
-    operativa, administrativa y analítica.
+  title: 'AXZY CHECK API'
+  description: "Documentación técnica completa de la API de AXZY CHECK. Cubre gestión\noperativa, administrativa y analítica."
   version: 1.3.2
 servers:
-- url: http://localhost:4444/api/v1
-  description: Local server
+  -
+    url: 'http://localhost:4444/api/v1'
+    description: 'Local server'
 tags:
-- name: auth
-  description: Control de acceso
-- name: users
-  description: Personal y administración
-- name: clients
-  description: Empresas clientes
-- name: zones
-  description: Áreas/Zonas geográficas
-- name: locations
-  description: Puntos de control / Spots
-- name: assignments
-  description: Órdenes de trabajo y tareas
-- name: rounds
-  description: Recorridos de seguridad
-- name: incidents
-  description: Gestión de anomalías
-- name: maintenance
-  description: Soporte técnico
-- name: schedules
-  description: Horarios y turnos
-- name: kardex
-  description: Bitácora de actividad
-- name: reports
-  description: Analítica y KPIs
-- name: settings
-  description: Configuración maestra y catálogos
-- name: sync
-  description: Sincronización móvil offline
-- name: recurring
-  description: Tareas recurrentes
-- name: catalog
-  description: Listas rápidas de sistema
-- name: home
-  description: Métricas y dashboard de inicio
+  -
+    name: auth
+    description: 'Control de acceso'
+  -
+    name: users
+    description: 'Personal y administración'
+  -
+    name: clients
+    description: 'Empresas clientes'
+  -
+    name: zones
+    description: 'Áreas/Zonas geográficas'
+  -
+    name: locations
+    description: 'Puntos de control / Spots'
+  -
+    name: assignments
+    description: 'Órdenes de trabajo y tareas'
+  -
+    name: rounds
+    description: 'Recorridos de seguridad'
+  -
+    name: incidents
+    description: 'Gestión de anomalías'
+  -
+    name: maintenance
+    description: 'Soporte técnico'
+  -
+    name: schedules
+    description: 'Horarios y turnos'
+  -
+    name: kardex
+    description: 'Bitácora de actividad'
+  -
+    name: reports
+    description: 'Analítica y KPIs'
+  -
+    name: settings
+    description: 'Configuración maestra y catálogos'
+  -
+    name: sync
+    description: 'Sincronización móvil offline'
+  -
+    name: recurring
+    description: 'Tareas recurrentes'
+  -
+    name: catalog
+    description: 'Listas rápidas de sistema'
+  -
+    name: home
+    description: 'Métricas y dashboard de inicio'
 paths:
   /home/stats:
     get:
       tags:
-      - home
-      summary: Obtener métricas para el dashboard
+        - home
+      summary: 'Obtener métricas para el dashboard'
       responses:
         '200':
           description: OK
@@ -56,30 +73,14 @@ paths:
               schema:
                 type: object
                 properties:
-                  success:
-                    type: boolean
-                  data:
-                    type: object
-                    properties:
-                      activeRoundsCount:
-                        type: integer
-                      activeRounds:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/Round'
-                      pendingIncidentsCount:
-                        type: integer
-                      pendingMaintenanceCount:
-                        type: integer
-                  messages:
-                    type: array
-                    items:
-                      type: string
+                  success: {type: boolean}
+                  data: {type: object, properties: {activeRoundsCount: {type: integer}, activeRounds: {type: array, items: {$ref: '#/components/schemas/Round'}}, pendingIncidentsCount: {type: integer}, pendingMaintenanceCount: {type: integer}}}
+                  messages: {type: array, items: {type: string}}
   /users/login:
     post:
       tags:
-      - auth
-      summary: Iniciar sesión
+        - auth
+      summary: 'Iniciar sesión'
       requestBody:
         required: true
         content:
@@ -94,19 +95,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultLogin'
         '401':
-          description: No autorizado (Credenciales inválidas)
+          description: 'No autorizado (Credenciales inválidas)'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '403':
-          description: Prohibido (Cuenta inactiva o fuera de horario)
+          description: 'Prohibido (Cuenta inactiva o fuera de horario)'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
@@ -114,8 +115,8 @@ paths:
   /users:
     get:
       tags:
-      - users
-      summary: Listar usuarios
+        - users
+      summary: 'Listar usuarios'
       responses:
         '200':
           description: OK
@@ -124,21 +125,21 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultListUser'
         '401':
-          description: No autorizado
+          description: 'No autorizado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
     post:
       tags:
-      - users
-      summary: Crear usuario
+        - users
+      summary: 'Crear usuario'
       requestBody:
         required: true
         content:
@@ -153,19 +154,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResult'
         '400':
-          description: Error de validación o usuario duplicado
+          description: 'Error de validación o usuario duplicado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '401':
-          description: No autorizado
+          description: 'No autorizado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
@@ -173,8 +174,8 @@ paths:
   /users/datatable:
     post:
       tags:
-      - users
-      summary: Tabla paginada de usuarios
+        - users
+      summary: 'Tabla paginada de usuarios'
       requestBody:
         required: true
         content:
@@ -189,29 +190,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableUser'
         '400':
-          description: Error en filtros o paginación
+          description: 'Error en filtros o paginación'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-  /users/{id}:
+  '/users/{id}':
     get:
       tags:
-      - users
-      summary: Detalle de usuario
+        - users
+      summary: 'Detalle de usuario'
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: OK
@@ -220,40 +222,41 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatable'
         '400':
-          description: Petición inválida
+          description: 'Petición inválida'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '401':
-          description: No autorizado
+          description: 'No autorizado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '404':
-          description: No encontrado
+          description: 'No encontrado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
     put:
       tags:
-      - users
-      summary: Actualizar usuario
+        - users
+      summary: 'Actualizar usuario'
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       requestBody:
         required: true
         content:
@@ -268,40 +271,41 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResult'
         '400':
-          description: Error de validación o usuario duplicado
+          description: 'Error de validación o usuario duplicado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '401':
-          description: No autorizado
+          description: 'No autorizado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '404':
-          description: No encontrado
+          description: 'No encontrado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
     delete:
       tags:
-      - users
-      summary: Eliminar usuario
+        - users
+      summary: 'Eliminar usuario'
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: OK
@@ -310,41 +314,42 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResult'
         '400':
-          description: Petición inválida
+          description: 'Petición inválida'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '401':
-          description: No autorizado
+          description: 'No autorizado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '404':
-          description: No encontrado
+          description: 'No encontrado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-  /users/{id}/password:
+  '/users/{id}/password':
     put:
       tags:
-      - users
-      summary: Cambiar contraseña (Usuario propio)
+        - users
+      summary: 'Cambiar contraseña (Usuario propio)'
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       requestBody:
         required: true
         content:
@@ -352,8 +357,8 @@ paths:
             schema:
               type: object
               required:
-              - oldPassword
-              - newPassword
+                - oldPassword
+                - newPassword
               properties:
                 oldPassword:
                   type: string
@@ -367,41 +372,42 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResult'
         '400':
-          description: Error de validación o contraseña incorrecta
+          description: 'Error de validación o contraseña incorrecta'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '401':
-          description: No autorizado
+          description: 'No autorizado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '404':
-          description: No encontrado
+          description: 'No encontrado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-  /users/{id}/reset-password:
+  '/users/{id}/reset-password':
     put:
       tags:
-      - users
-      summary: Resetear contraseña (Administrador)
+        - users
+      summary: 'Resetear contraseña (Administrador)'
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       requestBody:
         required: true
         content:
@@ -409,7 +415,7 @@ paths:
             schema:
               type: object
               required:
-              - newPassword
+                - newPassword
               properties:
                 newPassword:
                   type: string
@@ -421,31 +427,31 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResult'
         '400':
-          description: Error de validación
+          description: 'Error de validación'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '401':
-          description: No autorizado
+          description: 'No autorizado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '403':
-          description: Prohibido (No es administrador)
+          description: 'Prohibido (No es administrador)'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '404':
-          description: No encontrado
+          description: 'No encontrado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
@@ -453,8 +459,8 @@ paths:
   /users/logout:
     post:
       tags:
-      - auth
-      summary: Cerrar sesión
+        - auth
+      summary: 'Cerrar sesión'
       responses:
         '200':
           description: OK
@@ -463,13 +469,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResult'
         '401':
-          description: No autorizado
+          description: 'No autorizado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
@@ -477,8 +483,8 @@ paths:
   /clients:
     get:
       tags:
-      - clients
-      summary: Listar clientes
+        - clients
+      summary: 'Listar clientes'
       responses:
         '200':
           description: OK
@@ -488,8 +494,8 @@ paths:
                 $ref: '#/components/schemas/TResultListClient'
     post:
       tags:
-      - clients
-      summary: Crear cliente
+        - clients
+      summary: 'Crear cliente'
       requestBody:
         required: true
         content:
@@ -504,13 +510,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultListClient'
         '400':
-          description: Datos inválidos o cliente duplicado
+          description: 'Datos inválidos o cliente duplicado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
@@ -518,8 +524,8 @@ paths:
   /clients/datatable:
     post:
       tags:
-      - clients
-      summary: Tabla paginada de clientes
+        - clients
+      summary: 'Tabla paginada de clientes'
       requestBody:
         required: true
         content:
@@ -534,23 +540,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableClient'
         '400':
-          description: Error en filtros
+          description: 'Error en filtros'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-  /clients/{id}:
+  '/clients/{id}':
     get:
       tags:
-      - clients
-      summary: Detalle de cliente
+        - clients
+      summary: 'Detalle de cliente'
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: OK
@@ -559,27 +566,28 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableClient'
         '400':
-          description: Error de paginación o filtros
+          description: 'Error de paginación o filtros'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
     put:
       tags:
-      - clients
+        - clients
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       requestBody:
         required: true
         content:
@@ -595,18 +603,17 @@ paths:
                 $ref: '#/components/schemas/TResultListClient'
     delete:
       tags:
-      - clients
-      summary: Eliminar cliente (Cascading)
-      description: Elimina físicamente el cliente y todos sus datos relacionados (Zonas,
-        Ubicaciones, Rondas, Incidencias, Tareas). Los usuarios operativos (guardias)
-        son desasignados (clientId = null) pero no eliminados.
+        - clients
+      summary: 'Eliminar cliente (Cascading)'
+      description: "Elimina físicamente el cliente y todos sus datos relacionados (Zonas,\nUbicaciones, Rondas, Incidencias, Tareas). Los usuarios operativos (guardias)\nson desasignados (clientId = null) pero no eliminados."
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: OK
@@ -617,8 +624,8 @@ paths:
   /zones:
     post:
       tags:
-      - zones
-      summary: Crear zona
+        - zones
+      summary: 'Crear zona'
       requestBody:
         required: true
         content:
@@ -633,23 +640,24 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableClient'
         '400':
-          description: Datos inválidos
+          description: 'Datos inválidos'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-  /zones/client/{clientId}:
+  '/zones/client/{clientId}':
     get:
       tags:
-      - zones
-      summary: Listar zonas de un cliente
+        - zones
+      summary: 'Listar zonas de un cliente'
       parameters:
-      - in: path
-        name: clientId
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: clientId
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: OK
@@ -660,8 +668,8 @@ paths:
   /zones/datatable:
     post:
       tags:
-      - zones
-      summary: Tabla paginada de zonas
+        - zones
+      summary: 'Tabla paginada de zonas'
       requestBody:
         required: true
         content:
@@ -676,22 +684,23 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableZone'
         '400':
-          description: Error en filtros
+          description: 'Error en filtros'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-  /zones/{id}:
+  '/zones/{id}':
     put:
       tags:
-      - zones
+        - zones
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       requestBody:
         required: true
         content:
@@ -706,28 +715,29 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableZone'
         '400':
-          description: Error de paginación o filtros
+          description: 'Error de paginación o filtros'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
     delete:
       tags:
-      - zones
-      summary: Eliminar zona
+        - zones
+      summary: 'Eliminar zona'
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: OK
@@ -736,19 +746,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableZone'
         '400':
-          description: Petición inválida o restricción de llave foránea
+          description: 'Petición inválida o restricción de llave foránea'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '404':
-          description: No encontrado
+          description: 'No encontrado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
@@ -756,8 +766,8 @@ paths:
   /locations:
     get:
       tags:
-      - locations
-      summary: Listar ubicaciones
+        - locations
+      summary: 'Listar ubicaciones'
       responses:
         '200':
           description: OK
@@ -767,8 +777,8 @@ paths:
                 $ref: '#/components/schemas/TResultDatatableZone'
     post:
       tags:
-      - locations
-      summary: Crear ubicación
+        - locations
+      summary: 'Crear ubicación'
       requestBody:
         required: true
         content:
@@ -783,7 +793,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultListClient'
         '400':
-          description: Datos inválidos
+          description: 'Datos inválidos'
           content:
             application/json:
               schema:
@@ -791,8 +801,8 @@ paths:
   /locations/datatable:
     post:
       tags:
-      - locations
-      summary: Tabla paginada de ubicaciones
+        - locations
+      summary: 'Tabla paginada de ubicaciones'
       requestBody:
         required: true
         content:
@@ -807,29 +817,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableLocation'
         '400':
-          description: Error de paginación o filtros
+          description: 'Error de paginación o filtros'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-  /locations/{id}:
+  '/locations/{id}':
     get:
       tags:
-      - locations
-      summary: Detalle de ubicación
+        - locations
+      summary: 'Detalle de ubicación'
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: OK
@@ -839,14 +850,15 @@ paths:
                 $ref: '#/components/schemas/TResultListLocation'
     put:
       tags:
-      - locations
+        - locations
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       requestBody:
         required: true
         content:
@@ -862,17 +874,17 @@ paths:
                 $ref: '#/components/schemas/TResultListLocation'
     delete:
       tags:
-      - locations
-      summary: Eliminar ubicación (Cascading)
-      description: Elimina físicamente la ubicación y sus dependencias (Kardex, Tareas
-        recurrentes, Tareas activas).
+        - locations
+      summary: 'Eliminar ubicación (Cascading)'
+      description: "Elimina físicamente la ubicación y sus dependencias (Kardex, Tareas\nrecurrentes, Tareas activas)."
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: OK
@@ -881,19 +893,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableLocation'
         '400':
-          description: Petición inválida o restricción de llave foránea
+          description: 'Petición inválida o restricción de llave foránea'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '404':
-          description: No encontrado
+          description: 'No encontrado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
@@ -901,8 +913,8 @@ paths:
   /locations/print-bulk-qr:
     post:
       tags:
-      - locations
-      summary: Generar PDF masivo con códigos QR
+        - locations
+      summary: 'Generar PDF masivo con códigos QR'
       requestBody:
         required: true
         content:
@@ -910,16 +922,14 @@ paths:
             schema:
               type: object
               required:
-              - ids
+                - ids
               properties:
                 ids:
                   type: array
-                  items:
-                    type: string
-                    format: uuid
+                  items: {type: string, format: uuid}
       responses:
         '200':
-          description: Archivo PDF
+          description: 'Archivo PDF'
           content:
             application/pdf:
               schema:
@@ -928,18 +938,20 @@ paths:
   /assignments:
     get:
       tags:
-      - assignments
-      summary: Listar todas las asignaciones
+        - assignments
+      summary: 'Listar todas las asignaciones'
       parameters:
-      - in: query
-        name: guardId
-        schema:
-          type: string
-          format: uuid
-      - in: query
-        name: status
-        schema:
-          type: string
+        -
+          in: query
+          name: guardId
+          schema:
+            type: string
+            format: uuid
+        -
+          in: query
+          name: status
+          schema:
+            type: string
       responses:
         '200':
           description: OK
@@ -949,8 +961,8 @@ paths:
                 $ref: '#/components/schemas/TResultListAssignment'
     post:
       tags:
-      - assignments
-      summary: Crear asignación
+        - assignments
+      summary: 'Crear asignación'
       requestBody:
         required: true
         content:
@@ -963,8 +975,8 @@ paths:
   /assignments/me:
     get:
       tags:
-      - assignments
-      summary: Mis asignaciones activas (Guardia)
+        - assignments
+      summary: 'Mis asignaciones activas (Guardia)'
       responses:
         '200':
           description: OK
@@ -975,8 +987,8 @@ paths:
   /assignments/datatable:
     post:
       tags:
-      - assignments
-      summary: Tabla paginada de asignaciones
+        - assignments
+      summary: 'Tabla paginada de asignaciones'
       requestBody:
         required: true
         content:
@@ -991,29 +1003,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableAssignment'
         '400':
-          description: Error de paginación o filtros
+          description: 'Error de paginación o filtros'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-  /assignments/{id}/status:
+  '/assignments/{id}/status':
     patch:
       tags:
-      - assignments
-      summary: Actualizar estado de asignación
+        - assignments
+      summary: 'Actualizar estado de asignación'
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       requestBody:
         required: true
         content:
@@ -1023,11 +1036,7 @@ paths:
               properties:
                 status:
                   type: string
-                  enum:
-                  - PENDING
-                  - CHECKING
-                  - COMPLETED
-                  - ANOMALY
+                  enum: [PENDING, CHECKING, COMPLETED, ANOMALY]
       responses:
         '200':
           description: OK
@@ -1036,35 +1045,36 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableAssignment'
         '400':
-          description: Petición inválida
+          description: 'Petición inválida'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '404':
-          description: No encontrado
+          description: 'No encontrado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-  /assignments/tasks/{taskId}/toggle:
+  '/assignments/tasks/{taskId}/toggle':
     patch:
       tags:
-      - assignments
-      summary: Alternar check de tarea específica
+        - assignments
+      summary: 'Alternar check de tarea específica'
       parameters:
-      - in: path
-        name: taskId
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: taskId
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: OK
@@ -1073,19 +1083,51 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResult'
         '400':
-          description: Petición inválida
+          description: 'Petición inválida'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '404':
-          description: No encontrado
+          description: 'No encontrado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  '/assignments/{id}':
+    delete:
+      tags:
+        - assignments
+      summary: 'Eliminar asignación'
+      parameters:
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Eliminada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '404':
+          description: 'No encontrada'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
@@ -1093,10 +1135,9 @@ paths:
   /rounds/start:
     post:
       tags:
-      - rounds
-      summary: Iniciar un nuevo recorrido (Ronda)
-      description: Permite a un guardia iniciar una ronda, ya sea libre o basada en
-        una configuración recurrente predefinida.
+        - rounds
+      summary: 'Iniciar un nuevo recorrido (Ronda)'
+      description: "Permite a un guardia iniciar una ronda, ya sea libre o basada en\nuna configuración recurrente predefinida."
       requestBody:
         required: true
         content:
@@ -1107,48 +1148,47 @@ paths:
                 guardId:
                   type: string
                   format: uuid
-                  description: ID del guardia que inicia la ronda (opcional si se
-                    usa token de guardia)
+                  description: "ID del guardia que inicia la ronda (opcional si se\nusa token de guardia)"
                 clientId:
                   type: string
                   format: uuid
-                  description: ID del cliente al que pertenece la ronda
+                  description: 'ID del cliente al que pertenece la ronda'
                 recurringConfigurationId:
                   type: string
                   format: uuid
-                  description: ID de la configuración recurrente (opcional para rondas
-                    libres)
+                  description: "ID de la configuración recurrente (opcional para rondas\nlibres)"
       responses:
         '201':
-          description: Ronda iniciada exitosamente
+          description: 'Ronda iniciada exitosamente'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultDatatableLocation'
         '400':
-          description: Error en la solicitud (ej. ya existe una ronda activa)
+          description: 'Error en la solicitud (ej. ya existe una ronda activa)'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-  /rounds/{id}/end:
+  '/rounds/{id}/end':
     put:
       tags:
-      - rounds
-      summary: Finalizar rondín
+        - rounds
+      summary: 'Finalizar rondín'
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: OK
@@ -1159,8 +1199,8 @@ paths:
   /rounds/current:
     get:
       tags:
-      - rounds
-      summary: Rondín actual en curso
+        - rounds
+      summary: 'Rondín actual en curso'
       responses:
         '200':
           description: OK
@@ -1171,8 +1211,8 @@ paths:
   /rounds/datatable:
     post:
       tags:
-      - rounds
-      summary: Tabla paginada de rondines
+        - rounds
+      summary: 'Tabla paginada de rondines'
       requestBody:
         required: true
         content:
@@ -1187,7 +1227,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableRound'
         '400':
-          description: Error en filtros
+          description: 'Error en filtros'
           content:
             application/json:
               schema:
@@ -1195,29 +1235,32 @@ paths:
   /rounds:
     get:
       tags:
-      - rounds
-      summary: Listar rondines (con filtros)
+        - rounds
+      summary: 'Listar rondines (con filtros)'
       parameters:
-      - in: query
-        name: date
-        schema:
-          type: string
-          format: date
-        description: Filtro por fecha (YYYY-MM-DD)
-      - in: query
-        name: guardId
-        schema:
-          type: string
-          format: uuid
-        description: Filtro por guardia específico
-      - in: query
-        name: status
-        schema:
-          type: string
-          enum:
-          - IN_PROGRESS
-          - COMPLETED
-        description: Filtro por estado de la ronda
+        -
+          in: query
+          name: date
+          schema:
+            type: string
+            format: date
+          description: 'Filtro por fecha (YYYY-MM-DD)'
+        -
+          in: query
+          name: guardId
+          schema:
+            type: string
+            format: uuid
+          description: 'Filtro por guardia específico'
+        -
+          in: query
+          name: status
+          schema:
+            type: string
+            enum:
+              - IN_PROGRESS
+              - COMPLETED
+          description: 'Filtro por estado de la ronda'
       responses:
         '200':
           description: OK
@@ -1225,18 +1268,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultDatatableRound'
-  /rounds/{id}:
+  '/rounds/{id}':
     get:
       tags:
-      - rounds
-      summary: Detalle de rondín
+        - rounds
+      summary: 'Detalle de rondín'
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: OK
@@ -1244,18 +1288,50 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultDatatableRound'
-  /rounds/{id}/report:
+    delete:
+      tags:
+        - rounds
+      summary: 'Eliminar rondín'
+      parameters:
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Eliminado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '404':
+          description: 'No encontrado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  '/rounds/{id}/report':
     get:
       tags:
-      - rounds
-      summary: Generar reporte de rondín
+        - rounds
+      summary: 'Generar reporte de rondín'
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: OK
@@ -1264,13 +1340,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableAssignment'
         '400':
-          description: Error de paginación o filtros
+          description: 'Error de paginación o filtros'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
@@ -1278,8 +1354,8 @@ paths:
   /incidents:
     get:
       tags:
-      - incidents
-      summary: Listar incidencias
+        - incidents
+      summary: 'Listar incidencias'
       responses:
         '200':
           description: OK
@@ -1289,8 +1365,8 @@ paths:
                 $ref: '#/components/schemas/TResult'
     post:
       tags:
-      - incidents
-      summary: Crear reporte de incidencia
+        - incidents
+      summary: 'Crear reporte de incidencia'
       requestBody:
         required: true
         content:
@@ -1305,7 +1381,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResult'
         '400':
-          description: Datos inválidos
+          description: 'Datos inválidos'
           content:
             application/json:
               schema:
@@ -1313,8 +1389,8 @@ paths:
   /incidents/pending-count:
     get:
       tags:
-      - incidents
-      summary: Contador de pendientes
+        - incidents
+      summary: 'Contador de pendientes'
       responses:
         '200':
           description: OK
@@ -1322,18 +1398,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultListRound'
-  /incidents/{id}/resolve:
+  '/incidents/{id}/resolve':
     put:
       tags:
-      - incidents
-      summary: Marcar resuelta
+        - incidents
+      summary: 'Marcar resuelta'
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: OK
@@ -1344,8 +1421,8 @@ paths:
   /incidents/datatable:
     post:
       tags:
-      - incidents
-      summary: Tabla paginada de incidencias
+        - incidents
+      summary: 'Tabla paginada de incidencias'
       responses:
         '200':
           description: OK
@@ -1354,29 +1431,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableIncident'
         '400':
-          description: Error de paginación o filtros
+          description: 'Error de paginación o filtros'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-  /incidents/{id}:
+  '/incidents/{id}':
     delete:
       tags:
-      - incidents
-      summary: Eliminar incidencia
+        - incidents
+      summary: 'Eliminar incidencia'
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: OK
@@ -1387,8 +1465,8 @@ paths:
   /maintenance:
     get:
       tags:
-      - maintenance
-      summary: Listar solicitudes
+        - maintenance
+      summary: 'Listar solicitudes'
       responses:
         '200':
           description: OK
@@ -1398,8 +1476,8 @@ paths:
                 $ref: '#/components/schemas/TResultListMaintenance'
     post:
       tags:
-      - maintenance
-      summary: Crear solicitud
+        - maintenance
+      summary: 'Crear solicitud'
       requestBody:
         required: true
         content:
@@ -1414,7 +1492,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableRound'
         '400':
-          description: Datos inválidos
+          description: 'Datos inválidos'
           content:
             application/json:
               schema:
@@ -1422,8 +1500,8 @@ paths:
   /maintenance/pending-count:
     get:
       tags:
-      - maintenance
-      summary: Contador de pendientes
+        - maintenance
+      summary: 'Contador de pendientes'
       responses:
         '200':
           description: OK
@@ -1431,18 +1509,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultListIncident'
-  /maintenance/{id}/resolve:
+  '/maintenance/{id}/resolve':
     put:
       tags:
-      - maintenance
-      summary: Marcar finalizada
+        - maintenance
+      summary: 'Marcar finalizada'
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: OK
@@ -1453,8 +1532,8 @@ paths:
   /maintenance/datatable:
     post:
       tags:
-      - maintenance
-      summary: Tabla paginada de mantenimiento
+        - maintenance
+      summary: 'Tabla paginada de mantenimiento'
       responses:
         '200':
           description: OK
@@ -1463,29 +1542,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableMaintenance'
         '400':
-          description: Error de paginación o filtros
+          description: 'Error de paginación o filtros'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-  /maintenance/{id}:
+  '/maintenance/{id}':
     delete:
       tags:
-      - maintenance
-      summary: Eliminar mantenimiento
+        - maintenance
+      summary: 'Eliminar mantenimiento'
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: OK
@@ -1494,19 +1574,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableIncident'
         '400':
-          description: Petición inválida o restricción de llave foránea
+          description: 'Petición inválida o restricción de llave foránea'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '404':
-          description: No encontrado
+          description: 'No encontrado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
@@ -1514,8 +1594,8 @@ paths:
   /schedules:
     get:
       tags:
-      - schedules
-      summary: Listar horarios
+        - schedules
+      summary: 'Listar horarios'
       responses:
         '200':
           description: OK
@@ -1525,8 +1605,8 @@ paths:
                 $ref: '#/components/schemas/TResultListSchedule'
     post:
       tags:
-      - schedules
-      summary: Crear horario
+        - schedules
+      summary: 'Crear horario'
       requestBody:
         required: true
         content:
@@ -1541,7 +1621,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableIncident'
         '400':
-          description: Datos inválidos
+          description: 'Datos inválidos'
           content:
             application/json:
               schema:
@@ -1549,8 +1629,8 @@ paths:
   /schedules/datatable:
     post:
       tags:
-      - schedules
-      summary: Tabla paginada de horarios
+        - schedules
+      summary: 'Tabla paginada de horarios'
       responses:
         '200':
           description: OK
@@ -1559,28 +1639,29 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableSchedule'
         '400':
-          description: Error de paginación o filtros
+          description: 'Error de paginación o filtros'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-  /schedules/{id}:
+  '/schedules/{id}':
     put:
       tags:
-      - schedules
+        - schedules
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       requestBody:
         required: true
         content:
@@ -1596,15 +1677,16 @@ paths:
                 $ref: '#/components/schemas/TResultListSchedule'
     delete:
       tags:
-      - schedules
-      summary: Eliminar horario
+        - schedules
+      summary: 'Eliminar horario'
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: OK
@@ -1613,19 +1695,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableMaintenance'
         '400':
-          description: Petición inválida o restricción de llave foránea
+          description: 'Petición inválida o restricción de llave foránea'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '404':
-          description: No encontrado
+          description: 'No encontrado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
@@ -1633,8 +1715,8 @@ paths:
   /kardex:
     get:
       tags:
-      - kardex
-      summary: Listar bitácora
+        - kardex
+      summary: 'Listar bitácora'
       responses:
         '200':
           description: OK
@@ -1643,35 +1725,35 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableSchedule'
         '400':
-          description: Petición inválida
+          description: 'Petición inválida'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '404':
-          description: No encontrado
+          description: 'No encontrado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
     post:
       tags:
-      - kardex
-      summary: Crear registro
+        - kardex
+      summary: 'Crear registro'
       responses:
         '201':
           description: Creado
   /recurring:
     get:
       tags:
-      - recurring
-      summary: Listar todas las configuraciones recurrentes
+        - recurring
+      summary: 'Listar todas las configuraciones recurrentes'
       responses:
         '200':
           description: OK
@@ -1683,8 +1765,8 @@ paths:
                   $ref: '#/components/schemas/RecurringConfiguration'
     post:
       tags:
-      - recurring
-      summary: Crear una nueva configuración de ronda recurrente
+        - recurring
+      summary: 'Crear una nueva configuración de ronda recurrente'
       requestBody:
         required: true
         content:
@@ -1699,7 +1781,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableMaintenance'
         '400':
-          description: Datos inválidos
+          description: 'Datos inválidos'
           content:
             application/json:
               schema:
@@ -1707,8 +1789,8 @@ paths:
   /recurring/datatable:
     post:
       tags:
-      - recurring
-      summary: Tabla paginada de recurrentes
+        - recurring
+      summary: 'Tabla paginada de recurrentes'
       responses:
         '200':
           description: OK
@@ -1717,29 +1799,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableRecurringConfiguration'
         '400':
-          description: Error de paginación o filtros
+          description: 'Error de paginación o filtros'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-  /recurring/guard/{guardId}:
+  '/recurring/guard/{guardId}':
     get:
       tags:
-      - recurring
-      summary: Listar por guardia
+        - recurring
+      summary: 'Listar por guardia'
       parameters:
-      - in: path
-        name: guardId
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: guardId
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: OK
@@ -1747,18 +1830,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultListRecurringConfiguration'
-  /recurring/{id}:
+  '/recurring/{id}':
     get:
       tags:
-      - recurring
-      summary: Detalle de recurrente
+        - recurring
+      summary: 'Detalle de recurrente'
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: OK
@@ -1768,15 +1852,16 @@ paths:
                 $ref: '#/components/schemas/TResultListRecurringConfiguration'
     put:
       tags:
-      - recurring
-      summary: Actualizar configuración recurrente
+        - recurring
+      summary: 'Actualizar configuración recurrente'
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       requestBody:
         required: true
         content:
@@ -1792,15 +1877,16 @@ paths:
                 $ref: '#/components/schemas/RecurringConfiguration'
     delete:
       tags:
-      - recurring
-      summary: Eliminar recurrente
+        - recurring
+      summary: 'Eliminar recurrente'
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: OK
@@ -1809,19 +1895,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableRecurringConfiguration'
         '400':
-          description: Petición inválida o restricción de llave foránea
+          description: 'Petición inválida o restricción de llave foránea'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '404':
-          description: No encontrado
+          description: 'No encontrado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
@@ -1829,8 +1915,8 @@ paths:
   /reports/guards/stats:
     get:
       tags:
-      - reports
-      summary: Estadísticas generales de guardias
+        - reports
+      summary: 'Estadísticas generales de guardias'
       responses:
         '200':
           description: OK
@@ -1839,19 +1925,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultListKardex'
         '400':
-          description: Petición inválida
+          description: 'Petición inválida'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '404':
-          description: No encontrado
+          description: 'No encontrado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
@@ -1859,8 +1945,8 @@ paths:
   /reports/guards/top-performance:
     get:
       tags:
-      - reports
-      summary: Guardias con mejor desempeño
+        - reports
+      summary: 'Guardias con mejor desempeño'
       responses:
         '200':
           description: OK
@@ -1869,19 +1955,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResult'
         '400':
-          description: Petición inválida
+          description: 'Petición inválida'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '404':
-          description: No encontrado
+          description: 'No encontrado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
@@ -1889,8 +1975,8 @@ paths:
   /reports/guards/distribution:
     get:
       tags:
-      - reports
-      summary: Distribución de actividad
+        - reports
+      summary: 'Distribución de actividad'
       responses:
         '200':
           description: OK
@@ -1899,13 +1985,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResult'
         '400':
-          description: Petición inválida
+          description: 'Petición inválida'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
@@ -1913,8 +1999,8 @@ paths:
   /reports/guards/detail:
     get:
       tags:
-      - reports
-      summary: Reporte detallado de guardias
+        - reports
+      summary: 'Reporte detallado de guardias'
       responses:
         '200':
           description: OK
@@ -1923,29 +2009,30 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResult'
         '400':
-          description: Petición inválida
+          description: 'Petición inválida'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-  /reports/guards/detail-breakdown/{id}:
+  '/reports/guards/detail-breakdown/{id}':
     get:
       tags:
-      - reports
-      summary: Desglose detallado por guardia
+        - reports
+      summary: 'Desglose detallado por guardia'
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: OK
@@ -1954,13 +2041,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResult'
         '400':
-          description: Petición inválida
+          description: 'Petición inválida'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
@@ -1968,8 +2055,8 @@ paths:
   /reports/guards/workload:
     get:
       tags:
-      - reports
-      summary: Comparación de carga de trabajo
+        - reports
+      summary: 'Comparación de carga de trabajo'
       responses:
         '200':
           description: OK
@@ -1978,13 +2065,62 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResult'
         '400':
-          description: Petición inválida
+          description: 'Petición inválida'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /reports/administrative/matrix/pdf:
+    post:
+      tags:
+        - reports
+      summary: 'Generar Reporte de Matriz Administrativa PDF'
+      description: 'Genera un archivo PDF con la matriz de asistencia por punto de control para las rutas seleccionadas dentro de un rango de fechas.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - recurringConfigurationIds
+                - startDate
+                - endDate
+              properties:
+                recurringConfigurationIds:
+                  type: array
+                  items: {type: string, format: uuid}
+                  description: 'IDs de las rutas a incluir en el reporte'
+                startDate:
+                  type: string
+                  format: date
+                  description: 'Fecha de inicio del reporte (YYYY-MM-DD)'
+                endDate:
+                  type: string
+                  format: date
+                  description: 'Fecha de fin del reporte (YYYY-MM-DD)'
+      responses:
+        '200':
+          description: 'Archivo PDF generado exitosamente'
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: 'Datos de entrada inválidos'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
@@ -1992,8 +2128,8 @@ paths:
   /settings/categories/datatable:
     post:
       tags:
-      - settings
-      summary: Tabla paginada de categorías (Incidentes)
+        - settings
+      summary: 'Tabla paginada de categorías (Incidentes)'
       responses:
         '200':
           description: OK
@@ -2002,13 +2138,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableCategory'
         '400':
-          description: Error de paginación o filtros
+          description: 'Error de paginación o filtros'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
@@ -2016,23 +2152,24 @@ paths:
   /settings/categories:
     post:
       tags:
-      - settings
-      summary: Crear categoría
+        - settings
+      summary: 'Crear categoría'
       responses:
         '201':
           description: Creado
-  /settings/categories/{id}:
+  '/settings/categories/{id}':
     put:
       tags:
-      - settings
-      summary: Actualizar categoría
+        - settings
+      summary: 'Actualizar categoría'
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: OK
@@ -2041,34 +2178,35 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableCategory'
         '400':
-          description: Petición inválida
+          description: 'Petición inválida'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '404':
-          description: No encontrado
+          description: 'No encontrado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
     delete:
       tags:
-      - settings
-      summary: Eliminar categoría
+        - settings
+      summary: 'Eliminar categoría'
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: OK
@@ -2077,19 +2215,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResult'
         '400':
-          description: Petición inválida o restricción de llave foránea
+          description: 'Petición inválida o restricción de llave foránea'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '404':
-          description: No encontrado
+          description: 'No encontrado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
@@ -2097,8 +2235,8 @@ paths:
   /settings/types/datatable:
     post:
       tags:
-      - settings
-      summary: Tabla paginada de tipos (Incidentes)
+        - settings
+      summary: 'Tabla paginada de tipos (Incidentes)'
       responses:
         '200':
           description: OK
@@ -2107,13 +2245,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableType'
         '400':
-          description: Error de paginación o filtros
+          description: 'Error de paginación o filtros'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
@@ -2121,23 +2259,24 @@ paths:
   /settings/types:
     post:
       tags:
-      - settings
-      summary: Crear tipo de incidente
+        - settings
+      summary: 'Crear tipo de incidente'
       responses:
         '201':
           description: Creado
-  /settings/types/{id}:
+  '/settings/types/{id}':
     put:
       tags:
-      - settings
-      summary: Actualizar tipo
+        - settings
+      summary: 'Actualizar tipo'
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: OK
@@ -2146,34 +2285,35 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableType'
         '400':
-          description: Petición inválida
+          description: 'Petición inválida'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '404':
-          description: No encontrado
+          description: 'No encontrado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
     delete:
       tags:
-      - settings
-      summary: Eliminar tipo
+        - settings
+      summary: 'Eliminar tipo'
       parameters:
-      - in: path
-        name: id
-        required: true
-        schema:
-          type: string
-          format: uuid
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
       responses:
         '200':
           description: OK
@@ -2182,19 +2322,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResult'
         '400':
-          description: Petición inválida o restricción de llave foránea
+          description: 'Petición inválida o restricción de llave foránea'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '404':
-          description: No encontrado
+          description: 'No encontrado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
@@ -2202,8 +2342,8 @@ paths:
   /settings/sysconfig/datatable:
     post:
       tags:
-      - settings
-      summary: Tabla paginada de configuración de sistema
+        - settings
+      summary: 'Tabla paginada de configuración de sistema'
       responses:
         '200':
           description: OK
@@ -2212,13 +2352,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableSysConfig'
         '400':
-          description: Error de paginación o filtros
+          description: 'Error de paginación o filtros'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
@@ -2226,8 +2366,8 @@ paths:
   /settings/sysconfig:
     post:
       tags:
-      - settings
-      summary: Actualizar configuración de sistema
+        - settings
+      summary: 'Actualizar configuración de sistema'
       responses:
         '200':
           description: OK
@@ -2236,34 +2376,35 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultDatatableSysConfig'
         '400':
-          description: Petición inválida
+          description: 'Petición inválida'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '404':
-          description: No encontrado
+          description: 'No encontrado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-  /settings/sysconfig/{key}:
+  '/settings/sysconfig/{key}':
     delete:
       tags:
-      - settings
-      summary: Eliminar configuración específica
+        - settings
+      summary: 'Eliminar configuración específica'
       parameters:
-      - in: path
-        name: key
-        required: true
-        schema:
-          type: string
+        -
+          in: path
+          name: key
+          required: true
+          schema:
+            type: string
       responses:
         '200':
           description: OK
@@ -2272,19 +2413,19 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResult'
         '400':
-          description: Petición inválida o restricción de llave foránea
+          description: 'Petición inválida o restricción de llave foránea'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '404':
-          description: No encontrado
+          description: 'No encontrado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
@@ -2292,8 +2433,17 @@ paths:
   /sync:
     get:
       tags:
-      - sync
-      summary: Pull data (Offline)
+        - sync
+      summary: 'Pull data (Offline)'
+      parameters:
+        -
+          in: query
+          name: last_pulled_at
+          required: false
+          schema:
+            type: string
+            pattern: ^\d+$
+          description: 'Timestamp numérico de milisegundos para sincronización incremental'
       responses:
         '200':
           description: OK
@@ -2302,21 +2452,33 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResult'
         '400':
-          description: Petición inválida
+          description: 'Petición inválida'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
     post:
       tags:
-      - sync
-      summary: Push data (Offline)
+        - sync
+      summary: 'Push data (Offline)'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - changes
+              properties:
+                changes:
+                  type: object
+                  additionalProperties: {type: object, required: [created, updated, deleted], properties: {created: {type: array, items: {type: object}, description: 'Registros creados localmente en el cliente'}, updated: {type: array, items: {type: object}, description: 'Registros modificados localmente en el cliente'}, deleted: {type: array, items: {type: string}, description: 'IDs de registros eliminados localmente'}}}
       responses:
         '200':
           description: OK
@@ -2325,34 +2487,35 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResult'
         '400':
-          description: Petición inválida
+          description: 'Petición inválida'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '404':
-          description: No encontrado
+          description: 'No encontrado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-  /catalog/{key}:
+  '/catalog/{key}':
     get:
       tags:
-      - catalog
-      summary: Obtener catálogo genérico
+        - catalog
+      summary: 'Obtener catálogo genérico'
       parameters:
-      - in: path
-        name: key
-        required: true
-        schema:
-          type: string
+        -
+          in: path
+          name: key
+          required: true
+          schema:
+            type: string
       responses:
         '200':
           description: OK
@@ -2361,13 +2524,13 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResult'
         '400':
-          description: Petición inválida
+          description: 'Petición inválida'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
@@ -2375,8 +2538,8 @@ paths:
   /uploads:
     post:
       tags:
-      - settings
-      summary: Subir archivo multimedia
+        - settings
+      summary: 'Subir archivo multimedia'
       requestBody:
         content:
           multipart/form-data:
@@ -2394,30 +2557,346 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResult'
         '400':
-          description: Petición inválida
+          description: 'Petición inválida'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '404':
-          description: No encontrado
+          description: 'No encontrado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
         '500':
-          description: Error interno del servidor
+          description: 'Error interno del servidor'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
+  '/incidents/{id}/media':
+    delete:
+      tags:
+        - incidents
+      summary: 'Eliminar archivo multimedia de incidencia'
+      parameters:
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        -
+          in: query
+          name: key
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '400':
+          description: 'Petición inválida'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /:
+    get:
+      tags:
+        - index
+      summary: 'Hello World / Estado de la API'
+      responses:
+        '200':
+          description: OK
+  '/kardex/{id}':
+    get:
+      tags:
+        - kardex
+      summary: 'Detalle de registro Kardex'
+      parameters:
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultKardex'
+        '404':
+          description: 'No encontrado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+    patch:
+      tags:
+        - kardex
+      summary: 'Actualizar registro Kardex'
+      parameters:
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notes:
+                  type: string
+                latitude:
+                  type: number
+                longitude:
+                  type: number
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultKardex'
+    delete:
+      tags:
+        - kardex
+      summary: 'Eliminar registro Kardex'
+      parameters:
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+  '/kardex/{id}/media':
+    delete:
+      tags:
+        - kardex
+      summary: 'Eliminar archivo multimedia de Kardex'
+      parameters:
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        -
+          in: query
+          name: key
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+  /kardex/datatable:
+    post:
+      tags:
+        - kardex
+      summary: 'Tabla paginada de Kardex'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataTableFetchParams'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableKardex'
+  /locations/print-qrs:
+    post:
+      tags:
+        - locations
+      summary: 'Generar PDF con códigos QR de ubicaciones en lote'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - ids
+              properties:
+                ids:
+                  type: array
+                  items: {type: string, format: uuid}
+      responses:
+        '200':
+          description: 'PDF generado exitosamente'
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+  '/maintenance/{id}/media':
+    delete:
+      tags:
+        - maintenance
+      summary: 'Eliminar archivo multimedia de solicitud de soporte'
+      parameters:
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+        -
+          in: query
+          name: key
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+  /report-configurations/datatable:
+    post:
+      tags:
+        - reports
+      summary: 'Tabla paginada de configuraciones de reporte'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataTableFetchParams'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableReportConfiguration'
+  '/report-configurations/{id}':
+    delete:
+      tags:
+        - reports
+      summary: 'Eliminar configuración de reporte'
+      parameters:
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+  '/rounds/{id}/share':
+    get:
+      tags:
+        - rounds
+      summary: 'Obtener enlace público/temporal para compartir reporte PDF de ronda'
+      parameters:
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: {type: boolean}
+                  data: {type: string}
+                  messages: {type: array, items: {type: string}}
+  '/schedules/{id}/users':
+    get:
+      tags:
+        - schedules
+      summary: 'Listar usuarios asignados a un horario'
+      parameters:
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListUser'
+  /sync/check:
+    get:
+      tags:
+        - sync
+      summary: 'Verificar si hay cambios pendientes para descargar'
+      parameters:
+        -
+          in: query
+          name: last_pulled_at
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: {type: boolean}
+                  data: {type: object, properties: {hasChanges: {type: boolean}}}
+                  messages: {type: array, items: {type: string}}
 components:
   schemas:
     UserLogin:
       type: object
       required:
-      - username
-      - password
+        - username
+        - password
       properties:
         username:
           type: string
@@ -2430,7 +2909,7 @@ components:
           type: boolean
         data:
           type: string
-          description: JWT Token
+          description: 'JWT Token'
     DataTableFetchParams:
       type: object
       properties:
@@ -2447,10 +2926,10 @@ components:
     UserCreate:
       type: object
       required:
-      - name
-      - username
-      - password
-      - roleId
+        - name
+        - username
+        - password
+        - roleId
       properties:
         name:
           type: string
@@ -2487,101 +2966,101 @@ components:
     RoleBasic:
       type: object
       properties:
-        id: &id012
+        id:
           type: string
           format: uuid
-        name: &id013
+        name:
           type: string
-        value: &id014
+        value:
           type: string
-        createdAt: &id015
-          type: string
-          format: date-time
-        updatedAt: &id016
+        createdAt:
           type: string
           format: date-time
-        deletedAt: &id017
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
           type: string
           format: date-time
           nullable: true
     ClientBasic:
       type: object
       properties:
-        id: &id001
+        id:
           type: string
           format: uuid
-        name: &id002
+        name:
           type: string
-        address: &id003
-          type: string
-          nullable: true
-        rfc: &id004
+        address:
           type: string
           nullable: true
-        contactName: &id005
+        rfc:
           type: string
           nullable: true
-        contactPhone: &id006
+        contactName:
           type: string
           nullable: true
-        active: &id007
+        contactPhone:
+          type: string
+          nullable: true
+        active:
           type: boolean
-        softDelete: &id008
+        softDelete:
           type: boolean
-        createdAt: &id009
+        createdAt:
           type: string
           format: date-time
-        updatedAt: &id010
+        updatedAt:
           type: string
           format: date-time
-        deletedAt: &id011
+        deletedAt:
           type: string
           format: date-time
           nullable: true
     User:
       type: object
       properties:
-        id: &id026
+        id:
           type: string
           format: uuid
-        name: &id027
+        name:
           type: string
-        lastName: &id028
+        lastName:
           type: string
           nullable: true
-        username: &id029
+        username:
           type: string
-        active: &id030
+        active:
           type: boolean
-        softDelete: &id031
+        softDelete:
           type: boolean
-        shiftStart: &id032
+        shiftStart:
           type: string
           nullable: true
-        shiftEnd: &id033
+        shiftEnd:
           type: string
           nullable: true
-        createdAt: &id034
+        createdAt:
           type: string
           format: date-time
-        updatedAt: &id035
+        updatedAt:
           type: string
           format: date-time
-        deletedAt: &id036
+        deletedAt:
           type: string
           format: date-time
           nullable: true
-        isLoggedIn: &id037
+        isLoggedIn:
           type: boolean
-        scheduleId: &id038
-          type: string
-          format: uuid
-          nullable: true
-        clientId: &id039
+        scheduleId:
           type: string
           format: uuid
           nullable: true
-        roleId: &id040
+        clientId:
+          type: string
+          format: uuid
+          nullable: true
+        roleId:
           type: string
           format: uuid
         assignments:
@@ -2677,7 +3156,7 @@ components:
     ClientCreate:
       type: object
       required:
-      - name
+        - name
       properties:
         name:
           type: string
@@ -2720,8 +3199,8 @@ components:
     ZoneCreate:
       type: object
       required:
-      - name
-      - clientId
+        - name
+        - clientId
       properties:
         name:
           type: string
@@ -2738,12 +3217,12 @@ components:
     LocationCreate:
       type: object
       required:
-      - name
-      - clientId
+        - name
+        - clientId
       properties:
         name:
           type: string
-          description: Nombre simple. El API lo convertirá a formato compuesto Cliente-Zona-Nombre
+          description: 'Nombre simple. El API lo convertirá a formato compuesto Cliente-Zona-Nombre'
         clientId:
           type: string
           format: uuid
@@ -2782,9 +3261,9 @@ components:
     AssignmentCreate:
       type: object
       required:
-      - guardId
-      - locationId
-      - assignedBy
+        - guardId
+        - locationId
+        - assignedBy
       properties:
         guardId:
           type: string
@@ -2809,8 +3288,8 @@ components:
     IncidentCreate:
       type: object
       required:
-      - title
-      - locationId
+        - title
+        - locationId
       properties:
         title:
           type: string
@@ -2826,7 +3305,7 @@ components:
     MaintenanceCreate:
       type: object
       required:
-      - title
+        - title
       properties:
         title:
           type: string
@@ -2839,15 +3318,15 @@ components:
     ScheduleCreate:
       type: object
       required:
-      - name
-      - startTime
-      - endTime
+        - name
+        - startTime
+        - endTime
       properties:
         name:
           type: string
         startTime:
           type: string
-          example: 08:00
+          example: '08:00'
         endTime:
           type: string
           example: '17:00'
@@ -2858,7 +3337,7 @@ components:
           type: string
         startTime:
           type: string
-          example: 08:00
+          example: '08:00'
         endTime:
           type: string
           example: '17:00'
@@ -2867,36 +3346,36 @@ components:
     Round:
       type: object
       properties:
-        id: &id143
+        id:
           type: string
           format: uuid
-        guardId: &id144
+        guardId:
           type: string
           format: uuid
-        clientId: &id145
+        clientId:
           type: string
           format: uuid
           nullable: true
-        startTime: &id146
+        startTime:
           type: string
           format: date-time
-        endTime: &id147
+        endTime:
           type: string
           format: date-time
           nullable: true
         status:
           $ref: '#/components/schemas/RoundStatus'
-        recurringConfigurationId: &id148
+        recurringConfigurationId:
           type: string
           format: uuid
           nullable: true
-        createdAt: &id149
+        createdAt:
           type: string
           format: date-time
-        updatedAt: &id150
+        updatedAt:
           type: string
           format: date-time
-        deletedAt: &id151
+        deletedAt:
           type: string
           format: date-time
           nullable: true
@@ -2909,26 +3388,26 @@ components:
     RecurringConfiguration:
       type: object
       properties:
-        id: &id155
+        id:
           type: string
           format: uuid
-        title: &id156
+        title:
           type: string
-        clientId: &id157
+        clientId:
           type: string
           format: uuid
           nullable: true
-        active: &id158
+        active:
           type: boolean
-        softDelete: &id159
+        softDelete:
           type: boolean
-        createdAt: &id160
+        createdAt:
           type: string
           format: date-time
-        updatedAt: &id161
+        updatedAt:
           type: string
           format: date-time
-        deletedAt: &id162
+        deletedAt:
           type: string
           format: date-time
           nullable: true
@@ -2949,24 +3428,24 @@ components:
     RecurringLocation:
       type: object
       properties:
-        id: &id163
+        id:
           type: string
           format: uuid
-        recurringConfigurationId: &id164
+        recurringConfigurationId:
           type: string
           format: uuid
-        locationId: &id165
+        locationId:
           type: string
           format: uuid
-        order: &id166
+        order:
           type: integer
-        createdAt: &id167
+        createdAt:
           type: string
           format: date-time
-        updatedAt: &id168
+        updatedAt:
           type: string
           format: date-time
-        deletedAt: &id169
+        deletedAt:
           type: string
           format: date-time
           nullable: true
@@ -2981,23 +3460,23 @@ components:
     RecurringTask:
       type: object
       properties:
-        id: &id170
+        id:
           type: string
           format: uuid
-        recurringLocationId: &id171
+        recurringLocationId:
           type: string
           format: uuid
-        description: &id172
+        description:
           type: string
-        reqPhoto: &id173
+        reqPhoto:
           type: boolean
-        createdAt: &id174
+        createdAt:
           type: string
           format: date-time
-        updatedAt: &id175
+        updatedAt:
           type: string
           format: date-time
-        deletedAt: &id176
+        deletedAt:
           type: string
           format: date-time
           nullable: true
@@ -3006,7 +3485,7 @@ components:
     RecurringConfigurationCreate:
       type: object
       required:
-      - title
+        - title
       properties:
         title:
           type: string
@@ -3032,11 +3511,7 @@ components:
                 type: array
                 items:
                   type: object
-                  properties:
-                    description:
-                      type: string
-                    reqPhoto:
-                      type: boolean
+                  properties: {description: {type: string}, reqPhoto: {type: boolean}}
     RecurringConfigurationUpdate:
       type: object
       properties:
@@ -3063,66 +3538,59 @@ components:
                 type: array
                 items:
                   type: object
-                  properties:
-                    id:
-                      type: string
-                      format: uuid
-                    description:
-                      type: string
-                    reqPhoto:
-                      type: boolean
+                  properties: {id: {type: string, format: uuid}, description: {type: string}, reqPhoto: {type: boolean}}
     Incident:
       type: object
       properties:
-        id: &id128
+        id:
           type: string
           format: uuid
-        guardId: &id129
+        guardId:
           type: string
           format: uuid
-        title: &id130
+        title:
           type: string
-        categoryId: &id131
-          type: string
-          format: uuid
-          nullable: true
-        typeId: &id132
+        categoryId:
           type: string
           format: uuid
           nullable: true
-        description: &id133
+        typeId:
+          type: string
+          format: uuid
+          nullable: true
+        description:
           type: string
           nullable: true
-        media: &id134
+        media:
           type: object
           nullable: true
-        latitude: &id135
+        latitude:
           type: number
           nullable: true
-        longitude: &id136
+        longitude:
           type: number
           nullable: true
-        createdAt: &id137
+        createdAt:
           type: string
           format: date-time
-        updatedAt: &id138
+        updatedAt:
           type: string
           format: date-time
-        deletedAt: &id139
-          type: string
-          format: date-time
-          nullable: true
-        resolvedAt: &id140
+        deletedAt:
           type: string
           format: date-time
           nullable: true
-        resolvedById: &id141
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        resolvedById:
           type: string
           format: uuid
           nullable: true
         status:
           $ref: '#/components/schemas/IncidentStatus'
-        clientId: &id142
+        clientId:
           type: string
           format: uuid
           nullable: true
@@ -3139,54 +3607,54 @@ components:
     Maintenance:
       type: object
       properties:
-        id: &id177
+        id:
           type: string
           format: uuid
-        guardId: &id178
+        guardId:
           type: string
           format: uuid
-        title: &id179
+        title:
           type: string
-        categoryId: &id180
-          type: string
-          format: uuid
-          nullable: true
-        typeId: &id181
+        categoryId:
           type: string
           format: uuid
           nullable: true
-        category: &id182
+        typeId:
+          type: string
+          format: uuid
+          nullable: true
+        category:
           type: string
           nullable: true
-        description: &id183
+        description:
           type: string
           nullable: true
-        media: &id184
+        media:
           type: object
           nullable: true
-        latitude: &id185
+        latitude:
           type: number
           nullable: true
-        longitude: &id186
+        longitude:
           type: number
           nullable: true
         status:
           $ref: '#/components/schemas/MaintenanceStatus'
-        resolvedAt: &id187
+        resolvedAt:
           type: string
           format: date-time
           nullable: true
-        resolvedById: &id188
+        resolvedById:
           type: string
           format: uuid
           nullable: true
-        createdAt: &id189
+        createdAt:
           type: string
           format: date-time
-        updatedAt: &id190
+        updatedAt:
           type: string
           format: date-time
-        deletedAt: &id191
+        deletedAt:
           type: string
           format: date-time
           nullable: true
@@ -3198,7 +3666,7 @@ components:
           $ref: '#/components/schemas/IncidentCategoryBasic'
         type:
           $ref: '#/components/schemas/IncidentTypeBasic'
-        clientId: &id192
+        clientId:
           type: string
           format: uuid
           nullable: true
@@ -3207,43 +3675,43 @@ components:
     Kardex:
       type: object
       properties:
-        id: &id083
+        id:
           type: string
           format: uuid
-        userId: &id084
+        userId:
           type: string
           format: uuid
-        locationId: &id085
+        locationId:
           type: string
           format: uuid
-        timestamp: &id086
+        timestamp:
           type: string
           format: date-time
-        notes: &id087
+        notes:
           type: string
           nullable: true
-        media: &id088
+        media:
           type: object
           nullable: true
-        latitude: &id089
+        latitude:
           type: number
           nullable: true
-        longitude: &id090
+        longitude:
           type: number
           nullable: true
-        assignmentId: &id091
+        assignmentId:
           type: string
           format: uuid
           nullable: true
         scanType:
           $ref: '#/components/schemas/ScanType'
-        createdAt: &id092
+        createdAt:
           type: string
           format: date-time
-        updatedAt: &id093
+        updatedAt:
           type: string
           format: date-time
-        deletedAt: &id094
+        deletedAt:
           type: string
           format: date-time
           nullable: true
@@ -3255,51 +3723,53 @@ components:
           $ref: '#/components/schemas/UserBasic'
     TResult:
       type: object
-      description: Estructura de respuesta estándar AXZY
+      description: 'Estructura de respuesta estándar AXZY'
       properties:
         success:
           type: boolean
-          description: Indica si la operación fue exitosa
+          description: 'Indica si la operación fue exitosa'
           example: true
         data:
           type: object
-          description: Datos de la respuesta
+          description: 'Datos de la respuesta'
           example:
             id: uuid
             name: Ejemplo
         messages:
           type: array
-          description: Lista de mensajes informativos o de éxito
+          description: 'Lista de mensajes informativos o de éxito'
           items:
             type: string
           example:
-          - Operación realizada con éxito
+            - 'Operación realizada con éxito'
     TResultList:
       type: object
-      description: Estructura de respuesta para listas sin paginar
+      description: 'Estructura de respuesta para listas sin paginar'
       properties:
         success:
           type: boolean
           example: true
         data:
           type: array
-          description: Arreglo de elementos
+          description: 'Arreglo de elementos'
           items:
             type: object
           example:
-          - id: uuid
-            name: Ejemplo 1
-          - id: uuid
-            name: Ejemplo 2
+            -
+              id: uuid
+              name: 'Ejemplo 1'
+            -
+              id: uuid
+              name: 'Ejemplo 2'
         messages:
           type: array
           items:
             type: string
           example:
-          - Success
+            - Success
     TResultDatatable:
       type: object
-      description: Estructura de respuesta para datatables paginados
+      description: 'Estructura de respuesta para datatables paginados'
       properties:
         success:
           type: boolean
@@ -3312,8 +3782,9 @@ components:
               items:
                 type: object
               example:
-              - id: uuid
-                name: Ejemplo 1
+                -
+                  id: uuid
+                  name: 'Ejemplo 1'
             total:
               type: integer
               example: 55
@@ -3322,10 +3793,10 @@ components:
           items:
             type: string
           example:
-          - Success
+            - Success
     TResultError:
       type: object
-      description: Estructura de respuesta de error estándar
+      description: 'Estructura de respuesta de error estándar'
       properties:
         success:
           type: boolean
@@ -3336,22 +3807,22 @@ components:
           example: null
         messages:
           type: array
-          description: Detalles del error o validación
+          description: 'Detalles del error o validación'
           items:
             type: string
           example:
-          - Credenciales inválidas
-          - El campo nombre es obligatorio
+            - 'Credenciales inválidas'
+            - 'El campo nombre es obligatorio'
         stack:
           type: string
-          description: Traza del error (solo en desarrollo)
+          description: 'Traza del error (solo en desarrollo)'
           example: 'Error: Stack trace sample...'
     AppError:
       type: object
       properties:
         message:
           type: string
-          example: Usuario no encontrado
+          example: 'Usuario no encontrado'
         statusCode:
           type: integer
           example: 404
@@ -3361,17 +3832,37 @@ components:
     Client:
       type: object
       properties:
-        id: *id001
-        name: *id002
-        address: *id003
-        rfc: *id004
-        contactName: *id005
-        contactPhone: *id006
-        active: *id007
-        softDelete: *id008
-        createdAt: *id009
-        updatedAt: *id010
-        deletedAt: *id011
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        address:
+          type: string
+          nullable: true
+        rfc:
+          type: string
+          nullable: true
+        contactName:
+          type: string
+          nullable: true
+        contactPhone:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+        softDelete:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
         locations:
           type: array
           items:
@@ -3404,6 +3895,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AssignmentLogBasic'
+        reportConfigurations:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportConfigurationBasic'
     TResultDatatableClient:
       type: object
       properties:
@@ -3447,25 +3942,25 @@ components:
     Zone:
       type: object
       properties:
-        id: &id018
+        id:
           type: string
           format: uuid
-        clientId: &id019
+        clientId:
           type: string
           format: uuid
-        name: &id020
+        name:
           type: string
-        active: &id021
+        active:
           type: boolean
-        softDelete: &id022
+        softDelete:
           type: boolean
-        createdAt: &id023
+        createdAt:
           type: string
           format: date-time
-        updatedAt: &id024
+        updatedAt:
           type: string
           format: date-time
-        deletedAt: &id025
+        deletedAt:
           type: string
           format: date-time
           nullable: true
@@ -3518,44 +4013,44 @@ components:
     Location:
       type: object
       properties:
-        id: &id062
+        id:
           type: string
           format: uuid
-        clientId: &id063
-          type: string
-          format: uuid
-          nullable: true
-        zoneId: &id064
+        clientId:
           type: string
           format: uuid
           nullable: true
-        aisle: &id065
+        zoneId:
+          type: string
+          format: uuid
+          nullable: true
+        aisle:
           type: string
           nullable: true
-        spot: &id066
+        spot:
           type: string
           nullable: true
-        number: &id067
+        number:
           type: string
           nullable: true
-        name: &id068
+        name:
           type: string
-        reference: &id069
+        reference:
           type: string
           nullable: true
-        isOccupied: &id070
+        isOccupied:
           type: boolean
-        active: &id071
+        active:
           type: boolean
-        softDelete: &id072
+        softDelete:
           type: boolean
-        createdAt: &id073
+        createdAt:
           type: string
           format: date-time
-        updatedAt: &id074
+        updatedAt:
           type: string
           format: date-time
-        deletedAt: &id075
+        deletedAt:
           type: string
           format: date-time
           nullable: true
@@ -3622,31 +4117,31 @@ components:
     Assignment:
       type: object
       properties:
-        id: &id095
+        id:
           type: string
           format: uuid
-        guardId: &id096
+        guardId:
           type: string
           format: uuid
-        locationId: &id097
+        locationId:
           type: string
           format: uuid
         status:
           $ref: '#/components/schemas/AssignmentStatus'
-        assignedBy: &id098
+        assignedBy:
           type: string
         assignedByUser:
           $ref: '#/components/schemas/UserBasic'
-        notes: &id099
+        notes:
           type: string
           nullable: true
-        createdAt: &id100
+        createdAt:
           type: string
           format: date-time
-        updatedAt: &id101
+        updatedAt:
           type: string
           format: date-time
-        deletedAt: &id102
+        deletedAt:
           type: string
           format: date-time
           nullable: true
@@ -3825,24 +4320,24 @@ components:
     Schedule:
       type: object
       properties:
-        id: &id054
+        id:
           type: string
           format: uuid
-        name: &id055
+        name:
           type: string
-        startTime: &id056
+        startTime:
           type: string
-        endTime: &id057
+        endTime:
           type: string
-        active: &id058
+        active:
           type: boolean
-        createdAt: &id059
+        createdAt:
           type: string
           format: date-time
-        updatedAt: &id060
+        updatedAt:
           type: string
           format: date-time
-        deletedAt: &id061
+        deletedAt:
           type: string
           format: date-time
           nullable: true
@@ -4041,12 +4536,12 @@ components:
     SysConfig:
       type: object
       properties:
-        key: &id152
+        key:
           type: string
           format: uuid
-        value: &id153
+        value:
           type: string
-        updatedAt: &id154
+        updatedAt:
           type: string
           format: date-time
     TResultDatatableSysConfig:
@@ -4106,16 +4601,27 @@ components:
     Role:
       type: object
       properties:
-        id: *id012
-        name: *id013
-        value: *id014
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        value:
+          type: string
         users:
           type: array
           items:
             $ref: '#/components/schemas/UserBasic'
-        createdAt: *id015
-        updatedAt: *id016
-        deletedAt: *id017
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
     TResultDatatableRole:
       type: object
       properties:
@@ -4159,22 +4665,22 @@ components:
     AssignmentLog:
       type: object
       properties:
-        id: &id041
+        id:
           type: string
           format: uuid
-        guardId: &id042
+        guardId:
           type: string
           format: uuid
-        clientId: &id043
+        clientId:
           type: string
           format: uuid
           nullable: true
-        type: &id044
+        type:
           type: string
-        notes: &id045
+        notes:
           type: string
           nullable: true
-        createdAt: &id046
+        createdAt:
           type: string
           format: date-time
         guard:
@@ -4224,24 +4730,24 @@ components:
     AuditLog:
       type: object
       properties:
-        id: &id047
+        id:
           type: string
           format: uuid
-        userId: &id048
+        userId:
           type: string
           format: uuid
-        module: &id049
+        module:
           type: string
-        action: &id050
+        action:
           type: string
-        resourceId: &id051
+        resourceId:
           type: string
           format: uuid
           nullable: true
-        details: &id052
+        details:
           type: object
           nullable: true
-        createdAt: &id053
+        createdAt:
           type: string
           format: date-time
         user:
@@ -4289,23 +4795,23 @@ components:
     LocationTask:
       type: object
       properties:
-        id: &id076
+        id:
           type: string
           format: uuid
-        locationId: &id077
+        locationId:
           type: string
           format: uuid
-        description: &id078
+        description:
           type: string
-        reqPhoto: &id079
+        reqPhoto:
           type: boolean
-        createdAt: &id080
+        createdAt:
           type: string
           format: date-time
-        updatedAt: &id081
+        updatedAt:
           type: string
           format: date-time
-        deletedAt: &id082
+        deletedAt:
           type: string
           format: date-time
           nullable: true
@@ -4380,29 +4886,29 @@ components:
     AssignmentTask:
       type: object
       properties:
-        id: &id103
+        id:
           type: string
           format: uuid
-        assignmentId: &id104
+        assignmentId:
           type: string
           format: uuid
-        description: &id105
+        description:
           type: string
-        reqPhoto: &id106
+        reqPhoto:
           type: boolean
-        completed: &id107
+        completed:
           type: boolean
-        completedAt: &id108
+        completedAt:
           type: string
           format: date-time
           nullable: true
-        createdAt: &id109
+        createdAt:
           type: string
           format: date-time
-        updatedAt: &id110
+        updatedAt:
           type: string
           format: date-time
-        deletedAt: &id111
+        deletedAt:
           type: string
           format: date-time
           nullable: true
@@ -4451,28 +4957,28 @@ components:
     IncidentCategory:
       type: object
       properties:
-        id: &id112
+        id:
           type: string
           format: uuid
-        name: &id113
+        name:
           type: string
-        value: &id114
+        value:
           type: string
-        type: &id115
+        type:
           type: string
-        color: &id116
-          type: string
-          nullable: true
-        icon: &id117
+        color:
           type: string
           nullable: true
-        createdAt: &id118
+        icon:
+          type: string
+          nullable: true
+        createdAt:
           type: string
           format: date-time
-        updatedAt: &id119
+        updatedAt:
           type: string
           format: date-time
-        deletedAt: &id120
+        deletedAt:
           type: string
           format: date-time
           nullable: true
@@ -4531,23 +5037,23 @@ components:
     IncidentType:
       type: object
       properties:
-        id: &id121
+        id:
           type: string
           format: uuid
-        categoryId: &id122
+        categoryId:
           type: string
           format: uuid
-        name: &id123
+        name:
           type: string
-        value: &id124
+        value:
           type: string
-        createdAt: &id125
-          type: string
-          format: date-time
-        updatedAt: &id126
+        createdAt:
           type: string
           format: date-time
-        deletedAt: &id127
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
           type: string
           format: date-time
           nullable: true
@@ -4684,32 +5190,32 @@ components:
     AssignmentStatus:
       type: string
       enum:
-      - PENDING
-      - CHECKING
-      - UNDER_REVIEW
-      - REVIEWED
-      - ANOMALY
+        - PENDING
+        - CHECKING
+        - UNDER_REVIEW
+        - REVIEWED
+        - ANOMALY
     ScanType:
       type: string
       enum:
-      - ASSIGNMENT
-      - RECURRING
-      - FREE
+        - ASSIGNMENT
+        - RECURRING
+        - FREE
     IncidentStatus:
       type: string
       enum:
-      - PENDING
-      - ATTENDED
+        - PENDING
+        - ATTENDED
     RoundStatus:
       type: string
       enum:
-      - IN_PROGRESS
-      - COMPLETED
+        - IN_PROGRESS
+        - COMPLETED
     MaintenanceStatus:
       type: string
       enum:
-      - PENDING
-      - ATTENDED
+        - PENDING
+        - ATTENDED
     TResultRole:
       type: object
       properties:
@@ -4737,14 +5243,28 @@ components:
     ZoneBasic:
       type: object
       properties:
-        id: *id018
-        clientId: *id019
-        name: *id020
-        active: *id021
-        softDelete: *id022
-        createdAt: *id023
-        updatedAt: *id024
-        deletedAt: *id025
+        id:
+          type: string
+          format: uuid
+        clientId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        active:
+          type: boolean
+        softDelete:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
     TResultZone:
       type: object
       properties:
@@ -4760,21 +5280,49 @@ components:
     UserBasic:
       type: object
       properties:
-        id: *id026
-        name: *id027
-        lastName: *id028
-        username: *id029
-        active: *id030
-        softDelete: *id031
-        shiftStart: *id032
-        shiftEnd: *id033
-        createdAt: *id034
-        updatedAt: *id035
-        deletedAt: *id036
-        isLoggedIn: *id037
-        scheduleId: *id038
-        clientId: *id039
-        roleId: *id040
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        lastName:
+          type: string
+          nullable: true
+        username:
+          type: string
+        active:
+          type: boolean
+        softDelete:
+          type: boolean
+        shiftStart:
+          type: string
+          nullable: true
+        shiftEnd:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+        isLoggedIn:
+          type: boolean
+        scheduleId:
+          type: string
+          format: uuid
+          nullable: true
+        clientId:
+          type: string
+          format: uuid
+          nullable: true
+        roleId:
+          type: string
+          format: uuid
     TResultUser:
       type: object
       properties:
@@ -4790,12 +5338,24 @@ components:
     AssignmentLogBasic:
       type: object
       properties:
-        id: *id041
-        guardId: *id042
-        clientId: *id043
-        type: *id044
-        notes: *id045
-        createdAt: *id046
+        id:
+          type: string
+          format: uuid
+        guardId:
+          type: string
+          format: uuid
+        clientId:
+          type: string
+          format: uuid
+          nullable: true
+        type:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
     TResultAssignmentLog:
       type: object
       properties:
@@ -4811,13 +5371,26 @@ components:
     AuditLogBasic:
       type: object
       properties:
-        id: *id047
-        userId: *id048
-        module: *id049
-        action: *id050
-        resourceId: *id051
-        details: *id052
-        createdAt: *id053
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        module:
+          type: string
+        action:
+          type: string
+        resourceId:
+          type: string
+          format: uuid
+          nullable: true
+        details:
+          type: object
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
     TResultAuditLog:
       type: object
       properties:
@@ -4833,14 +5406,27 @@ components:
     ScheduleBasic:
       type: object
       properties:
-        id: *id054
-        name: *id055
-        startTime: *id056
-        endTime: *id057
-        active: *id058
-        createdAt: *id059
-        updatedAt: *id060
-        deletedAt: *id061
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        startTime:
+          type: string
+        endTime:
+          type: string
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
     TResultSchedule:
       type: object
       properties:
@@ -4856,20 +5442,47 @@ components:
     LocationBasic:
       type: object
       properties:
-        id: *id062
-        clientId: *id063
-        zoneId: *id064
-        aisle: *id065
-        spot: *id066
-        number: *id067
-        name: *id068
-        reference: *id069
-        isOccupied: *id070
-        active: *id071
-        softDelete: *id072
-        createdAt: *id073
-        updatedAt: *id074
-        deletedAt: *id075
+        id:
+          type: string
+          format: uuid
+        clientId:
+          type: string
+          format: uuid
+          nullable: true
+        zoneId:
+          type: string
+          format: uuid
+          nullable: true
+        aisle:
+          type: string
+          nullable: true
+        spot:
+          type: string
+          nullable: true
+        number:
+          type: string
+          nullable: true
+        name:
+          type: string
+        reference:
+          type: string
+          nullable: true
+        isOccupied:
+          type: boolean
+        active:
+          type: boolean
+        softDelete:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
     TResultLocation:
       type: object
       properties:
@@ -4885,13 +5498,26 @@ components:
     LocationTaskBasic:
       type: object
       properties:
-        id: *id076
-        locationId: *id077
-        description: *id078
-        reqPhoto: *id079
-        createdAt: *id080
-        updatedAt: *id081
-        deletedAt: *id082
+        id:
+          type: string
+          format: uuid
+        locationId:
+          type: string
+          format: uuid
+        description:
+          type: string
+        reqPhoto:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
     TResultLocationTask:
       type: object
       properties:
@@ -4907,18 +5533,44 @@ components:
     KardexBasic:
       type: object
       properties:
-        id: *id083
-        userId: *id084
-        locationId: *id085
-        timestamp: *id086
-        notes: *id087
-        media: *id088
-        latitude: *id089
-        longitude: *id090
-        assignmentId: *id091
-        createdAt: *id092
-        updatedAt: *id093
-        deletedAt: *id094
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        locationId:
+          type: string
+          format: uuid
+        timestamp:
+          type: string
+          format: date-time
+        notes:
+          type: string
+          nullable: true
+        media:
+          type: object
+          nullable: true
+        latitude:
+          type: number
+          nullable: true
+        longitude:
+          type: number
+          nullable: true
+        assignmentId:
+          type: string
+          format: uuid
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
     TResultKardex:
       type: object
       properties:
@@ -4934,14 +5586,30 @@ components:
     AssignmentBasic:
       type: object
       properties:
-        id: *id095
-        guardId: *id096
-        locationId: *id097
-        assignedBy: *id098
-        notes: *id099
-        createdAt: *id100
-        updatedAt: *id101
-        deletedAt: *id102
+        id:
+          type: string
+          format: uuid
+        guardId:
+          type: string
+          format: uuid
+        locationId:
+          type: string
+          format: uuid
+        assignedBy:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
     TResultAssignment:
       type: object
       properties:
@@ -4957,15 +5625,32 @@ components:
     AssignmentTaskBasic:
       type: object
       properties:
-        id: *id103
-        assignmentId: *id104
-        description: *id105
-        reqPhoto: *id106
-        completed: *id107
-        completedAt: *id108
-        createdAt: *id109
-        updatedAt: *id110
-        deletedAt: *id111
+        id:
+          type: string
+          format: uuid
+        assignmentId:
+          type: string
+          format: uuid
+        description:
+          type: string
+        reqPhoto:
+          type: boolean
+        completed:
+          type: boolean
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
     TResultAssignmentTask:
       type: object
       properties:
@@ -4981,15 +5666,31 @@ components:
     IncidentCategoryBasic:
       type: object
       properties:
-        id: *id112
-        name: *id113
-        value: *id114
-        type: *id115
-        color: *id116
-        icon: *id117
-        createdAt: *id118
-        updatedAt: *id119
-        deletedAt: *id120
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        value:
+          type: string
+        type:
+          type: string
+        color:
+          type: string
+          nullable: true
+        icon:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
     TResultIncidentCategory:
       type: object
       properties:
@@ -5005,13 +5706,26 @@ components:
     IncidentTypeBasic:
       type: object
       properties:
-        id: *id121
-        categoryId: *id122
-        name: *id123
-        value: *id124
-        createdAt: *id125
-        updatedAt: *id126
-        deletedAt: *id127
+        id:
+          type: string
+          format: uuid
+        categoryId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        value:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
     TResultIncidentType:
       type: object
       properties:
@@ -5027,21 +5741,56 @@ components:
     IncidentBasic:
       type: object
       properties:
-        id: *id128
-        guardId: *id129
-        title: *id130
-        categoryId: *id131
-        typeId: *id132
-        description: *id133
-        media: *id134
-        latitude: *id135
-        longitude: *id136
-        createdAt: *id137
-        updatedAt: *id138
-        deletedAt: *id139
-        resolvedAt: *id140
-        resolvedById: *id141
-        clientId: *id142
+        id:
+          type: string
+          format: uuid
+        guardId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        categoryId:
+          type: string
+          format: uuid
+          nullable: true
+        typeId:
+          type: string
+          format: uuid
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        media:
+          type: object
+          nullable: true
+        latitude:
+          type: number
+          nullable: true
+        longitude:
+          type: number
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        resolvedById:
+          type: string
+          format: uuid
+          nullable: true
+        clientId:
+          type: string
+          format: uuid
+          nullable: true
     TResultIncident:
       type: object
       properties:
@@ -5057,15 +5806,37 @@ components:
     RoundBasic:
       type: object
       properties:
-        id: *id143
-        guardId: *id144
-        clientId: *id145
-        startTime: *id146
-        endTime: *id147
-        recurringConfigurationId: *id148
-        createdAt: *id149
-        updatedAt: *id150
-        deletedAt: *id151
+        id:
+          type: string
+          format: uuid
+        guardId:
+          type: string
+          format: uuid
+        clientId:
+          type: string
+          format: uuid
+          nullable: true
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+          nullable: true
+        recurringConfigurationId:
+          type: string
+          format: uuid
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
     TResultRound:
       type: object
       properties:
@@ -5081,9 +5852,14 @@ components:
     SysConfigBasic:
       type: object
       properties:
-        key: *id152
-        value: *id153
-        updatedAt: *id154
+        key:
+          type: string
+          format: uuid
+        value:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
     TResultSysConfig:
       type: object
       properties:
@@ -5099,14 +5875,29 @@ components:
     RecurringConfigurationBasic:
       type: object
       properties:
-        id: *id155
-        title: *id156
-        clientId: *id157
-        active: *id158
-        softDelete: *id159
-        createdAt: *id160
-        updatedAt: *id161
-        deletedAt: *id162
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        clientId:
+          type: string
+          format: uuid
+          nullable: true
+        active:
+          type: boolean
+        softDelete:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
     TResultRecurringConfiguration:
       type: object
       properties:
@@ -5122,13 +5913,27 @@ components:
     RecurringLocationBasic:
       type: object
       properties:
-        id: *id163
-        recurringConfigurationId: *id164
-        locationId: *id165
-        order: *id166
-        createdAt: *id167
-        updatedAt: *id168
-        deletedAt: *id169
+        id:
+          type: string
+          format: uuid
+        recurringConfigurationId:
+          type: string
+          format: uuid
+        locationId:
+          type: string
+          format: uuid
+        order:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
     TResultRecurringLocation:
       type: object
       properties:
@@ -5144,13 +5949,26 @@ components:
     RecurringTaskBasic:
       type: object
       properties:
-        id: *id170
-        recurringLocationId: *id171
-        description: *id172
-        reqPhoto: *id173
-        createdAt: *id174
-        updatedAt: *id175
-        deletedAt: *id176
+        id:
+          type: string
+          format: uuid
+        recurringLocationId:
+          type: string
+          format: uuid
+        description:
+          type: string
+        reqPhoto:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
     TResultRecurringTask:
       type: object
       properties:
@@ -5166,22 +5984,59 @@ components:
     MaintenanceBasic:
       type: object
       properties:
-        id: *id177
-        guardId: *id178
-        title: *id179
-        categoryId: *id180
-        typeId: *id181
-        category: *id182
-        description: *id183
-        media: *id184
-        latitude: *id185
-        longitude: *id186
-        resolvedAt: *id187
-        resolvedById: *id188
-        createdAt: *id189
-        updatedAt: *id190
-        deletedAt: *id191
-        clientId: *id192
+        id:
+          type: string
+          format: uuid
+        guardId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        categoryId:
+          type: string
+          format: uuid
+          nullable: true
+        typeId:
+          type: string
+          format: uuid
+          nullable: true
+        category:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        media:
+          type: object
+          nullable: true
+        latitude:
+          type: number
+          nullable: true
+        longitude:
+          type: number
+          nullable: true
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        resolvedById:
+          type: string
+          format: uuid
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+        clientId:
+          type: string
+          format: uuid
+          nullable: true
     TResultMaintenance:
       type: object
       properties:
@@ -5190,6 +6045,132 @@ components:
           example: true
         data:
           $ref: '#/components/schemas/Maintenance'
+        messages:
+          type: array
+          items:
+            type: string
+    ReportConfigurationBasic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        reportType:
+          type: string
+        clientId:
+          type: string
+          format: uuid
+          nullable: true
+        configuration:
+          type: object
+        cronExpression:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+        softDelete:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+    ReportConfiguration:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        reportType:
+          type: string
+        clientId:
+          type: string
+          format: uuid
+          nullable: true
+        client:
+          $ref: '#/components/schemas/ClientBasic'
+        configuration:
+          type: object
+        cronExpression:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+        softDelete:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+    TResultReportConfiguration:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/ReportConfiguration'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListReportConfiguration:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportConfiguration'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultDatatableReportConfiguration:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/ReportConfiguration'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
         messages:
           type: array
           items:

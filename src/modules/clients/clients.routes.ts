@@ -11,12 +11,13 @@ import {
 import { authenticate } from "../common/middlewares/auth.middleware";
 import { validate } from "../../core/middlewares/validate.middleware";
 import { CreateClientSchema, UpdateClientSchema, ClientIdParamSchema } from "./schemas/clients.schema";
+import { DataTableFetchParamsSchema } from "../../core/dto/datatable.schema";
 
 const router = Router();
 
 router.use(authenticate);
 
-router.post("/datatable", getDataTable);
+router.post("/datatable", validate(DataTableFetchParamsSchema), getDataTable);
 router.get("/", getClients);
 router.get("/:id", validate(ClientIdParamSchema), getById);
 router.post("/", validate(CreateClientSchema), addClient);

@@ -5,7 +5,9 @@ import { prismaClient } from "@src/core/config/database";
 jest.mock("@src/modules/common/middlewares/auth.middleware", () => ({
   authenticate: (req: any, res: any, next: any) => {
     if (req.headers["user"]) {
-      req.user = JSON.parse(req.headers["user"]);
+      const user = JSON.parse(req.headers["user"]);
+      req.user = user;
+      res.locals.user = user;
     }
     next();
   },
@@ -33,10 +35,30 @@ describe("Rutas de Sincronización (Offline - Sync)", () => {
   });
 
   describe("Operaciones de Pull y Push", () => {
-    it("debe realizar un pull de cambios desde el inicio de los tiempos", async () => {
+    it("debe fallar si la versión de la aplicación no está provista o es incompatible", async () => {
       const response = await request(app)
         .get("/api/v1/sync")
         .set("user", JSON.stringify({ id: "admin" }));
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.messages[0]).toContain("Aplicación desactualizada");
+
+      const response2 = await request(app)
+        .get("/api/v1/sync")
+        .set("user", JSON.stringify({ id: "admin" }))
+        .set("x-app-version", "0.9.0");
+
+      expect(response2.status).toBe(400);
+      expect(response2.body.success).toBe(false);
+      expect(response2.body.messages[0]).toContain("Aplicación desactualizada");
+    });
+
+    it("debe realizar un pull de cambios desde el inicio de los tiempos", async () => {
+      const response = await request(app)
+        .get("/api/v1/sync")
+        .set("user", JSON.stringify({ id: "admin" }))
+        .set("x-bypass-version-check", "true");
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
@@ -49,7 +71,8 @@ describe("Rutas de Sincronización (Offline - Sync)", () => {
       const future = Date.now() + 100000; // 100s in the future
       const response = await request(app)
         .get(`/api/v1/sync?last_pulled_at=${future}`)
-        .set("user", JSON.stringify({ id: "admin" }));
+        .set("user", JSON.stringify({ id: "admin" }))
+        .set("x-bypass-version-check", "true");
 
       expect(response.status).toBe(200);
       // No debería haber cambios nuevos después de una fecha futura
@@ -77,6 +100,7 @@ describe("Rutas de Sincronización (Offline - Sync)", () => {
       const response = await request(app)
         .post("/api/v1/sync")
         .set("user", JSON.stringify({ id: "admin" }))
+        .set("x-bypass-version-check", "true")
         .send(pushData);
 
       expect(response.status).toBe(200);
@@ -88,6 +112,33 @@ describe("Rutas de Sincronización (Offline - Sync)", () => {
       });
       expect(zone).toBeDefined();
       expect(zone?.name).toBe("Push Zone");
+    });
+
+    it("debe fallar si el formato del push es inválido", async () => {
+      const pushData = {
+        changes: "formato-invalido"
+      };
+
+      const response = await request(app)
+        .post("/api/v1/sync")
+        .set("user", JSON.stringify({ id: "admin" }))
+        .set("x-bypass-version-check", "true")
+        .send(pushData);
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.messages).toBeDefined();
+    });
+
+    it("debe fallar si last_pulled_at no es un formato numérico", async () => {
+      const response = await request(app)
+        .get("/api/v1/sync?last_pulled_at=invalido")
+        .set("user", JSON.stringify({ id: "admin" }))
+        .set("x-bypass-version-check", "true");
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.messages).toBeDefined();
     });
   });
 });

@@ -9,6 +9,8 @@ export enum CatalogKey {
   GUARD = "guard",
   INCIDENT_CATEGORY = "incident_category",
   INCIDENT_TYPE = "incident_type",
+  DISCIPLINE_CATEGORY = "discipline_category",
+  DISCIPLINE_TYPE = "discipline_type",
 }
 
 export const getCatalog = async (key: string) => {
@@ -44,6 +46,16 @@ export const getCatalog = async (key: string) => {
           name: l.name,
           value: l.name,
         }));
+      case CatalogKey.DISCIPLINE_CATEGORY:
+        return prismaClient.incidentCategory.findMany({
+          where: { type: "DISCIPLINE" },
+          select: { ...selectFields, color: true, icon: true },
+        });
+      case CatalogKey.DISCIPLINE_TYPE:
+        return prismaClient.incidentType.findMany({
+          where: { category: { type: "DISCIPLINE" } },
+          select: { ...selectFields, categoryId: true },
+        });
       case CatalogKey.GUARD:
         const guards = await prismaClient.user.findMany({
           where: {
@@ -51,13 +63,14 @@ export const getCatalog = async (key: string) => {
             softDelete: false,
             active: true,
           },
-          select: { id: true, name: true, lastName: true },
+          select: { id: true, name: true, lastName: true, clientId: true },
           orderBy: { name: "asc" },
         });
         return guards.map((g) => ({
           id: g.id,
           name: g.name,
           value: `${g.name} ${g.lastName}`,
+          clientId: g.clientId,
         }));
       default:
         throw new Error(`Catalog key "${key}" not found`);

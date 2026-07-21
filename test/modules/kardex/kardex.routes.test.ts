@@ -114,6 +114,8 @@ describe("Rutas de Kardex (Integración Total)", () => {
       const response = await request(app)
         .post("/api/v1/kardex/datatable")
         .send({
+          page: 1,
+          limit: 10,
           filters: { clientId: createdClientId }
         });
 
@@ -125,6 +127,8 @@ describe("Rutas de Kardex (Integración Total)", () => {
       const response = await request(app)
         .post("/api/v1/kardex/datatable")
         .send({
+          page: 1,
+          limit: 10,
           filters: { search: "Kardex" } // Por el apellido "Incidencias" (lastName)
         });
 

@@ -50,8 +50,13 @@ export const getUsers = async (search?: string): Promise<IUserResponse[]> => {
 
 export const getDataTableUsers = async (
   params: ITDataTableFetchParams,
+  user?: any,
 ): Promise<ITDataTableResponse<IUserResponse>> => {
   const prismaParams = getPrismaPaginationParams(params);
+
+  if (user?.role === ROLE_CLIENT && user.clientId) {
+    prismaParams.where.clientId = user.clientId;
+  }
 
   // If there's a name filter, convert it to a global OR search (name, lastName, username)
   if (prismaParams.where.name && typeof prismaParams.where.name === 'object' && prismaParams.where.name.contains) {
@@ -210,10 +215,6 @@ export const updateUser = async (id: string, data: IUserUpdateRequest) => {
       include: { schedule: true, role: true, client: true },
     });
 
-    if (updatedUser.role?.name === ROLE_CLIENT) {
-        throw new Error("No puedes asignar el rol CLIENTE desde este módulo.");
-    }
-
     return updatedUser;
   });
 };
@@ -266,11 +267,21 @@ export const deleteUser = async (id: string) => {
 
     if (user?.clientId && user.role?.name === ROLE_CLIENT) {
       await deleteClientDataCascade(tx, user.clientId, id);
+      await tx.client.delete({
+        where: { id: user.clientId },
+      });
     }
 
     return tx.user.delete({
       where: { id },
     });
+  });
+};
+
+export const updateFCMToken = async (userId: string, token: string) => {
+  return prismaClient.user.update({
+    where: { id: userId },
+    data: { fcmToken: token },
   });
 };
 

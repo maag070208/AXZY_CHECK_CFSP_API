@@ -15,6 +15,12 @@ export const getLocations = asyncHandler(async (req: Request, res: Response) => 
   return res.status(200).json(createTResult(locations));
 });
 
+export const getLocationsByGuard = asyncHandler(async (req: Request, res: Response) => {
+  const { guardId } = req.params;
+  const locations = await locationsService.getLocationsByGuard(guardId);
+  return res.status(200).json(createTResult(locations));
+});
+
 export const addLocation = asyncHandler(async (req: Request, res: Response) => {
   const { clientId, name, zoneId, aisle, spot, number } = req.body;
   

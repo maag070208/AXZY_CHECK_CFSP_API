@@ -3,7 +3,14 @@ import { app } from "@src/index";
 import { prismaClient } from "@src/core/config/database";
 
 jest.mock("@src/modules/common/middlewares/auth.middleware", () => ({
-  authenticate: (req: any, res: any, next: any) => next(),
+  authenticate: (req: any, res: any, next: any) => {
+    if (req.headers["user"]) {
+      const user = JSON.parse(req.headers["user"]);
+      req.user = user;
+      res.locals.user = user;
+    }
+    next();
+  },
   authorize: () => (req: any, res: any, next: any) => next(),
 }));
 

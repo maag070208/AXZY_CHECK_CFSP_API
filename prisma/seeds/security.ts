@@ -24,7 +24,6 @@ export const securitySeed = async (prisma: PrismaClient) => {
 
   // Get Clients
   const plaza2000 = await prisma.client.findUnique({ where: { name: "Plaza 2000" } });
-  const vinas = await prisma.client.findUnique({ where: { name: "Vinas del mar" } });
 
   // 1. ADMINS
   hackerLog.info('AUTH', 'Deploying Admin accounts');
@@ -57,8 +56,8 @@ export const securitySeed = async (prisma: PrismaClient) => {
   const guardUsers = [
     { username: "victor", name: "Victor", lastName: "Guardia", scheduleId: matutino?.id, clientId: plaza2000?.id },
     { username: "martin", name: "Martin", lastName: "Guardia", scheduleId: matutino?.id, clientId: plaza2000?.id },
-    { username: "marco", name: "Marco", lastName: "Guardia", scheduleId: vespertino?.id, clientId: vinas?.id },
-    { username: "asael", name: "Asael", lastName: "Guardia", scheduleId: nocturno?.id, clientId: vinas?.id },
+    { username: "marco", name: "Marco", lastName: "Guardia", scheduleId: vespertino?.id, clientId: plaza2000?.id },
+    { username: "asael", name: "Asael", lastName: "Guardia", scheduleId: nocturno?.id, clientId: plaza2000?.id },
   ];
 
   for (const u of guardUsers) {
@@ -117,6 +116,24 @@ export const securitySeed = async (prisma: PrismaClient) => {
       clientId: plaza2000?.id,
     },
   });
+
+  // 5. RESIDENT/CLIENT USER
+  const resdnRole = await prisma.role.findUnique({ where: { name: "RESDN" } });
+  if (resdnRole && plaza2000) {
+    hackerLog.info('AUTH', 'Deploying Plaza 2000 Resident account');
+    await prisma.user.upsert({
+      where: { username: "plaza2000" },
+      update: { roleId: resdnRole.id, clientId: plaza2000.id },
+      create: {
+        name: "Plaza 2000",
+        lastName: "CLIENTE",
+        username: "plaza2000",
+        password,
+        roleId: resdnRole.id,
+        clientId: plaza2000.id,
+      },
+    });
+  }
 
   hackerLog.success('SECURITY', 'Security layer deployed');
 };

@@ -77,7 +77,7 @@ export const registerCheck = async (data: {
   }
 
   // Create the Kardex Record
-  return prismaClient.kardex.create({
+  const newKardex = await prismaClient.kardex.create({
     data: {
       userId: data.userId,
       locationId: data.locationId,
@@ -88,7 +88,47 @@ export const registerCheck = async (data: {
       assignmentId: finalAssignmentId,
       scanType: finalScanType,
     },
+    include: {
+      assignment: {
+        include: { tasks: true },
+      },
+    },
   });
+
+  if (finalScanType === ScanType.RECURRING) {
+    const activeRound = await prismaClient.round.findFirst({
+      where: { guardId: data.userId, status: ROUND_STATUS_IN_PROGRESS },
+      include: {
+        recurringConfiguration: {
+          include: {
+            recurringLocations: {
+              where: { locationId: data.locationId },
+              include: { tasks: true },
+            },
+          },
+        },
+      },
+    });
+
+    const matchingRL = activeRound?.recurringConfiguration?.recurringLocations?.[0];
+    const tasks = matchingRL?.tasks || [];
+
+    return {
+      ...newKardex,
+      assignment: {
+        id: "0",
+        status: ASSIGNMENT_STATUS_PENDING,
+        tasks: tasks.map((t: any) => ({
+          id: t.id,
+          description: t.description,
+          completed: false,
+          reqPhoto: t.reqPhoto,
+        })),
+      },
+    };
+  }
+
+  return newKardex;
 };
 
 // Deprecated or Internal Use
@@ -175,25 +215,24 @@ export const getKardexById = async (id: string) => {
   });
 
   if (kardex && !kardex.assignment && kardex.scanType === "RECURRING") {
-    const locationWithTasks = await prismaClient.location.findUnique({
-      where: { id: kardex.locationId },
+    const recurringTask = await prismaClient.recurringLocation.findFirst({
+      where: { locationId: kardex.locationId },
       include: { tasks: true },
+      orderBy: { createdAt: "desc" },
     });
 
-    if (locationWithTasks && locationWithTasks.tasks.length > 0) {
-      // Temporarily attach these tasks as if they were assignment tasks (read-only view)
+    if (recurringTask && recurringTask.tasks.length > 0) {
       return {
         ...kardex,
         assignment: {
-          // Mock an assignment object structure for compatibility
           id: "0",
-          tasks: locationWithTasks.tasks.map((t: any) => ({
+          status: ASSIGNMENT_STATUS_PENDING,
+          tasks: recurringTask.tasks.map((t: any) => ({
             id: t.id,
             description: t.description,
-            completed: false, // Default to false since we don't know
+            completed: false,
             reqPhoto: t.reqPhoto,
           })),
-          status: ASSIGNMENT_STATUS_PENDING,
         },
       };
     }

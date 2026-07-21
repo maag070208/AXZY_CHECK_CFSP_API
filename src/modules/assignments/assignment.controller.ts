@@ -4,6 +4,7 @@ import { createTResult } from "@src/core/mappers/tresult.mapper";
 import { AssignmentStatus } from "@prisma/client";
 import { asyncHandler } from "@src/core/utils/asyncHandler";
 import { AppError } from "@src/core/errors/AppError";
+import { createAuditLog } from "../audit/audit.service";
 
 export const getDataTable = asyncHandler(async (req: Request, res: Response) => {
   const result = await assignmentService.getDataTableAssignments(req.body);
@@ -11,7 +12,10 @@ export const getDataTable = asyncHandler(async (req: Request, res: Response) => 
 });
 
 export const createAssignment = asyncHandler(async (req: Request, res: Response) => {
-  const result = await assignmentService.createAssignment(req.body);
+  const result = await assignmentService.createAssignment({
+    ...req.body,
+    assignedBy: res.locals.user.id,
+  });
   return res.status(201).json(createTResult(result));
 });
 
@@ -49,4 +53,18 @@ export const toggleTask = asyncHandler(async (req: Request, res: Response) => {
   const { taskId } = req.params;
   const result = await assignmentService.toggleAssignmentTask(taskId);
   return res.status(200).json(createTResult(result));
+});
+
+export const deleteAssignment = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  await assignmentService.deleteAssignment(id);
+
+  await createAuditLog({
+    userId: res.locals.user?.id || "SYSTEM",
+    module: "ASSIGNMENTS",
+    action: "DELETE",
+    resourceId: id,
+  });
+
+  return res.status(200).json(createTResult(true));
 });

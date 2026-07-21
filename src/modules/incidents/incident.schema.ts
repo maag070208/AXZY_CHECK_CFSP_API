@@ -19,3 +19,23 @@ export const IncidentIdParamSchema = z.object({
     id: z.string().uuid(),
   }),
 });
+
+export const GetIncidentsQuerySchema = z.object({
+  query: z.object({
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+    guardId: z.string().uuid("El ID de guardia debe ser un UUID válido").optional(),
+    category: z.string().optional(),
+    title: z.string().optional(),
+  }),
+});
+
+export const DeleteMediaSchema = z.object({
+  params: z.object({
+    id: z.string().uuid("ID de incidente inválido"),
+  }),
+  query: z.object({
+    key: z.string().min(1, "El key del archivo es requerido"),
+  }),
+});
+

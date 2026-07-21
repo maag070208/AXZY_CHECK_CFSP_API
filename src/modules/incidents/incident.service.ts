@@ -10,14 +10,22 @@ import {
   sendIncidentWhatsApp,
 } from "@src/core/utils/emailSender";
 import { logger } from "@src/core/utils/logger";
+import { publishActivity } from "@src/core/utils/ably-publisher";
 import { now } from "@src/core/utils/date-time.utils";
 
 import { IIncidentResponse } from "./incident.response";
 
+import { ROLE_CLIENT } from "@src/core/config/constants";
+
 export const getDataTableIncidents = async (
   params: ITDataTableFetchParams,
+  user?: any,
 ): Promise<ITDataTableResponse<IIncidentResponse>> => {
   const prismaParams = getPrismaPaginationParams(params);
+
+  if (user?.role === ROLE_CLIENT && user.clientId) {
+    prismaParams.where.clientId = user.clientId;
+  }
 
   // Handle combined search (if any)
   const searchVal = String(params.filters.search || "").trim();
@@ -56,7 +64,7 @@ export const getDataTableIncidents = async (
         clientId: true,
         guard: { select: { id: true, name: true, lastName: true, username: true } },
         resolvedBy: { select: { id: true, name: true, lastName: true } },
-        category: { select: { id: true, name: true } },
+        category: { select: { id: true, name: true, icon: true, color: true } },
         type: { select: { id: true, name: true } },
         client: { select: { id: true, name: true } },
       },
@@ -115,11 +123,27 @@ export const createIncident = async (data: {
           guard: true,
           category: true,
           type: true,
+          client: { select: { id: true, name: true } },
         },
       });
       if (enrichedIncident) {
         await sendIncidentEmail(enrichedIncident, enrichedIncident.guard);
         await sendIncidentWhatsApp(enrichedIncident, enrichedIncident.guard);
+
+        // Publicar en Ably para que el dashboard se actualice en tiempo real
+        await publishActivity("incident", "created", {
+          id: enrichedIncident.id,
+          title: enrichedIncident.title,
+          status: enrichedIncident.status,
+          guardId: enrichedIncident.guardId,
+          guardName: enrichedIncident.guard
+            ? `${enrichedIncident.guard.name} ${enrichedIncident.guard.lastName ?? ""}`.trim()
+            : null,
+          clientId: enrichedIncident.clientId,
+          clientName: enrichedIncident.client?.name ?? null,
+          latitude: enrichedIncident.latitude,
+          longitude: enrichedIncident.longitude,
+        });
       }
     } catch (error) {
       logger.error("Background incident processing error:", error);
@@ -163,16 +187,30 @@ export const getIncidents = async (filters: {
 
   return prismaClient.incident.findMany({
     where: whereClause,
-    include: {
-      guard: true,
-      resolvedBy: true,
+    select: {
+      id: true,
+      guardId: true,
+      title: true,
+      categoryId: true,
+      typeId: true,
+      description: true,
+      media: true,
+      latitude: true,
+      longitude: true,
+      createdAt: true,
+      resolvedAt: true,
+      resolvedById: true,
+      status: true,
+      clientId: true,
+      guard: { select: { id: true, name: true, lastName: true, username: true } },
+      resolvedBy: { select: { id: true, name: true, lastName: true, username: true } },
     },
     orderBy: { createdAt: "desc" },
   });
 };
 
 export const resolveIncident = async (id: string, userId: string) => {
-  return prismaClient.incident.update({
+  const updated = await prismaClient.incident.update({
     where: { id },
     data: {
       status: "ATTENDED",
@@ -184,6 +222,22 @@ export const resolveIncident = async (id: string, userId: string) => {
       resolvedBy: true,
     },
   });
+
+  setImmediate(() => {
+    publishActivity("incident", "resolved", {
+      id: updated.id,
+      title: updated.title,
+      status: updated.status,
+      guardId: updated.guardId,
+      guardName: updated.guard
+        ? `${updated.guard.name} ${updated.guard.lastName ?? ""}`.trim()
+        : null,
+      clientId: updated.clientId,
+      resolvedById: updated.resolvedById,
+    });
+  });
+
+  return updated;
 };
 
 export const getPendingIncidentsCount = async () => {

@@ -10,13 +10,14 @@ import {
 import { authenticate } from "../common/middlewares/auth.middleware";
 import { validate } from "../../core/middlewares/validate.middleware";
 import { CreateScheduleSchema, UpdateScheduleSchema, ScheduleIdParamSchema } from "./schemas/schedule.schema";
+import { DataTableFetchParamsSchema } from "../../core/dto/datatable.schema";
 import { Router } from "express";
 
 const router = Router();
 
 router.use(authenticate);
 
-router.post("/datatable", getDataTable);
+router.post("/datatable", validate(DataTableFetchParamsSchema), getDataTable);
 
 router.get("/", getAll);
 router.get("/:id/users", validate(ScheduleIdParamSchema), getUsers);

@@ -39,7 +39,8 @@ export const getDataTableAssignments = async (params: ITDataTableFetchParams): P
           select: {
             id: true,
             name: true,
-            clientId: true
+            clientId: true,
+            zone: { select: { id: true, name: true, client: { select: { id: true, name: true } } } }
           }
         },
         guard: {
@@ -100,7 +101,7 @@ export const createAssignment = async (data: CreateAssignmentSchema) => {
     data: {
       guardId: data.guardId,
       locationId: data.locationId,
-      assignedBy: data.assignedBy,
+      assignedBy: data.assignedBy || data.guardId,
       notes: data.notes,
       status: ASSIGNMENT_STATUS_PENDING as AssignmentStatus,
       tasks: data.tasks && data.tasks.length > 0 ? {
@@ -126,7 +127,7 @@ export const getAssignmentsByGuard = async (guardId: string) => {
     where: { 
       guardId,
       status: {
-        in: [AssignmentStatus.PENDING, AssignmentStatus.ANOMALY]
+        in: [AssignmentStatus.PENDING, AssignmentStatus.CHECKING, AssignmentStatus.UNDER_REVIEW, AssignmentStatus.ANOMALY]
       }
     },
     include: {
@@ -169,6 +170,19 @@ export const updateAssignmentStatus = async (id: string, status: AssignmentStatu
         data: { status }
     });
 }
+
+// Delete assignment (soft delete)
+export const deleteAssignment = async (id: string) => {
+  const assignment = await prisma.assignment.findUnique({ where: { id } });
+  if (!assignment) {
+    throw new AppError("Asignación no encontrada", 404);
+  }
+
+  return prisma.assignment.update({
+    where: { id },
+    data: { deletedAt: now() },
+  });
+};
 
 // Toggle task completion
 export const toggleAssignmentTask = async (taskId: string) => {

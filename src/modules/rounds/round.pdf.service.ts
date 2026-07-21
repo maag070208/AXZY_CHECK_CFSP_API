@@ -1,4 +1,5 @@
 import { TIMELINE_EVENT_SCAN } from "@src/core/config/constants";
+import { drawTrialWatermark } from "@src/core/utils/pdf.utils";
 import axios from "axios";
 import fs from "fs";
 import path from "path";
@@ -96,7 +97,7 @@ export const generateRoundPDFBuffer = async (
     .fillColor(C_DARK)
     .font("Helvetica-Bold")
     .fontSize(18)
-    .text("FANSAL", 94, 28);
+    .text("CheckApp", 94, 28);
   doc
     .fillColor(C_GRAY)
     .font("Helvetica")
@@ -383,7 +384,7 @@ export const generateRoundPDFBuffer = async (
       .fillColor(C_GRAY)
       .font("Helvetica")
       .fontSize(7)
-      .text("FANSAL — Sistema de Gestión de Seguridad", 24, 763);
+      .text("CheckApp — Sistema de Gestión de Seguridad", 24, 763);
     doc
       .fillColor(C_GRAY)
       .font("Helvetica-Bold")
@@ -406,6 +407,8 @@ export const generateRoundPDFBuffer = async (
         width: 564,
       });
   }
+
+  await drawTrialWatermark(doc, 612, 792);
 
   doc.end();
   return new Promise<Buffer>((resolve) => {

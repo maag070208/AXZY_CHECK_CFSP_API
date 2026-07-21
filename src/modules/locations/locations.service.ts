@@ -1,4 +1,5 @@
 import { prismaClient as prisma } from "@src/core/config/database";
+import { AppError } from "@src/core/errors/AppError";
 import {
   PDF_COLOR_BLACK,
   PDF_COLOR_SUCCESS,
@@ -41,8 +42,7 @@ export const getDataTableLocations = async (
         let query = `
                 SELECT l.*, c.name as "clientName" FROM "Location" l
                 LEFT JOIN "Client" c ON c.id = l."clientId"
-                WHERE l."softDelete" = false
-                AND (
+                WHERE (
                     unaccent(l."name") ILIKE unaccent(${search}) OR
                     unaccent(l."reference") ILIKE unaccent(${search})
                 )
@@ -59,8 +59,7 @@ export const getDataTableLocations = async (
 
         let countQuery = `
                 SELECT COUNT(*)::int as count FROM "Location" l
-                WHERE l."softDelete" = false
-                AND (
+                WHERE (
                     unaccent(l."name") ILIKE unaccent(${search}) OR
                     unaccent(l."reference") ILIKE unaccent(${search})
                 )
@@ -82,7 +81,6 @@ export const getDataTableLocations = async (
     const prismaParams = getPrismaPaginationParams(params);
     const whereClause: any = {
       ...prismaParams.where,
-      softDelete: false,
     };
     if (clientIdFilter) {
       whereClause.clientId = clientIdFilter;
@@ -115,12 +113,25 @@ export const getDataTableLocations = async (
 };
 
 export const getAllLocations = async (clientId?: string) => {
-  const where: any = { softDelete: false };
+  const where: any = {};
   if (clientId) {
     where.clientId = clientId;
   }
   return await prisma.location.findMany({
     where,
+    orderBy: { createdAt: "desc" },
+    include: { client: { select: { name: true } }, tasks: true },
+  });
+};
+
+export const getLocationsByGuard = async (guardId: string) => {
+  const guard = await prisma.user.findUnique({
+    where: { id: guardId },
+    select: { clientId: true },
+  });
+  if (!guard?.clientId) return [];
+  return await prisma.location.findMany({
+    where: { clientId: guard.clientId },
     orderBy: { createdAt: "desc" },
     include: { client: { select: { name: true } }, tasks: true },
   });
@@ -135,9 +146,26 @@ export const createLocation = async (data: {
   spot?: string;
   number?: string;
 }) => {
-  return await prisma.location.create({
-    data,
+  const active = await prisma.location.findFirst({
+    where: {
+      zoneId: data.zoneId,
+      name: data.name,
+      softDelete: false,
+    },
   });
+  if (active) {
+    throw new AppError(
+      "Ya existe una ubicación registrada con ese nombre para esta zona",
+      409,
+    );
+  }
+
+  await prisma.location.updateMany({
+    where: { zoneId: data.zoneId, name: data.name, softDelete: true },
+    data: { name: `${data.name}__DELETED_${Date.now()}` },
+  });
+
+  return await prisma.location.create({ data });
 };
 
 export const updateLocation = async (id: string, data: any) => {
@@ -152,11 +180,10 @@ export const deleteLocation = async (id: string) => {
     where: { id },
   });
 
-  if (!location) throw new Error("Location not found");
+  if (!location) throw new AppError("Location not found", 404);
 
-  return await prisma.location.update({
+  return await prisma.location.delete({
     where: { id },
-    data: { softDelete: true, active: false },
   });
 };
 
@@ -168,6 +195,7 @@ export const getAvailableLocation = async () => {
 
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
+import { drawTrialWatermark } from "@src/core/utils/pdf.utils";
 import { logger } from "@src/core/utils/logger";
 
 export const generateQRPDF = async (ids: string[]) => {
@@ -319,7 +347,7 @@ export const generateQRPDF = async (ids: string[]) => {
       .fillColor(SLATE_600)
       .font("Helvetica-Bold")
       .fontSize(8)
-      .text("PUNTO PROTEGIDO POR AXZY", x, footerY, {
+      .text("PUNTO PROTEGIDO POR CheckApp", x, footerY, {
         width: cardW,
         align: "center",
         characterSpacing: 0.5,
@@ -341,6 +369,8 @@ export const generateQRPDF = async (ids: string[]) => {
       .strokeColor("#E2E8F0") // Slate-200 for subtle cutting guide
       .stroke();
   }
+
+  await drawTrialWatermark(doc, 612, 792);
 
   doc.end();
 

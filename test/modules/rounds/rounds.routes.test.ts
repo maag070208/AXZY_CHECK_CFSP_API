@@ -114,6 +114,8 @@ describe("Rutas de Historial de Rondas (Integración Total)", () => {
       const response = await request(app)
         .post("/api/v1/rounds/datatable")
         .send({
+          page: 1,
+          limit: 10,
           filters: { 
             client: createdClientId,
             status: "COMPLETED",

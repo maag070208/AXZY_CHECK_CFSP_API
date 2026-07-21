@@ -5,28 +5,32 @@ import { ROLE_CLIENT } from "@src/core/config/constants";
  * Used by both clients.service and user.service when a client-owner is deleted.
  */
 export async function deleteClientDataCascade(tx: any, clientId: string, userIdToExclude?: string) {
-  // 1. Unassign guards (don't delete them, just set clientId to null)
-  const roleClient = await tx.role.findUnique({ where: { name: ROLE_CLIENT } });
-  
-  const unassignWhere: any = { clientId };
-  if (userIdToExclude) {
-    unassignWhere.id = { not: userIdToExclude };
-  }
-  unassignWhere.roleId = { not: roleClient?.id };
-
-  await tx.user.updateMany({
-    where: unassignWhere,
-    data: { clientId: null }
+  // 1. Get all users associated with this client
+  const allClientUsers = await tx.user.findMany({
+    where: {
+      clientId,
+      ...(userIdToExclude && { id: { not: userIdToExclude } })
+    },
+    include: { role: true }
   });
 
-  // 2. Physical delete all users that ARE client users
-  const deleteUsersWhere: any = { clientId, roleId: roleClient?.id };
-  if (userIdToExclude) {
-    deleteUsersWhere.id = { not: userIdToExclude };
+  const usersToDelete = allClientUsers.filter((u: any) => u.role?.name === ROLE_CLIENT);
+  const usersToUnassign = allClientUsers.filter((u: any) => u.role?.name !== ROLE_CLIENT);
+
+  // 2. Unassign guards/staff (clientId = null)
+  if (usersToUnassign.length > 0) {
+    await tx.user.updateMany({
+      where: { id: { in: usersToUnassign.map((u: any) => u.id) } },
+      data: { clientId: null }
+    });
   }
-  await tx.user.deleteMany({
-    where: deleteUsersWhere
-  });
+
+  // 3. Physical delete all users that ARE client users
+  if (usersToDelete.length > 0) {
+    await tx.user.deleteMany({
+      where: { id: { in: usersToDelete.map((u: any) => u.id) } }
+    });
+  }
 
   // 3. Recurring Configurations
   const configs = await tx.recurringConfiguration.findMany({
@@ -84,11 +88,7 @@ export async function deleteClientDataCascade(tx: any, clientId: string, userIdT
   await tx.zone.deleteMany({ where: { clientId } });
   
   // 6. Data associated with users of this client (guards/staff)
-  const clientUsers = await tx.user.findMany({
-    where: { clientId },
-    select: { id: true },
-  });
-  const clientUserIds = clientUsers.map((u: any) => u.id);
+  const clientUserIds = usersToUnassign.map((u: any) => u.id);
 
   if (clientUserIds.length > 0) {
     const userAssignments = await tx.assignment.findMany({

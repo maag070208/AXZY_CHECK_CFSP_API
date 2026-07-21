@@ -76,6 +76,8 @@ describe("Rutas de Usuarios (Integración Total)", () => {
             .post("/api/v1/users/datatable")
             .set("user", JSON.stringify({ id: adminUserId }))
             .send({
+                page: 1,
+                limit: 10,
                 filters: { name: "Login" }
             });
 

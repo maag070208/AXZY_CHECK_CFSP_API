@@ -24,4 +24,7 @@ export interface IRoundResponse {
     title: string;
     client?: { name: string } | null;
   } | null;
+  _count?: {
+    kardexEntries: number;
+  };
 }

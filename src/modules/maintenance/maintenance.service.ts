@@ -11,10 +11,19 @@ import {
 
 import { IMaintenanceResponse } from "./maintenance.response";
 
+import { ROLE_CLIENT } from "@src/core/config/constants";
+import { publishActivity } from "@src/core/utils/ably-publisher";
+import { now } from "@src/core/utils/date-time.utils";
+
 export const getDataTableMaintenances = async (
   params: ITDataTableFetchParams,
+  user?: any,
 ): Promise<ITDataTableResponse<IMaintenanceResponse>> => {
   const prismaParams = getPrismaPaginationParams(params);
+
+  if (user?.role === ROLE_CLIENT && user.clientId) {
+    prismaParams.where.clientId = user.clientId;
+  }
   
   // Handle combined search
   const searchVal = String(params.filters.search || "").trim();
@@ -51,7 +60,7 @@ export const getDataTableMaintenances = async (
         clientId: true,
         guard: { select: { id: true, name: true, lastName: true, username: true } },
         resolvedBy: { select: { id: true, name: true, lastName: true } },
-        categoryRel: { select: { id: true, name: true } },
+        categoryRel: { select: { id: true, name: true, icon: true, color: true } },
         type: { select: { id: true, name: true } },
         client: { select: { id: true, name: true } },
       },
@@ -70,7 +79,6 @@ import {
   sendMaintenanceWhatsApp,
 } from "@src/core/utils/emailSender";
 import { logger } from "@src/core/utils/logger";
-import { now } from "@src/core/utils/date-time.utils";
 
 export const createMaintenance = async (data: {
   guardId: string;
@@ -129,6 +137,17 @@ export const createMaintenance = async (data: {
           enrichedMaintenance,
           enrichedMaintenance.guard,
         );
+
+        await publishActivity("maintenance", "created", {
+          id: enrichedMaintenance.id,
+          title: enrichedMaintenance.title,
+          status: enrichedMaintenance.status,
+          guardId: enrichedMaintenance.guardId,
+          guardName: enrichedMaintenance.guard
+            ? `${enrichedMaintenance.guard.name} ${enrichedMaintenance.guard.lastName ?? ""}`.trim()
+            : null,
+          clientId: enrichedMaintenance.clientId,
+        });
       }
     } catch (error) {
       logger.error("Background maintenance processing error:", error);
@@ -172,16 +191,31 @@ export const getMaintenances = async (filters: {
 
   return prismaClient.maintenance.findMany({
     where: whereClause,
-    include: {
-      guard: true,
-      resolvedBy: true,
+    select: {
+      id: true,
+      guardId: true,
+      title: true,
+      categoryId: true,
+      typeId: true,
+      category: true,
+      description: true,
+      media: true,
+      latitude: true,
+      longitude: true,
+      createdAt: true,
+      resolvedAt: true,
+      resolvedById: true,
+      status: true,
+      clientId: true,
+      guard: { select: { id: true, name: true, lastName: true, username: true } },
+      resolvedBy: { select: { id: true, name: true, lastName: true, username: true } },
     },
     orderBy: { createdAt: "desc" },
   });
 };
 
 export const resolveMaintenance = async (id: string, userId: string) => {
-  return prismaClient.maintenance.update({
+  const updated = await prismaClient.maintenance.update({
     where: { id },
     data: {
       status: MAINTENANCE_STATUS_ATTENDED,
@@ -193,6 +227,19 @@ export const resolveMaintenance = async (id: string, userId: string) => {
       resolvedBy: true,
     },
   });
+
+  setImmediate(() => {
+    publishActivity("maintenance", "resolved", {
+      id: updated.id,
+      title: updated.title,
+      status: updated.status,
+      guardId: updated.guardId,
+      clientId: updated.clientId,
+      resolvedById: updated.resolvedById,
+    });
+  });
+
+  return updated;
 };
 
 export const getPendingMaintenancesCount = async () => {

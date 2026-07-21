@@ -143,6 +143,8 @@ describe("Rutas de Incidencias (Integración Total)", () => {
       const response = await request(app)
         .post("/api/v1/incidents/datatable")
         .send({
+          page: 1,
+          limit: 10,
           filters: { search: "Intento" }
         });
 

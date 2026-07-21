@@ -65,7 +65,7 @@ export const sendIncidentEmail = async (incident: any, guard: any) => {
               <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold; color: #555;">Categoría:</td>
               <td style="padding: 10px; border-bottom: 1px solid #eee; color: #333;">
                 <span style="background-color: #fce4ec; color: #c2185b; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">
-                  ${incident.category?.value || "Sin categoría"}
+                  ${incident.category?.name || "Sin categoría"}
                 </span>
               </td>
             </tr>
@@ -174,11 +174,11 @@ export const sendMaintenanceEmail = async (maintenance: any, guard: any) => {
             </tr>
             <tr>
               <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold; color: #555;">Tipo:</td>
-              <td style="padding: 10px; border-bottom: 1px solid #eee; color: #333;">${maintenance.type?.value || maintenance.title}</td>
+              <td style="padding: 10px; border-bottom: 1px solid #eee; color: #333;">${maintenance.type?.name || maintenance.title}</td>
             </tr>
             <tr>
               <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: bold; color: #555;">Categoría:</td>
-              <td style="padding: 10px; border-bottom: 1px solid #eee; color: #333;">${maintenance.categoryRel?.value || maintenance.category || "Mantenimiento General"}</td>
+              <td style="padding: 10px; border-bottom: 1px solid #eee; color: #333;">${maintenance.categoryRel?.name || maintenance.category || "Mantenimiento General"}</td>
             </tr>
           </table>
 
@@ -207,7 +207,7 @@ export const sendMaintenanceEmail = async (maintenance: any, guard: any) => {
 
     if (resend) {
       const { data, error } = await resend.emails.send({
-        from: "AXZY Check <onboarding@resend.dev>",
+        from: "AXZY Check <noreply@axzy.dev>",
         to: recipients,
         subject: subject,
         html: htmlContent,

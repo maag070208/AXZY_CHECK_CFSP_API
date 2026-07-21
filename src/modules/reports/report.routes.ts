@@ -2,6 +2,8 @@
 import { Router } from 'express';
 import * as ReportController from './report.controller';
 import { authenticate } from '../common/middlewares/auth.middleware';
+import { validate } from '@src/core/middlewares/validate.middleware';
+import { generateAdministrativeReportSchema } from './schemas/report.schema';
 
 const router = Router();
 
@@ -13,5 +15,7 @@ router.get('/guards/distribution', ReportController.getActivityDistribution);
 router.get('/guards/detail', ReportController.getGuardDetailedReport);
 router.get('/guards/detail-breakdown/:id', ReportController.getGuardDetailBreakdown);
 router.get('/guards/workload', ReportController.getWorkloadComparison);
+
+router.post('/administrative/matrix/pdf', validate(generateAdministrativeReportSchema), ReportController.generateAdministrativeReport);
 
 export default router;

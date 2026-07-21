@@ -1,14 +1,15 @@
 import { PrismaClient } from "@prisma/client";
 import { catalogsSeed } from "./seeds/catalogs";
+import { disciplineCatalogsSeed } from "./seeds/discipline";
+import { guardLogsSeed } from "./seeds/guard-logs";
 import { incidentCatalogsSeed } from "./seeds/incidents";
-import { locationsSeed } from "./seeds/locations";
+import { hackerLog } from "./seeds/logger";
 import { maintenanceCatalogsSeed } from "./seeds/maintenance";
+import { seedPlaza2000Full } from "./seeds/plaza2000_full";
 import { schedulesSeed } from "./seeds/schedules";
 import { securitySeed } from "./seeds/security";
 import { sysConfigSeed } from "./seeds/sysconfig";
-import { seedPlaza2000Full } from "./seeds/plaza2000_full";
-import { vinasDelMarSeed } from "./seeds/vinas";
-import { hackerLog } from "./seeds/logger";
+import { seedVinasDelMar } from "./seeds/vinas-del-mar";
 
 const prisma = new PrismaClient();
 
@@ -19,11 +20,12 @@ async function main() {
   await incidentCatalogsSeed(prisma);
   await maintenanceCatalogsSeed(prisma);
   await schedulesSeed(prisma);
-  // await locationsSeed(prisma); // Commented out old generic locations
   await seedPlaza2000Full();
-  await vinasDelMarSeed(prisma);
   await securitySeed(prisma);
   await sysConfigSeed(prisma);
+  await disciplineCatalogsSeed(prisma);
+  await guardLogsSeed(prisma);
+  await seedVinasDelMar(prisma);
 
   hackerLog.divider();
   hackerLog.success("SYSTEM", "Master Seeding Complete");

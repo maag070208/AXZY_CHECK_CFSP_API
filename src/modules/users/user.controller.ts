@@ -11,10 +11,11 @@ import * as userService from "./user.service";
 import { asyncHandler } from "@src/core/utils/asyncHandler";
 import { AppError } from "@src/core/errors/AppError";
 import { createAuditLog } from "../audit/audit.service";
+import { publishActivity } from "@src/core/utils/ably-publisher";
 
 
 export const getDataTable = asyncHandler(async (req: Request, res: Response) => {
-  const result = await userService.getDataTableUsers(req.body);
+  const result = await userService.getDataTableUsers(req.body, res.locals.user);
   return res.status(200).json(createTResult(result));
 });
 
@@ -53,6 +54,16 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   // Update logged in status
   await userService.updateUser(user.id, { isLoggedIn: true });
 
+  // Notificar al dashboard en tiempo real
+  setImmediate(() => {
+    publishActivity("guard_status", "login", {
+      guardId: user.id,
+      guardName: `${user.name} ${user.lastName ?? ""}`.trim(),
+      clientId: user.clientId,
+      isLoggedIn: true,
+    });
+  });
+
   const tokenPayload = {
     id: user.id,
     name: user.name,
@@ -78,23 +89,46 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
   const userId = res.locals.user?.id || req.body.userId;
 
   if (userId) {
+    const user = await userService.getUserById(userId);
     await userService.updateUser(userId, { isLoggedIn: false });
     await createAuditLog({
       userId,
       module: "AUTH",
       action: "LOGOUT"
     });
+
+    // Notificar al dashboard en tiempo real
+    if (user) {
+      setImmediate(() => {
+        publishActivity("guard_status", "logout", {
+          guardId: userId,
+          guardName: `${user.name} ${user.lastName ?? ""}`.trim(),
+          clientId: user.clientId,
+          isLoggedIn: false,
+        });
+      });
+    }
   }
 
   return res.status(200).json(createTResult(true));
 });
 
+export const registerFCMToken = asyncHandler(async (req: Request, res: Response) => {
+  const { token, platform } = req.body;
+  const userId = res.locals.user?.id;
+
+  if (!token || !userId) {
+    return res.status(400).json(createTResult(null, ["Token y usuario requeridos"]));
+  }
+
+  await userService.updateFCMToken(userId, token);
+  return res.status(200).json(createTResult({ registered: true }));
+});
+
 export const getUserById = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const user = await userService.getUserById(id);
-  if (!user) {
-    throw new AppError("Usuario no encontrado", 404);
-  }
+  if (!user) throw new AppError("Usuario no encontrado", 404);
   return res.status(200).json(createTResult(user));
 });
 

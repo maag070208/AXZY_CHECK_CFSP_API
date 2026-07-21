@@ -20,7 +20,12 @@ export const getZonesDataTable = async (body: any) => {
 
     const rows = await prisma.zone.findMany({
         where,
-        include: { client: true },
+        include: {
+          client: true,
+          _count: {
+            select: { locations: { where: { softDelete: false } } }
+          }
+        },
         orderBy: { id: "desc" }
     });
 

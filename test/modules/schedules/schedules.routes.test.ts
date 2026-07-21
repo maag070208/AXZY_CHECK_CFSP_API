@@ -1,14 +1,28 @@
 import request from "supertest";
 import { app } from "@src/index";
+import { prismaClient } from "@src/core/config/database";
 
 jest.mock("@src/modules/common/middlewares/auth.middleware", () => ({
-  authenticate: (req: any, res: any, next: any) => next(),
+  authenticate: (req: any, res: any, next: any) => {
+    if (req.headers["user"]) {
+      const user = JSON.parse(req.headers["user"]);
+      req.user = user;
+      res.locals.user = user;
+    }
+    next();
+  },
   authorize: () => (req: any, res: any, next: any) => next(),
 }));
 
 describe("Rutas de Horarios (Integración)", () => {
   let createdScheduleId: string;
   const uniqueName = `Horario de Prueba ${Date.now()}`;
+
+  afterAll(async () => {
+    if (createdScheduleId) {
+      await prismaClient.schedule.delete({ where: { id: createdScheduleId } }).catch(() => {});
+    }
+  });
 
   describe("POST /api/v1/schedules", () => {
     it("debe crear un nuevo horario en la base de datos", async () => {

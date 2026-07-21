@@ -13,3 +13,12 @@ export const RoundIdParamSchema = z.object({
     id: z.string().uuid(),
   }),
 });
+
+export const GetRoundsQuerySchema = z.object({
+  query: z.object({
+    date: z.string().optional(),
+    guardId: z.string().uuid("El ID de guardia debe ser un UUID válido").optional(),
+    status: z.string().optional(),
+  }),
+});
+

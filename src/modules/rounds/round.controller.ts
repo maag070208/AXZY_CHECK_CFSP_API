@@ -100,6 +100,30 @@ export const generateReport = asyncHandler(async (req: Request, res: Response) =
   return res.send(buffer);
 });
 
+export const deleteRound = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const user = res.locals.user;
+
+  if (user?.role === "RESDN") {
+    throw new AppError("No tienes permiso para eliminar rondas", 403);
+  }
+
+  const result = await roundService.deleteRound(id);
+
+  if (!result.success) {
+    throw new AppError(result.messages?.[0] || "Error eliminando ronda", 404);
+  }
+
+  await createAuditLog({
+    userId: res.locals.user?.id || "SYSTEM",
+    module: "ROUNDS",
+    action: "DELETE",
+    resourceId: id,
+  });
+
+  return res.status(200).json(createTResult(true));
+});
+
 export const shareReport = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const user = res.locals.user;
