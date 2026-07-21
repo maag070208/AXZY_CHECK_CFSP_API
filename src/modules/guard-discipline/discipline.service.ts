@@ -3,6 +3,7 @@ import { AppError } from "@src/core/errors/AppError";
 import { ITDataTableFetchParams, ITDataTableResponse } from "@src/core/dto/datatable.dto";
 import { getPrismaPaginationParams } from "@src/core/utils/prisma-pagination.utils";
 import { createAuditLog } from "../audit/audit.service";
+import { publishActivity } from "@src/core/utils/ably-publisher";
 
 const prisma = prismaClient;
 
@@ -168,6 +169,19 @@ export const createDiscipline = async (data: any, createdById: string) => {
     resourceId: record.id,
   });
 
+  setImmediate(() => {
+    publishActivity("discipline", "created", {
+      id: record.id,
+      title: record.title,
+      status: record.status,
+      guardId: record.guardId,
+      guardName: record.guard
+        ? `${record.guard.name} ${record.guard.lastName ?? ""}`.trim()
+        : null,
+      clientId: record.clientId,
+    });
+  });
+
   return record;
 };
 
@@ -177,7 +191,7 @@ export const resolveDiscipline = async (id: string, data: { description?: string
     throw new AppError("Registro no encontrado", 404);
   }
 
-  return prisma.guardDiscipline.update({
+  const updated = await prisma.guardDiscipline.update({
     where: { id },
     data: {
       status: data.status,
@@ -189,6 +203,18 @@ export const resolveDiscipline = async (id: string, data: { description?: string
       type: { select: { id: true, name: true } },
     },
   });
+
+  setImmediate(() => {
+    publishActivity("discipline", data.status === "RESOLVED" ? "resolved" : "dismissed", {
+      id: updated.id,
+      title: updated.title,
+      status: updated.status,
+      guardId: updated.guardId,
+      clientId: updated.clientId,
+    });
+  });
+
+  return updated;
 };
 
 export const deleteDiscipline = async (id: string) => {

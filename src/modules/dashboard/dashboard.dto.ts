@@ -8,6 +8,7 @@ export interface IActiveGuard {
   name: string;
   lastName: string;
   username: string;
+  role: 'GUARD' | 'SHIFT' | 'MAINT';
   clientId: string | null;
   clientName: string | null;
   isLoggedIn: boolean;
@@ -58,9 +59,24 @@ export interface IPanicAlertListItem {
   resolvedAt: string | null;
 }
 
+export interface IRoleBreakdown {
+  guards: number;
+  shift: number;
+  maintenance: number;
+}
+
+export interface IActiveBreakdown {
+  total: number;
+  guards: number;
+  shift: number;
+  maintenance: number;
+}
+
 export interface IDashboardOverview {
   totalGuards: number;
   activeGuardsNow: number;
+  totalBreakdown: IRoleBreakdown;
+  activeBreakdown: IActiveBreakdown;
   totalClients: number;
   totalLocations: number;
   totalAssignments: number;

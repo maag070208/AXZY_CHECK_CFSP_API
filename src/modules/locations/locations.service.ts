@@ -347,7 +347,7 @@ export const generateQRPDF = async (ids: string[]) => {
       .fillColor(SLATE_600)
       .font("Helvetica-Bold")
       .fontSize(8)
-      .text("PUNTO PROTEGIDO POR FANSAL", x, footerY, {
+      .text("PUNTO PROTEGIDO POR CheckApp", x, footerY, {
         width: cardW,
         align: "center",
         characterSpacing: 0.5,

@@ -12,6 +12,8 @@ import {
 import { IMaintenanceResponse } from "./maintenance.response";
 
 import { ROLE_CLIENT } from "@src/core/config/constants";
+import { publishActivity } from "@src/core/utils/ably-publisher";
+import { now } from "@src/core/utils/date-time.utils";
 
 export const getDataTableMaintenances = async (
   params: ITDataTableFetchParams,
@@ -77,7 +79,6 @@ import {
   sendMaintenanceWhatsApp,
 } from "@src/core/utils/emailSender";
 import { logger } from "@src/core/utils/logger";
-import { now } from "@src/core/utils/date-time.utils";
 
 export const createMaintenance = async (data: {
   guardId: string;
@@ -136,6 +137,17 @@ export const createMaintenance = async (data: {
           enrichedMaintenance,
           enrichedMaintenance.guard,
         );
+
+        await publishActivity("maintenance", "created", {
+          id: enrichedMaintenance.id,
+          title: enrichedMaintenance.title,
+          status: enrichedMaintenance.status,
+          guardId: enrichedMaintenance.guardId,
+          guardName: enrichedMaintenance.guard
+            ? `${enrichedMaintenance.guard.name} ${enrichedMaintenance.guard.lastName ?? ""}`.trim()
+            : null,
+          clientId: enrichedMaintenance.clientId,
+        });
       }
     } catch (error) {
       logger.error("Background maintenance processing error:", error);
@@ -203,7 +215,7 @@ export const getMaintenances = async (filters: {
 };
 
 export const resolveMaintenance = async (id: string, userId: string) => {
-  return prismaClient.maintenance.update({
+  const updated = await prismaClient.maintenance.update({
     where: { id },
     data: {
       status: MAINTENANCE_STATUS_ATTENDED,
@@ -215,6 +227,19 @@ export const resolveMaintenance = async (id: string, userId: string) => {
       resolvedBy: true,
     },
   });
+
+  setImmediate(() => {
+    publishActivity("maintenance", "resolved", {
+      id: updated.id,
+      title: updated.title,
+      status: updated.status,
+      guardId: updated.guardId,
+      clientId: updated.clientId,
+      resolvedById: updated.resolvedById,
+    });
+  });
+
+  return updated;
 };
 
 export const getPendingMaintenancesCount = async () => {

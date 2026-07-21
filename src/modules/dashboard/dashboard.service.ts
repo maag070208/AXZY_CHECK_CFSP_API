@@ -2,16 +2,20 @@ import { prismaClient as prisma } from "@src/core/config/database";
 import {
   ROLE_CLIENT,
   ROLE_GUARD,
+  ROLE_MAINTENANCE,
+  ROLE_SHIFT,
   INCIDENT_STATUS_PENDING,
   MAINTENANCE_STATUS_PENDING,
   ROUND_STATUS_IN_PROGRESS,
 } from "@src/core/config/constants";
 import {
+  IActiveBreakdown,
   IActiveGuard,
   IActivityItem,
   IDashboardOverview,
   IPanicAlertListItem,
   IPendingCounts,
+  IRoleBreakdown,
 } from "./dashboard.dto";
 
 /**
@@ -43,7 +47,11 @@ export const getOverview = async (
 
   const [
     totalGuards,
+    totalShift,
+    totalMaintenance,
     activeGuardsNow,
+    activeGuardsNowShift,
+    activeGuardsNowMaintenance,
     totalClients,
     totalLocations,
     totalAssignments,
@@ -66,8 +74,42 @@ export const getOverview = async (
         ...buildGuardFilter(user),
         active: true,
         softDelete: false,
+        role: { name: ROLE_SHIFT },
+      },
+    }),
+    prisma.user.count({
+      where: {
+        ...buildGuardFilter(user),
+        active: true,
+        softDelete: false,
+        role: { name: ROLE_MAINTENANCE },
+      },
+    }),
+    prisma.user.count({
+      where: {
+        ...buildGuardFilter(user),
+        active: true,
+        softDelete: false,
         isLoggedIn: true,
         role: { name: ROLE_GUARD },
+      },
+    }),
+    prisma.user.count({
+      where: {
+        ...buildGuardFilter(user),
+        active: true,
+        softDelete: false,
+        isLoggedIn: true,
+        role: { name: ROLE_SHIFT },
+      },
+    }),
+    prisma.user.count({
+      where: {
+        ...buildGuardFilter(user),
+        active: true,
+        softDelete: false,
+        isLoggedIn: true,
+        role: { name: ROLE_MAINTENANCE },
       },
     }),
     prisma.client.count({ where: { active: true, softDelete: false } }),
@@ -94,6 +136,19 @@ export const getOverview = async (
     }),
   ]);
 
+  const totalBreakdown: IRoleBreakdown = {
+    guards: totalGuards,
+    shift: totalShift,
+    maintenance: totalMaintenance,
+  };
+
+  const activeBreakdown: IActiveBreakdown = {
+    total: activeGuardsNow + activeGuardsNowShift + activeGuardsNowMaintenance,
+    guards: activeGuardsNow,
+    shift: activeGuardsNowShift,
+    maintenance: activeGuardsNowMaintenance,
+  };
+
   const pendingCounts: IPendingCounts = {
     incidents: pendingIncidents,
     maintenances: pendingMaintenances,
@@ -103,8 +158,10 @@ export const getOverview = async (
   };
 
   return {
-    totalGuards,
-    activeGuardsNow,
+    totalGuards: totalGuards + totalShift + totalMaintenance,
+    activeGuardsNow: activeBreakdown.total,
+    totalBreakdown,
+    activeBreakdown,
     totalClients,
     totalLocations,
     totalAssignments,
@@ -125,13 +182,14 @@ export const getActiveGuards = async (
       ...buildGuardFilter(user),
       active: true,
       softDelete: false,
-      role: { name: ROLE_GUARD },
+      role: { name: { in: [ROLE_GUARD, ROLE_SHIFT, ROLE_MAINTENANCE] } },
     },
     select: {
       id: true,
       name: true,
       lastName: true,
       username: true,
+      role: { select: { name: true } },
       clientId: true,
       client: { select: { name: true } },
       isLoggedIn: true,
@@ -158,11 +216,15 @@ export const getActiveGuards = async (
 
   return guards.map((g) => {
     const lastKardex = g.kardexEntries?.[0];
+    const roleName = g.role?.name as 'GUARD' | 'SHIFT' | 'MAINT' | undefined;
     return {
       id: g.id,
       name: g.name,
       lastName: g.lastName ?? "",
       username: g.username,
+      role: roleName === 'SHIFT' || roleName === 'MAINT' || roleName === 'GUARD'
+        ? roleName
+        : 'GUARD',
       clientId: g.clientId,
       clientName: g.client?.name ?? null,
       isLoggedIn: g.isLoggedIn,

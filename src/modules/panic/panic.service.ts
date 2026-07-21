@@ -2,6 +2,7 @@ import { prismaClient } from "@src/core/config/database";
 import { logger } from "@src/core/utils/logger";
 import { now } from "@src/core/utils/date-time.utils";
 import { ROLE_GUARD, ROLE_CLIENT } from "@src/core/config/constants";
+import { publishActivity, publishToClient } from "@src/core/utils/ably-publisher";
 import {
   IPanicAlert,
   IPanicAlertCreate,
@@ -11,20 +12,6 @@ import {
 } from "./panic.dto";
 import { ITDataTableFetchParams } from "@src/core/dto/datatable.dto";
 import { getPrismaPaginationParams } from "@src/core/utils/prisma-pagination.utils";
-
-import * as Ably from "ably";
-
-const ABLY_KEY =
-  process.env.ABLY_API_KEY ||
-  "_iYGPA.fJVkAw:ix6oVHub7TpqllbX6JMdmfJgDoqKKEIoZ5wJNRo6Zlc";
-
-let ablyRest: Ably.Rest | null = null;
-const getAbly = (): Ably.Rest => {
-  if (!ablyRest) {
-    ablyRest = new Ably.Rest({ key: ABLY_KEY });
-  }
-  return ablyRest;
-};
 
 let firebaseApp: any = null;
 const getFirebase = () => {
@@ -201,8 +188,8 @@ export const createPanicAlert = async (
       }
 
       try {
-        const ably = getAbly();
-
+        // a) Canal global: notificación toast (compat con consumidores legacy)
+        const ably = (await import("@src/core/utils/ably-publisher")).getAbly();
         const globalChannel = ably.channels.get("global");
         await globalChannel.publish("notification", {
           title: "🚨 EMERGENCIA",
@@ -212,7 +199,7 @@ export const createPanicAlert = async (
           persistent: true,
           panic: true,
           alertId: dto.id,
-          incidentId: dto.id, // compat con consumidores legacy
+          incidentId: dto.id,
           guardId: guard.id,
           guardName,
           clientId,
@@ -221,13 +208,10 @@ export const createPanicAlert = async (
           accuracy: input.triggerAccuracy,
         });
 
-        const dedicatedChannelName = clientId
-          ? `panic.${clientId}`
-          : "panic.global";
-        const dedicatedChannel = ably.channels.get(dedicatedChannelName);
-        await dedicatedChannel.publish("panic", {
+        // b) Canal dedicado del cliente
+        await publishToClient(clientId, "panic", {
           alertId: dto.id,
-          incidentId: dto.id, // compat
+          incidentId: dto.id,
           guardId: guard.id,
           guardName,
           clientId,
@@ -236,6 +220,18 @@ export const createPanicAlert = async (
           accuracy: input.triggerAccuracy,
           source: input.source ?? "volume_button",
           timestamp: dto.createdAt,
+        });
+
+        // c) Evento de actividad genérico para que el dashboard se refresque
+        await publishActivity("panic", "created", {
+          alertId: dto.id,
+          guardId: guard.id,
+          guardName,
+          clientId,
+          clientName: undefined,
+          latitude: input.triggerLatitude,
+          longitude: input.triggerLongitude,
+          message: panicMessage,
         });
       } catch (e) {
         logger.error("[Panic] Error publicando en Ably:", e);
@@ -335,7 +331,24 @@ export const resolvePanicAlert = async (
     include: PANIC_INCLUDE,
   });
 
-  return toDto(updated);
+  const dto = toDto(updated);
+
+  // Publicar en Ably para que el dashboard se actualice en vivo
+  setImmediate(() => {
+    publishActivity("panic", "resolved", {
+      alertId: dto.id,
+      guardId: dto.guardId,
+      clientId: dto.clientId,
+      status: dto.status,
+      resolutionComment: dto.resolutionComment,
+      resolvedById: dto.resolvedById,
+      resolvedByName: dto.resolvedBy
+        ? `${dto.resolvedBy.name} ${dto.resolvedBy.lastName ?? ""}`.trim()
+        : null,
+    });
+  });
+
+  return dto;
 };
 
 export const getRecentPanicAlerts = async (

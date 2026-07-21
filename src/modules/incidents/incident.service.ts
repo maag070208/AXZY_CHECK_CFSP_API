@@ -10,6 +10,7 @@ import {
   sendIncidentWhatsApp,
 } from "@src/core/utils/emailSender";
 import { logger } from "@src/core/utils/logger";
+import { publishActivity } from "@src/core/utils/ably-publisher";
 import { now } from "@src/core/utils/date-time.utils";
 
 import { IIncidentResponse } from "./incident.response";
@@ -122,11 +123,27 @@ export const createIncident = async (data: {
           guard: true,
           category: true,
           type: true,
+          client: { select: { id: true, name: true } },
         },
       });
       if (enrichedIncident) {
         await sendIncidentEmail(enrichedIncident, enrichedIncident.guard);
         await sendIncidentWhatsApp(enrichedIncident, enrichedIncident.guard);
+
+        // Publicar en Ably para que el dashboard se actualice en tiempo real
+        await publishActivity("incident", "created", {
+          id: enrichedIncident.id,
+          title: enrichedIncident.title,
+          status: enrichedIncident.status,
+          guardId: enrichedIncident.guardId,
+          guardName: enrichedIncident.guard
+            ? `${enrichedIncident.guard.name} ${enrichedIncident.guard.lastName ?? ""}`.trim()
+            : null,
+          clientId: enrichedIncident.clientId,
+          clientName: enrichedIncident.client?.name ?? null,
+          latitude: enrichedIncident.latitude,
+          longitude: enrichedIncident.longitude,
+        });
       }
     } catch (error) {
       logger.error("Background incident processing error:", error);
@@ -193,7 +210,7 @@ export const getIncidents = async (filters: {
 };
 
 export const resolveIncident = async (id: string, userId: string) => {
-  return prismaClient.incident.update({
+  const updated = await prismaClient.incident.update({
     where: { id },
     data: {
       status: "ATTENDED",
@@ -205,6 +222,22 @@ export const resolveIncident = async (id: string, userId: string) => {
       resolvedBy: true,
     },
   });
+
+  setImmediate(() => {
+    publishActivity("incident", "resolved", {
+      id: updated.id,
+      title: updated.title,
+      status: updated.status,
+      guardId: updated.guardId,
+      guardName: updated.guard
+        ? `${updated.guard.name} ${updated.guard.lastName ?? ""}`.trim()
+        : null,
+      clientId: updated.clientId,
+      resolvedById: updated.resolvedById,
+    });
+  });
+
+  return updated;
 };
 
 export const getPendingIncidentsCount = async () => {

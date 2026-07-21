@@ -95,7 +95,7 @@ export const generateAdministrativeMatrixPDFBuffer = async (
       .fillColor(C_DARK)
       .font("Helvetica-Bold")
       .fontSize(16)
-      .text("FANSAL", 90, 20);
+      .text("CheckApp", 90, 20);
     doc
       .fillColor(C_GRAY)
       .font("Helvetica")

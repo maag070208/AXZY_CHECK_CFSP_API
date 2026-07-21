@@ -1,7 +1,6 @@
 import { prismaClient as prisma } from "@src/core/config/database";
 import { ITDataTableFetchParams, ITDataTableResponse } from "@src/core/dto/datatable.dto";
 import { getPrismaPaginationParams } from "@src/core/utils/prisma-pagination.utils";
-import { logger } from "@src/core/utils/logger";
 
 export const getDataTable = async (params: ITDataTableFetchParams): Promise<ITDataTableResponse<any>> => {
   const prismaParams = getPrismaPaginationParams(params);
