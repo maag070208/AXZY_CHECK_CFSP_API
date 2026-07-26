@@ -23,7 +23,7 @@ export const securitySeed = async (prisma: PrismaClient) => {
   const nocturno = await prisma.schedule.findUnique({ where: { name: "Nocturno" } });
 
   // Get Clients
-  const plaza2000 = await prisma.client.findUnique({ where: { name: "Plaza 2000" } });
+  const hotelPuertoNuevo = await prisma.client.findUnique({ where: { name: "Hotel Puerto Nuevo" } });
 
   // 1. ADMINS
   hackerLog.info('AUTH', 'Deploying Admin accounts');
@@ -54,10 +54,10 @@ export const securitySeed = async (prisma: PrismaClient) => {
   // 2. GUARDS
   hackerLog.info('AUTH', 'Deploying Guard infrastructure');
   const guardUsers = [
-    { username: "victor", name: "Victor", lastName: "Guardia", scheduleId: matutino?.id, clientId: plaza2000?.id },
-    { username: "martin", name: "Martin", lastName: "Guardia", scheduleId: matutino?.id, clientId: plaza2000?.id },
-    { username: "marco", name: "Marco", lastName: "Guardia", scheduleId: vespertino?.id, clientId: plaza2000?.id },
-    { username: "asael", name: "Asael", lastName: "Guardia", scheduleId: nocturno?.id, clientId: plaza2000?.id },
+    { username: "victor", name: "Victor", lastName: "Guardia", scheduleId: matutino?.id, clientId: hotelPuertoNuevo?.id },
+    { username: "martin", name: "Martin", lastName: "Guardia", scheduleId: matutino?.id, clientId: hotelPuertoNuevo?.id },
+    { username: "marco", name: "Marco", lastName: "Guardia", scheduleId: vespertino?.id, clientId: hotelPuertoNuevo?.id },
+    { username: "asael", name: "Asael", lastName: "Guardia", scheduleId: nocturno?.id, clientId: hotelPuertoNuevo?.id },
   ];
 
   for (const u of guardUsers) {
@@ -90,7 +90,7 @@ export const securitySeed = async (prisma: PrismaClient) => {
   // 3. SHIFT GUARDS
   await prisma.user.upsert({
     where: { username: "ricardo" },
-    update: { scheduleId: vespertino?.id, roleId: shiftRole.id, clientId: plaza2000?.id },
+    update: { scheduleId: vespertino?.id, roleId: shiftRole.id, clientId: hotelPuertoNuevo?.id },
     create: {
       name: "Ricardo",
       lastName: "Shift",
@@ -98,7 +98,7 @@ export const securitySeed = async (prisma: PrismaClient) => {
       password,
       roleId: shiftRole.id,
       scheduleId: vespertino?.id,
-      clientId: plaza2000?.id,
+      clientId: hotelPuertoNuevo?.id,
     },
   });
 
@@ -106,31 +106,31 @@ export const securitySeed = async (prisma: PrismaClient) => {
   hackerLog.info('AUTH', 'Deploying Maintenance personnel');
   await prisma.user.upsert({
     where: { username: "mario" },
-    update: { roleId: maintRole.id, clientId: plaza2000?.id },
+    update: { roleId: maintRole.id, clientId: hotelPuertoNuevo?.id },
     create: {
       name: "Mario",
       lastName: "Mantenimiento",
       username: "mario",
       password,
       roleId: maintRole.id,
-      clientId: plaza2000?.id,
+      clientId: hotelPuertoNuevo?.id,
     },
   });
 
   // 5. RESIDENT/CLIENT USER
   const resdnRole = await prisma.role.findUnique({ where: { name: "RESDN" } });
-  if (resdnRole && plaza2000) {
-    hackerLog.info('AUTH', 'Deploying Plaza 2000 Resident account');
+  if (resdnRole && hotelPuertoNuevo) {
+    hackerLog.info('AUTH', 'Deploying Hotel Puerto Nuevo Resident account');
     await prisma.user.upsert({
-      where: { username: "plaza2000" },
-      update: { roleId: resdnRole.id, clientId: plaza2000.id },
+      where: { username: "hotelpn" },
+      update: { roleId: resdnRole.id, clientId: hotelPuertoNuevo.id },
       create: {
-        name: "Plaza 2000",
+        name: "Hotel Puerto Nuevo",
         lastName: "CLIENTE",
-        username: "plaza2000",
+        username: "hotelpn",
         password,
         roleId: resdnRole.id,
-        clientId: plaza2000.id,
+        clientId: hotelPuertoNuevo.id,
       },
     });
   }
