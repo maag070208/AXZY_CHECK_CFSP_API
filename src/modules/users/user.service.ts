@@ -4,7 +4,7 @@ import {
   ITDataTableResponse,
 } from "@src/core/dto/datatable.dto";
 import { getPrismaPaginationParams } from "@src/core/utils/prisma-pagination.utils";
-import { OPERATIONAL_ROLES, ROLE_CLIENT } from "@src/core/config/constants";
+import { OPERATIONAL_ROLES, PRISMA_TRANSACTION_OPTIONS, ROLE_CLIENT } from "@src/core/config/constants";
 import { IUserCreateRequest, IUserUpdateRequest } from "./user.dto";
 import { deleteClientDataCascade } from "../clients/clients.cascade";
 
@@ -216,7 +216,7 @@ export const updateUser = async (id: string, data: IUserUpdateRequest) => {
     });
 
     return updatedUser;
-  });
+  }, PRISMA_TRANSACTION_OPTIONS);
 };
 
 export const getUserById = async (id: string) => {
@@ -275,7 +275,7 @@ export const deleteUser = async (id: string) => {
     return tx.user.delete({
       where: { id },
     });
-  });
+  }, PRISMA_TRANSACTION_OPTIONS);
 };
 
 export const updateFCMToken = async (userId: string, token: string) => {

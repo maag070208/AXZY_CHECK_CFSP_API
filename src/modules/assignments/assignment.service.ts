@@ -24,6 +24,9 @@ export const getDataTableAssignments = async (params: ITDataTableFetchParams): P
     delete prismaParams.where.clientId;
   }
 
+  // Excluir asignaciones con borrado lógico
+  prismaParams.where.deletedAt = null;
+
   const [rows, total] = await Promise.all([
     prisma.assignment.findMany({
       ...prismaParams,
@@ -82,6 +85,7 @@ export const createAssignment = async (data: CreateAssignmentSchema) => {
     where: {
       guardId: data.guardId,
       locationId: data.locationId,
+      deletedAt: null,
       status: {
         in: [
           AssignmentStatus.PENDING,
@@ -126,6 +130,7 @@ export const getAssignmentsByGuard = async (guardId: string) => {
   return prisma.assignment.findMany({
     where: { 
       guardId,
+      deletedAt: null,
       status: {
         in: [AssignmentStatus.PENDING, AssignmentStatus.CHECKING, AssignmentStatus.UNDER_REVIEW, AssignmentStatus.ANOMALY]
       }
@@ -140,7 +145,7 @@ export const getAssignmentsByGuard = async (guardId: string) => {
 
 // Get all assignments (filtering optional)
 export const getAllAssignments = async (filters: { guardId?: string; status?: AssignmentStatus; id?: string }) => {
-  const where: any = {};
+  const where: any = { deletedAt: null };
   if (filters.id) where.id = filters.id;
   if (filters.guardId) where.guardId = filters.guardId;
   if (filters.status) where.status = filters.status;

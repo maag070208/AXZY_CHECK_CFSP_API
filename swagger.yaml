@@ -59,6 +59,18 @@ tags:
   -
     name: home
     description: 'Métricas y dashboard de inicio'
+  -
+    name: shift-plans
+    description: 'Programación de entregas de turno y revisiones de uniforme (agenda)'
+  -
+    name: shift-handovers
+    description: 'Entregas de turno'
+  -
+    name: uniform-checks
+    description: 'Revisión de uniforme y aseo'
+  -
+    name: dashboard
+    description: 'Dashboard operativo en vivo'
 paths:
   /home/stats:
     get:
@@ -2890,6 +2902,442 @@ paths:
                   success: {type: boolean}
                   data: {type: object, properties: {hasChanges: {type: boolean}}}
                   messages: {type: array, items: {type: string}}
+  /shift-plans:
+    get:
+      tags:
+        - shift-plans
+      summary: 'Listar programación de turnos'
+      parameters:
+        -
+          in: query
+          name: clientId
+          required: false
+          description: 'Filtra por cliente (ignorado para usuarios RESDN)'
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultShiftPlanList'
+        '403':
+          description: 'Permisos insuficientes'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+    post:
+      tags:
+        - shift-plans
+      summary: 'Programar un turno de un cliente (ADMIN/LIDER)'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShiftPlanCreate'
+      responses:
+        '201':
+          description: 'Creado (o reactivado si existía eliminado)'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultShiftPlan'
+        '400':
+          description: 'Datos inválidos o plan sin exigencias'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: 'Cliente u horario no encontrado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '409':
+          description: 'El turno ya está programado para ese cliente'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  '/shift-plans/{id}':
+    put:
+      tags:
+        - shift-plans
+      summary: 'Actualizar reglas de un plan'
+      parameters:
+        -
+          in: path
+          name: id
+          required: true
+          description: 'ID del plan'
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShiftPlanUpdate'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultShiftPlan'
+        '400':
+          description: 'Datos inválidos'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: 'Plan no encontrado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+    delete:
+      tags:
+        - shift-plans
+      summary: 'Eliminar (lógico) un plan'
+      parameters:
+        -
+          in: path
+          name: id
+          required: true
+          description: 'ID del plan'
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: 'Plan no encontrado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /shift-plans/agenda:
+    get:
+      tags:
+        - shift-plans
+      summary: 'Agenda de entregas y uniformes de un día'
+      parameters:
+        -
+          in: query
+          name: date
+          required: false
+          description: 'YYYY-MM-DD (por defecto hoy)'
+          schema:
+            type: string
+            format: date
+        -
+          in: query
+          name: clientId
+          required: false
+          description: 'Filtra por cliente (ignorado para usuarios RESDN)'
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultAgenda'
+  /shift-plans/agenda/current:
+    get:
+      tags:
+        - shift-plans
+      summary: 'Compromisos vigentes ahora (turnos de hoy y nocturnos de ayer en curso)'
+      parameters:
+        -
+          in: query
+          name: clientId
+          required: false
+          description: 'Filtra por cliente (ignorado para usuarios RESDN)'
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultAgenda'
+  /shift-handovers/catalog:
+    get:
+      tags:
+        - shift-handovers
+      summary: 'Catálogo de equipo a verificar en la entrega'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultChecklistCatalog'
+  /shift-handovers:
+    post:
+      tags:
+        - shift-handovers
+      summary: 'Registrar entrega de turno (ADMIN/LIDER/SHIFT)'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShiftHandoverCreate'
+      responses:
+        '201':
+          description: Creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultShiftHandover'
+        '400':
+          description: 'Datos inválidos, guardia repetido o clave de checklist desconocida'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: 'Cliente u horario no encontrado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '409':
+          description: 'Ya existe una entrega para ese turno y fecha'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /shift-handovers/datatable:
+    post:
+      tags:
+        - shift-handovers
+      summary: 'Tabla paginada de entregas (filtros: clientId, scheduleId, dateFrom, dateTo, search)'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableShiftHandover'
+        '400':
+          description: 'Paginación inválida'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  '/shift-handovers/{id}':
+    get:
+      tags:
+        - shift-handovers
+      summary: 'Detalle de una entrega'
+      parameters:
+        -
+          in: path
+          name: id
+          required: true
+          description: 'ID de la entrega'
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultShiftHandover'
+        '404':
+          description: 'Entrega no encontrada'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+    delete:
+      tags:
+        - shift-handovers
+      summary: 'Eliminar (lógico) una entrega (ADMIN/LIDER)'
+      parameters:
+        -
+          in: path
+          name: id
+          required: true
+          description: 'ID de la entrega'
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: 'Entrega no encontrada'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /uniform-checks/catalog:
+    get:
+      tags:
+        - uniform-checks
+      summary: 'Catálogo de uniforme/aseo y umbral de cumplimiento'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultChecklistCatalog'
+  /uniform-checks:
+    post:
+      tags:
+        - uniform-checks
+      summary: 'Registrar revisión de uniforme (ADMIN/LIDER/SHIFT)'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UniformCheckCreate'
+      responses:
+        '201':
+          description: Creada
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultUniformCheck'
+        '400':
+          description: 'Datos inválidos o clave desconocida'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: 'Guardia no encontrado o inactivo'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /uniform-checks/datatable:
+    post:
+      tags:
+        - uniform-checks
+      summary: 'Tabla paginada de revisiones (filtros: clientId, guardId, compliant, dateFrom, dateTo, search)'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableUniformCheck'
+        '400':
+          description: 'Paginación inválida'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  '/uniform-checks/{id}':
+    get:
+      tags:
+        - uniform-checks
+      summary: 'Detalle de una revisión'
+      parameters:
+        -
+          in: path
+          name: id
+          required: true
+          description: 'ID de la revisión'
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultUniformCheck'
+        '404':
+          description: 'Revisión no encontrada'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+    delete:
+      tags:
+        - uniform-checks
+      summary: 'Eliminar (lógico) una revisión (ADMIN/LIDER)'
+      parameters:
+        -
+          in: path
+          name: id
+          required: true
+          description: 'ID de la revisión'
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: 'Revisión no encontrada'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /dashboard/live:
+    get:
+      tags:
+        - dashboard
+      summary: 'Estado operativo en vivo'
+      parameters:
+        -
+          in: query
+          name: clientId
+          required: false
+          description: 'Filtra por cliente (ignorado para usuarios RESDN)'
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultLiveDashboard'
+        '401':
+          description: 'No autenticado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
 components:
   schemas:
     UserLogin:
@@ -3050,6 +3498,9 @@ components:
           type: string
           format: date-time
           nullable: true
+        fcmToken:
+          type: string
+          nullable: true
         isLoggedIn:
           type: boolean
         scheduleId:
@@ -3113,6 +3564,50 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AuditLogBasic'
+        guardLoginLogs:
+          type: array
+          items:
+            $ref: '#/components/schemas/GuardLoginLogBasic'
+        guardDisciplines:
+          type: array
+          items:
+            $ref: '#/components/schemas/GuardDisciplineBasic'
+        createdGuardDisciplines:
+          type: array
+          items:
+            $ref: '#/components/schemas/GuardDisciplineBasic'
+        scheduledNotifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduledNotificationBasic'
+        notificationLogs:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationLogBasic'
+        panicAlertsTriggered:
+          type: array
+          items:
+            $ref: '#/components/schemas/PanicAlertBasic'
+        panicAlertsResolved:
+          type: array
+          items:
+            $ref: '#/components/schemas/PanicAlertBasic'
+        createdShiftHandovers:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShiftHandoverBasic'
+        shiftHandoverElements:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShiftHandoverElementBasic'
+        uniformChecks:
+          type: array
+          items:
+            $ref: '#/components/schemas/UniformCheckBasic'
+        evaluatedUniformChecks:
+          type: array
+          items:
+            $ref: '#/components/schemas/UniformCheckBasic'
     TResultDatatableUser:
       type: object
       properties:
@@ -3899,6 +4394,26 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ReportConfigurationBasic'
+        guardDisciplines:
+          type: array
+          items:
+            $ref: '#/components/schemas/GuardDisciplineBasic'
+        panicAlerts:
+          type: array
+          items:
+            $ref: '#/components/schemas/PanicAlertBasic'
+        shiftPlans:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShiftPlanBasic'
+        shiftHandovers:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShiftHandoverBasic'
+        uniformChecks:
+          type: array
+          items:
+            $ref: '#/components/schemas/UniformCheckBasic'
     TResultDatatableClient:
       type: object
       properties:
@@ -4345,6 +4860,18 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/UserBasic'
+        shiftPlans:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShiftPlanBasic'
+        shiftHandovers:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShiftHandoverBasic'
+        uniformChecks:
+          type: array
+          items:
+            $ref: '#/components/schemas/UniformCheckBasic'
     TResultDatatableSchedule:
       type: object
       properties:
@@ -4994,6 +5521,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/MaintenanceBasic'
+        disciplines:
+          type: array
+          items:
+            $ref: '#/components/schemas/GuardDisciplineBasic'
     TResultDatatableIncidentCategory:
       type: object
       properties:
@@ -5067,6 +5598,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/MaintenanceBasic'
+        disciplines:
+          type: array
+          items:
+            $ref: '#/components/schemas/GuardDisciplineBasic'
     TResultDatatableIncidentType:
       type: object
       properties:
@@ -5309,6 +5844,9 @@ components:
         deletedAt:
           type: string
           format: date-time
+          nullable: true
+        fcmToken:
+          type: string
           nullable: true
         isLoggedIn:
           type: boolean
@@ -6175,3 +6713,1493 @@ components:
           type: array
           items:
             type: string
+    GuardDisciplineStatus:
+      type: string
+      enum:
+        - PENDING
+        - RESOLVED
+        - DISMISSED
+    PanicAlertStatus:
+      type: string
+      enum:
+        - PENDING
+        - IN_PROGRESS
+        - RESOLVED
+        - DISMISSED
+    SubscriptionConfigBasic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        paid:
+          type: boolean
+        trialDaysRemaining:
+          type: integer
+        showTrialWatermark:
+          type: boolean
+        showTrialBadge:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    SubscriptionConfig:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        paid:
+          type: boolean
+        trialDaysRemaining:
+          type: integer
+        showTrialWatermark:
+          type: boolean
+        showTrialBadge:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    TResultSubscriptionConfig:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/SubscriptionConfig'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListSubscriptionConfig:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SubscriptionConfig'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultDatatableSubscriptionConfig:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/SubscriptionConfig'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    GuardLoginLogBasic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        loginAt:
+          type: string
+          format: date-time
+        logoutAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    GuardLoginLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        loginAt:
+          type: string
+          format: date-time
+        logoutAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        user:
+          $ref: '#/components/schemas/UserBasic'
+    TResultGuardLoginLog:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/GuardLoginLog'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListGuardLoginLog:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/GuardLoginLog'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultDatatableGuardLoginLog:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/GuardLoginLog'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    GuardDisciplineBasic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        guardId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        categoryId:
+          type: string
+          format: uuid
+          nullable: true
+        typeId:
+          type: string
+          format: uuid
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        media:
+          type: object
+          nullable: true
+        createdById:
+          type: string
+          format: uuid
+        clientId:
+          type: string
+          format: uuid
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+    GuardDiscipline:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        guardId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        categoryId:
+          type: string
+          format: uuid
+          nullable: true
+        typeId:
+          type: string
+          format: uuid
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        media:
+          type: object
+          nullable: true
+        status:
+          $ref: '#/components/schemas/GuardDisciplineStatus'
+        createdById:
+          type: string
+          format: uuid
+        clientId:
+          type: string
+          format: uuid
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+        guard:
+          $ref: '#/components/schemas/UserBasic'
+        createdBy:
+          $ref: '#/components/schemas/UserBasic'
+        category:
+          $ref: '#/components/schemas/IncidentCategoryBasic'
+        type:
+          $ref: '#/components/schemas/IncidentTypeBasic'
+        client:
+          $ref: '#/components/schemas/ClientBasic'
+    TResultGuardDiscipline:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/GuardDiscipline'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListGuardDiscipline:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/GuardDiscipline'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultDatatableGuardDiscipline:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/GuardDiscipline'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    ScheduledNotificationBasic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          nullable: true
+        message:
+          type: string
+        type:
+          type: string
+        channel:
+          type: string
+        persistent:
+          type: boolean
+        scheduledAt:
+          type: string
+          format: date-time
+          nullable: true
+        cronExpression:
+          type: string
+          nullable: true
+        frequency:
+          type: string
+          nullable: true
+        timeOfDay:
+          type: string
+          nullable: true
+        daysOfWeek:
+          type: string
+          nullable: true
+        endsAt:
+          type: string
+          format: date-time
+          nullable: true
+        maxSends:
+          type: integer
+          nullable: true
+        userId:
+          type: string
+          format: uuid
+          nullable: true
+        active:
+          type: boolean
+        sendCount:
+          type: integer
+        lastSentAt:
+          type: string
+          format: date-time
+          nullable: true
+        nextSendAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+    ScheduledNotification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          nullable: true
+        message:
+          type: string
+        type:
+          type: string
+        channel:
+          type: string
+        persistent:
+          type: boolean
+        scheduledAt:
+          type: string
+          format: date-time
+          nullable: true
+        cronExpression:
+          type: string
+          nullable: true
+        frequency:
+          type: string
+          nullable: true
+        timeOfDay:
+          type: string
+          nullable: true
+        daysOfWeek:
+          type: string
+          nullable: true
+        endsAt:
+          type: string
+          format: date-time
+          nullable: true
+        maxSends:
+          type: integer
+          nullable: true
+        userId:
+          type: string
+          format: uuid
+          nullable: true
+        targetUser:
+          $ref: '#/components/schemas/UserBasic'
+        active:
+          type: boolean
+        sendCount:
+          type: integer
+        lastSentAt:
+          type: string
+          format: date-time
+          nullable: true
+        nextSendAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+    TResultScheduledNotification:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/ScheduledNotification'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListScheduledNotification:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduledNotification'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultDatatableScheduledNotification:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/ScheduledNotification'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    NotificationLogBasic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        title:
+          type: string
+          nullable: true
+        message:
+          type: string
+        type:
+          type: string
+        read:
+          type: boolean
+        readAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    NotificationLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        title:
+          type: string
+          nullable: true
+        message:
+          type: string
+        type:
+          type: string
+        read:
+          type: boolean
+        readAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        user:
+          $ref: '#/components/schemas/UserBasic'
+    TResultNotificationLog:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/NotificationLog'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListNotificationLog:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationLog'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultDatatableNotificationLog:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/NotificationLog'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    PanicAlertBasic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        guardId:
+          type: string
+          format: uuid
+        clientId:
+          type: string
+          format: uuid
+          nullable: true
+        source:
+          type: string
+        triggerLatitude:
+          type: number
+          nullable: true
+        triggerLongitude:
+          type: number
+          nullable: true
+        triggerAccuracy:
+          type: number
+          nullable: true
+        message:
+          type: string
+          nullable: true
+        resolutionComment:
+          type: string
+          nullable: true
+        resolvedById:
+          type: string
+          format: uuid
+          nullable: true
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+    PanicAlert:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        guardId:
+          type: string
+          format: uuid
+        clientId:
+          type: string
+          format: uuid
+          nullable: true
+        source:
+          type: string
+        triggerLatitude:
+          type: number
+          nullable: true
+        triggerLongitude:
+          type: number
+          nullable: true
+        triggerAccuracy:
+          type: number
+          nullable: true
+        message:
+          type: string
+          nullable: true
+        status:
+          $ref: '#/components/schemas/PanicAlertStatus'
+        resolutionComment:
+          type: string
+          nullable: true
+        resolvedById:
+          type: string
+          format: uuid
+          nullable: true
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+        guard:
+          $ref: '#/components/schemas/UserBasic'
+        resolvedBy:
+          $ref: '#/components/schemas/UserBasic'
+        client:
+          $ref: '#/components/schemas/ClientBasic'
+    TResultPanicAlert:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/PanicAlert'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListPanicAlert:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PanicAlert'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultDatatablePanicAlert:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/PanicAlert'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    ShiftPlanBasic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        clientId:
+          type: string
+          format: uuid
+        scheduleId:
+          type: string
+          format: uuid
+        requireHandover:
+          type: boolean
+        requireUniform:
+          type: boolean
+        toleranceMinutes:
+          type: integer
+        daysOfWeek:
+          type: array
+          items:
+            type: integer
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+    ShiftPlan:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        clientId:
+          type: string
+          format: uuid
+        scheduleId:
+          type: string
+          format: uuid
+        requireHandover:
+          type: boolean
+        requireUniform:
+          type: boolean
+        toleranceMinutes:
+          type: integer
+        daysOfWeek:
+          type: array
+          items:
+            type: integer
+        active:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+          nullable: true
+        client:
+          $ref: '#/components/schemas/ClientBasic'
+        schedule:
+          $ref: '#/components/schemas/ScheduleBasic'
+    TResultShiftPlan:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/ShiftPlan'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListShiftPlan:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShiftPlan'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultDatatableShiftPlan:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/ShiftPlan'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    ShiftHandoverBasic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        clientId:
+          type: string
+          format: uuid
+        scheduleId:
+          type: string
+          format: uuid
+        shiftDate:
+          type: string
+          format: date-time
+        credentialsCount:
+          type: integer
+          nullable: true
+        tarjetonesCount:
+          type: integer
+          nullable: true
+        novedades:
+          type: string
+          nullable: true
+    ShiftHandover:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        clientId:
+          type: string
+          format: uuid
+        scheduleId:
+          type: string
+          format: uuid
+        shiftDate:
+          type: string
+          format: date-time
+        credentialsCount:
+          type: integer
+          nullable: true
+        tarjetonesCount:
+          type: integer
+          nullable: true
+        novedades:
+          type: string
+          nullable: true
+    TResultShiftHandover:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/ShiftHandover'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListShiftHandover:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShiftHandover'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultDatatableShiftHandover:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/ShiftHandover'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    ShiftHandoverElementBasic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        shiftHandoverId:
+          type: string
+          format: uuid
+        guardId:
+          type: string
+          format: uuid
+        entryTime:
+          type: string
+        punctual:
+          type: boolean
+        observations:
+          type: string
+          nullable: true
+    ShiftHandoverElement:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        shiftHandoverId:
+          type: string
+          format: uuid
+        guardId:
+          type: string
+          format: uuid
+        entryTime:
+          type: string
+        punctual:
+          type: boolean
+        observations:
+          type: string
+          nullable: true
+        shiftHandover:
+          $ref: '#/components/schemas/ShiftHandoverBasic'
+        guard:
+          $ref: '#/components/schemas/UserBasic'
+    TResultShiftHandoverElement:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/ShiftHandoverElement'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListShiftHandoverElement:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShiftHandoverElement'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultDatatableShiftHandoverElement:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/ShiftHandoverElement'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    UniformCheckBasic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        guardId:
+          type: string
+          format: uuid
+        clientId:
+          type: string
+          format: uuid
+          nullable: true
+        scheduleId:
+          type: string
+          format: uuid
+          nullable: true
+        shiftDate:
+          type: string
+          format: date-time
+        evaluatedById:
+          type: string
+          format: uuid
+    UniformCheck:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        guardId:
+          type: string
+          format: uuid
+        clientId:
+          type: string
+          format: uuid
+          nullable: true
+        scheduleId:
+          type: string
+          format: uuid
+          nullable: true
+        shiftDate:
+          type: string
+          format: date-time
+        evaluatedById:
+          type: string
+          format: uuid
+    TResultUniformCheck:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/UniformCheck'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultListUniformCheck:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/UniformCheck'
+        messages:
+          type: array
+          items:
+            type: string
+    TResultDatatableUniformCheck:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            rows:
+              type: array
+              items:
+                $ref: '#/components/schemas/UniformCheck'
+            total:
+              type: integer
+              example: 100
+            page:
+              type: integer
+              example: 1
+            limit:
+              type: integer
+              example: 10
+        messages:
+          type: array
+          items:
+            type: string
+    ShiftPlanCreate:
+      type: object
+      required:
+        - clientId
+        - scheduleId
+      properties:
+        clientId:
+          type: string
+          format: uuid
+        scheduleId:
+          type: string
+          format: uuid
+          description: 'Horario (turno) a programar'
+        requireHandover:
+          type: boolean
+          default: true
+        requireUniform:
+          type: boolean
+          default: true
+        toleranceMinutes:
+          type: integer
+          minimum: 0
+          maximum: 240
+          default: 30
+          description: 'Minutos tras el inicio del turno antes de considerarse vencido'
+        daysOfWeek:
+          type: array
+          items:
+            type: integer
+            minimum: 0
+            maximum: 6
+          description: '0 = domingo ... 6 = sábado'
+        active:
+          type: boolean
+          default: true
+    ShiftPlanUpdate:
+      type: object
+      properties:
+        requireHandover:
+          type: boolean
+        requireUniform:
+          type: boolean
+        toleranceMinutes:
+          type: integer
+        daysOfWeek:
+          type: array
+          items:
+            type: integer
+        active:
+          type: boolean
+    AgendaItem:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum:
+            - HANDOVER
+            - UNIFORM
+        status:
+          type: string
+          enum:
+            - UPCOMING
+            - IN_WINDOW
+            - OVERDUE
+            - MISSED
+            - DONE
+          description: 'UPCOMING: aún no inicia · IN_WINDOW: dentro de la tolerancia · OVERDUE: vencido con el turno en curso · MISSED: el turno terminó sin registro · DONE: registrado'
+        shiftDate:
+          type: string
+          format: date
+        startAt:
+          type: string
+          format: date-time
+        dueAt:
+          type: string
+          format: date-time
+        endAt:
+          type: string
+          format: date-time
+        planId:
+          type: string
+        client:
+          type: object
+        schedule:
+          type: object
+        guard:
+          type: object
+          nullable: true
+        record:
+          type: object
+          nullable: true
+    AgendaSummary:
+      type: object
+      properties:
+        total:
+          type: integer
+        done:
+          type: integer
+        inWindow:
+          type: integer
+        overdue:
+          type: integer
+        missed:
+          type: integer
+        upcoming:
+          type: integer
+        compliancePercent:
+          type: integer
+          nullable: true
+    TResultAgenda:
+      type: object
+      properties:
+        success:
+          type: boolean
+        messages:
+          type: array
+          items:
+            type: string
+        data:
+          type: object
+          properties:
+            dates:
+              type: array
+              items:
+                type: string
+            generatedAt:
+              type: string
+              format: date-time
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/AgendaItem'
+            summary:
+              $ref: '#/components/schemas/AgendaSummary'
+            handoverSummary:
+              $ref: '#/components/schemas/AgendaSummary'
+            uniformSummary:
+              $ref: '#/components/schemas/AgendaSummary'
+    TResultShiftPlanList:
+      type: object
+      properties:
+        success:
+          type: boolean
+        messages:
+          type: array
+          items:
+            type: string
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShiftPlan'
+    ShiftHandoverCreate:
+      type: object
+      required:
+        - clientId
+        - scheduleId
+        - shiftDate
+        - elements
+      properties:
+        clientId:
+          type: string
+          format: uuid
+        scheduleId:
+          type: string
+          format: uuid
+        shiftDate:
+          type: string
+          format: date
+          description: 'Fecha en que inicia el turno (YYYY-MM-DD)'
+        credentialsCount:
+          type: integer
+          nullable: true
+        tarjetonesCount:
+          type: integer
+          nullable: true
+        novedades:
+          type: string
+          nullable: true
+          maxLength: 2000
+        checklist:
+          type: array
+          items:
+            type: object
+            required:
+              - key
+              - ok
+            properties:
+              key:
+                type: string
+                description: 'Clave del catálogo'
+              ok:
+                type: boolean
+          description: 'Claves de GET /shift-handovers/catalog; las omitidas se guardan como no verificadas'
+        reportedToAdmin:
+          type: boolean
+        elements:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required:
+              - guardId
+              - entryTime
+            properties:
+              guardId:
+                type: string
+                format: uuid
+              entryTime:
+                type: string
+                example: '07:05'
+                description: 'HH:mm; la puntualidad se calcula contra el inicio del turno + tolerancia'
+              observations:
+                type: string
+                nullable: true
+    UniformCheckCreate:
+      type: object
+      required:
+        - guardId
+      properties:
+        guardId:
+          type: string
+          format: uuid
+        shiftDate:
+          type: string
+          format: date
+          description: 'Opcional: por defecto el turno en curso del guardia'
+        items:
+          type: array
+          items:
+            type: object
+            required:
+              - key
+              - ok
+            properties:
+              key:
+                type: string
+                description: 'Clave del catálogo'
+              ok:
+                type: boolean
+          description: 'Claves de GET /uniform-checks/catalog'
+        notes:
+          type: string
+          nullable: true
+    TResultChecklistCatalog:
+      type: object
+      properties:
+        success:
+          type: boolean
+        messages:
+          type: array
+          items:
+            type: string
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              key:
+                type: string
+              label:
+                type: string
+              group:
+                type: string
+    TResultLiveDashboard:
+      type: object
+      properties:
+        success:
+          type: boolean
+        messages:
+          type: array
+          items:
+            type: string
+        data:
+          type: object
+          description: 'kpis, alerts (PANIC, HANDOVER_OVERDUE, UNIFORM_OVERDUE, ROUND_STALLED, ROUND_ABANDONED, INCIDENT_OPEN), activeRounds, mapPoints, uncoveredRoutes y compliance'

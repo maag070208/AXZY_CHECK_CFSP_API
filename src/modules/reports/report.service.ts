@@ -464,3 +464,110 @@ export const generateAdministrativeMatrixReport = async (params: AdministrativeR
 
     return generateAdministrativeMatrixPDFBuffer(startDate, endDate, rows);
 };
+
+export interface IIncidentReportFilters {
+    startDate: string;
+    endDate: string;
+    clientId?: string;
+}
+
+export interface IIncidentReport {
+    total: number;
+    pending: number;
+    attended: number;
+    resolutionRate: number;
+    byCategory: Array<{ id: string; name: string; color: string | null; count: number }>;
+    byGuard: Array<{ id: string; name: string; count: number }>;
+    byDay: Array<{ date: string; count: number }>;
+}
+
+/**
+ * Resumen analítico de incidencias en un rango de fechas: totales por estado,
+ * categoría, guardia y día. Alimenta el reporte "Incidencias" del Centro de Reportes.
+ */
+export const getIncidentReport = async (
+    filters: IIncidentReportFilters,
+): Promise<TResult<IIncidentReport>> => {
+    try {
+        const { startDate, endDate, clientId } = filters;
+        const start = getStartOfDay(startDate);
+        const end = getEndOfDay(endDate);
+
+        const incidents = await prisma.incident.findMany({
+            where: {
+                deletedAt: null,
+                createdAt: { gte: start, lte: end },
+                ...(clientId ? { clientId } : {}),
+            },
+            select: {
+                status: true,
+                createdAt: true,
+                guardId: true,
+                guard: { select: { name: true, lastName: true } },
+                category: { select: { id: true, name: true, color: true } },
+            },
+            orderBy: { createdAt: "desc" },
+        });
+
+        const total = incidents.length;
+        const pending = incidents.filter((i) => i.status === "PENDING").length;
+        const attended = total - pending;
+
+        const categoryMap = new Map<
+            string,
+            { id: string; name: string; color: string | null; count: number }
+        >();
+        const guardMap = new Map<string, { id: string; name: string; count: number }>();
+        const dayMap = new Map<string, number>();
+
+        for (const incident of incidents) {
+            const catId = incident.category?.id ?? "sin-categoria";
+            const existingCat = categoryMap.get(catId);
+            if (existingCat) existingCat.count++;
+            else
+                categoryMap.set(catId, {
+                    id: catId,
+                    name: incident.category?.name ?? "Sin categoría",
+                    color: incident.category?.color ?? null,
+                    count: 1,
+                });
+
+            const guardName =
+                `${incident.guard?.name ?? ""} ${incident.guard?.lastName ?? ""}`.trim() ||
+                "Sin asignar";
+            const existingGuard = guardMap.get(incident.guardId);
+            if (existingGuard) existingGuard.count++;
+            else
+                guardMap.set(incident.guardId, {
+                    id: incident.guardId,
+                    name: guardName,
+                    count: 1,
+                });
+
+            const day = incident.createdAt.toISOString().slice(0, 10);
+            dayMap.set(day, (dayMap.get(day) ?? 0) + 1);
+        }
+
+        return {
+            success: true,
+            data: {
+                total,
+                pending,
+                attended,
+                resolutionRate: total > 0 ? Math.round((attended / total) * 100) : 0,
+                byCategory: [...categoryMap.values()].sort((a, b) => b.count - a.count),
+                byGuard: [...guardMap.values()].sort((a, b) => b.count - a.count),
+                byDay: [...dayMap.entries()]
+                    .map(([date, count]) => ({ date, count }))
+                    .sort((a, b) => a.date.localeCompare(b.date)),
+            },
+            messages: [],
+        };
+    } catch (error: any) {
+        return {
+            success: false,
+            data: null as any,
+            messages: [error?.message || "Error al generar reporte de incidencias"],
+        };
+    }
+};

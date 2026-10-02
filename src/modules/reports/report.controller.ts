@@ -78,6 +78,21 @@ export const getWorkloadComparison = asyncHandler(async (req: Request, res: Resp
     res.json(result);
 });
 
+export const getIncidentReport = asyncHandler(async (req: Request, res: Response) => {
+    const user = res.locals.user;
+    const endDate =
+        (req.query.endDate as string) || new Date().toISOString().slice(0, 10);
+    const startDate =
+        (req.query.startDate as string) ||
+        new Date(Date.now() - 29 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const result = await ReportService.getIncidentReport({
+        startDate,
+        endDate,
+        clientId: (user.clientId || req.query.clientId) as string | undefined,
+    });
+    res.json(result);
+});
+
 export const generateAdministrativeReport = asyncHandler(async (req: Request, res: Response) => {
     const params = req.body;
     try {

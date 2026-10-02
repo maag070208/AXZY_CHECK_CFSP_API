@@ -5,6 +5,7 @@ import { asyncHandler } from "@src/core/utils/asyncHandler";
 import { AppError } from "@src/core/errors/AppError";
 import { API_VERSION } from "@src/core/config/constants";
 import { prismaClient } from "@src/core/config/database";
+import { IAuthUser } from "@src/core/dto/auth-user.dto";
 
 const validateAppVersion = async (req: Request) => {
   if (req.headers["x-bypass-version-check"] === "true") {
@@ -68,7 +69,7 @@ export const pull = asyncHandler(async (req: Request, res: Response) => {
       ? (req.query.reset_models as string).split(",")
       : undefined;
   
-  const result = await syncService.pullChanges({ lastPulledAt, resetModels });
+  const result = await syncService.pullChanges({ lastPulledAt, resetModels, user: res.locals.user as IAuthUser });
   res.json(createTResult(result));
 });
 
@@ -76,8 +77,9 @@ export const push = asyncHandler(async (req: Request, res: Response) => {
   await validateAppVersion(req);
 
   const { changes, lastPulledAt } = req.body;
-  const userId = res.locals.user?.id || "SYSTEM";
-  const result = await syncService.pushChanges({ changes, userId, lastPulledAt });
+  const user = res.locals.user as IAuthUser | undefined;
+  if (!user?.id) throw new AppError("No autenticado", 401);
+  const result = await syncService.pushChanges({ changes, user, lastPulledAt });
   res.json(createTResult(result));
 });
 
@@ -88,6 +90,6 @@ export const checkChanges = asyncHandler(async (req: Request, res: Response) => 
       ? parseInt(req.query.last_pulled_at as string) 
       : 0;
   
-  const hasChanges = await syncService.hasChangesSince({ lastPulledAt });
+  const hasChanges = await syncService.hasChangesSince({ lastPulledAt, user: res.locals.user as IAuthUser });
   res.json(createTResult({ hasChanges }));
 });

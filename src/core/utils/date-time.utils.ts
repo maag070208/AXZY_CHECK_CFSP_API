@@ -2,12 +2,11 @@ import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import timezone from "dayjs/plugin/timezone";
 import utc from "dayjs/plugin/utc";
+import { DEFAULT_TIMEZONE } from "../config/constants";
 
 dayjs.extend(customParseFormat);
 dayjs.extend(utc);
 dayjs.extend(timezone);
-
-const DEFAULT_TIMEZONE = "America/Tijuana";
 
 /**
  * Validates if the current time is within the specified shift.
@@ -48,4 +47,22 @@ export const formatDate = (date: Date | string, format: string = "YYYY-MM-DD HH:
 
 export const now = (tz: string = DEFAULT_TIMEZONE): Date => {
   return dayjs().tz(tz).toDate();
+};
+
+/**
+ * @description Duración legible en español con las dos unidades más
+ * significativas (días/horas/minutos).
+ * @example formatDurationEs(3060) -> "2 días 3 horas"
+ */
+export const formatDurationEs = (minutes: number): string => {
+  const total = Math.max(0, Math.floor(minutes));
+  if (total < 1) return "menos de 1 minuto";
+  const days = Math.floor(total / 1440);
+  const hours = Math.floor((total % 1440) / 60);
+  const mins = total % 60;
+  const parts: string[] = [];
+  if (days) parts.push(`${days} ${days === 1 ? "día" : "días"}`);
+  if (hours) parts.push(`${hours} ${hours === 1 ? "hora" : "horas"}`);
+  if (mins && !days) parts.push(`${mins} ${mins === 1 ? "minuto" : "minutos"}`);
+  return parts.slice(0, 2).join(" ");
 };

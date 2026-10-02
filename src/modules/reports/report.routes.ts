@@ -16,6 +16,8 @@ router.get('/guards/detail', ReportController.getGuardDetailedReport);
 router.get('/guards/detail-breakdown/:id', ReportController.getGuardDetailBreakdown);
 router.get('/guards/workload', ReportController.getWorkloadComparison);
 
+router.get('/incidents/summary', ReportController.getIncidentReport);
+
 router.post('/administrative/matrix/pdf', validate(generateAdministrativeReportSchema), ReportController.generateAdministrativeReport);
 
 export default router;

@@ -6,6 +6,7 @@ import { incidentCatalogsSeed } from "./seeds/incidents";
 import { hackerLog } from "./seeds/logger";
 import { maintenanceCatalogsSeed } from "./seeds/maintenance";
 import { seedHotelPuertoNuevo } from "./seeds/hotel-puerto-nuevo";
+import { demoActivitySeed } from "./seeds/demo-activity";
 import { schedulesSeed } from "./seeds/schedules";
 import { securitySeed } from "./seeds/security";
 import { sysConfigSeed } from "./seeds/sysconfig";
@@ -24,6 +25,7 @@ async function main() {
   await disciplineCatalogsSeed(prisma);
   await guardLogsSeed(prisma);
   await seedHotelPuertoNuevo(prisma);
+  await demoActivitySeed(prisma);
 
   hackerLog.divider();
   hackerLog.success("SYSTEM", "Master Seeding Complete");

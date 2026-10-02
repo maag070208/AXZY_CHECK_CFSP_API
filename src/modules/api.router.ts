@@ -22,6 +22,9 @@ import reportRoute from "./reports/report.routes";
 import roundRoute from "./rounds/round.routes";
 import subscriptionRoute from "./subscription/subscription.routes";
 import scheduleRoute from "./schedules/schedule.routes";
+import shiftHandoversRoute from "./shift-handovers/shift-handover.routes";
+import shiftPlansRoute from "./shift-plans/shift-plan.routes";
+import uniformChecksRoute from "./uniform-checks/uniform-check.routes";
 import settingsRoute from "./settings/settings.routes";
 import syncRoute from "./sync/sync.routes";
 import userRoute from "./users/user.routes";
@@ -55,5 +58,8 @@ apiRouter.use("/dashboard", dashboardRoute);
 apiRouter.use("/scheduled-notifications", scheduledNotificationsRoute);
 apiRouter.use("/subscription", subscriptionRoute);
 apiRouter.use("/report-configurations", reportConfigurationsRoute);
+apiRouter.use("/shift-plans", shiftPlansRoute);
+apiRouter.use("/shift-handovers", shiftHandoversRoute);
+apiRouter.use("/uniform-checks", uniformChecksRoute);
 
 export default apiRouter;

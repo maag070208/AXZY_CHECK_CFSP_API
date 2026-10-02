@@ -79,39 +79,22 @@ describe("Rutas de Sincronización (Offline - Sync)", () => {
       expect(response.body.data.changes.client.created.length).toBe(0);
     });
 
-    it("debe procesar un push de cambios (creación)", async () => {
+    it("debe ignorar tablas que el dispositivo no puede modificar (p. ej. zonas)", async () => {
       const uniquePushId = crypto.randomUUID();
-      const pushData = {
-        changes: {
-          zone: {
-            created: [
-              {
-                id: uniquePushId,
-                name: "Push Zone",
-                clientId: createdClientId
-              }
-            ],
-            updated: [],
-            deleted: []
-          }
-        }
-      };
-
       const response = await request(app)
         .post("/api/v1/sync")
         .set("user", JSON.stringify({ id: "admin" }))
         .set("x-bypass-version-check", "true")
-        .send(pushData);
+        .send({
+          changes: {
+            zone: { created: [{ id: uniquePushId, name: "Push Zone", clientId: createdClientId }], updated: [], deleted: [] },
+          },
+        });
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
-
-      // Verificar persistencia en BD
-      const zone = await prismaClient.zone.findUnique({
-        where: { id: uniquePushId } as any
-      });
-      expect(zone).toBeDefined();
-      expect(zone?.name).toBe("Push Zone");
+      const zone = await prismaClient.zone.findUnique({ where: { id: uniquePushId } as any });
+      expect(zone).toBeNull();
     });
 
     it("debe fallar si el formato del push es inválido", async () => {

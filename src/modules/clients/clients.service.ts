@@ -1,6 +1,6 @@
 import { prismaClient as prisma } from "@src/core/config/database";
 import { Prisma } from "@prisma/client";
-import { ROLE_CLIENT } from "@src/core/config/constants";
+import { PRISMA_TRANSACTION_OPTIONS, ROLE_CLIENT } from "@src/core/config/constants";
 import { IClientCreateRequest, IClientUpdateRequest } from "./clients.dto";
 import { hashPassword } from "@src/core/utils/security";
 import { deleteClientDataCascade } from "./clients.cascade";
@@ -131,7 +131,7 @@ export const createClient = async (data: IClientCreateRequest) => {
     }
 
     return client;
-  });
+  }, PRISMA_TRANSACTION_OPTIONS);
 };
 
 export const updateClient = async (id: string, data: IClientUpdateRequest) => {
@@ -192,7 +192,7 @@ export const updateClient = async (id: string, data: IClientUpdateRequest) => {
     }
 
     return client;
-  });
+  }, PRISMA_TRANSACTION_OPTIONS);
 };
 
 export const deleteClient = async (id: string) => {
@@ -202,5 +202,5 @@ export const deleteClient = async (id: string) => {
     return tx.client.delete({
       where: { id },
     });
-  });
+  }, PRISMA_TRANSACTION_OPTIONS);
 };

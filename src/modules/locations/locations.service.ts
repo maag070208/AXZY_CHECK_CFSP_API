@@ -216,7 +216,7 @@ export const generateQRPDF = async (ids: string[]) => {
   const gapX = 0;
   const gapY = 0;
 
-  const logoPath = path.join(process.cwd(), "src/assets/logo_fansal.png");
+  const logoPath = path.join(process.cwd(), "src/assets/logo_mark.png");
   const hasLogo = fs.existsSync(logoPath);
   logger.debug(`[QR GEN] Logo path: ${logoPath}, found: ${hasLogo}`);
 

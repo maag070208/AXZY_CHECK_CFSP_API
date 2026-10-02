@@ -41,6 +41,9 @@ model Client {
   reportConfigurations    ReportConfiguration[]
   guardDisciplines        GuardDiscipline[]
   panicAlerts             PanicAlert[]
+  shiftPlans              ShiftPlan[]
+  shiftHandovers          ShiftHandover[]
+  uniformChecks           UniformCheck[]
 }
 
 model SubscriptionConfig {
@@ -107,6 +110,10 @@ model User {
   notificationLogs        NotificationLog[]        @relation("NotificationLogUser")
   panicAlertsTriggered    PanicAlert[]             @relation("PanicAlertGuard")
   panicAlertsResolved     PanicAlert[]             @relation("PanicAlertResolver")
+  createdShiftHandovers   ShiftHandover[]          @relation("ShiftHandoverCreator")
+  shiftHandoverElements   ShiftHandoverElement[]   @relation("ShiftHandoverGuard")
+  uniformChecks           UniformCheck[]           @relation("UniformGuard")
+  evaluatedUniformChecks  UniformCheck[]           @relation("UniformEvaluator")
 }
 
 model AssignmentLog {
@@ -143,6 +150,10 @@ model Schedule {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
   users     User[]
+
+  shiftPlans     ShiftPlan[]
+  shiftHandovers ShiftHandover[]
+  uniformChecks  UniformCheck[]
 }
 
 model Location {
@@ -567,5 +578,104 @@ model PanicAlert {
   @@index([guardId])
   @@index([clientId])
   @@index([status])
+  @@index([createdAt])
+}
+
+/// Programación: qué turnos (Schedule) de un cliente requieren entrega de
+/// turno y/o revisión de uniforme. La agenda diaria se calcula a partir de
+/// estos planes; no se guardan "instancias" por día.
+model ShiftPlan {
+  id               String    @id @default(uuid())
+  clientId         String
+  scheduleId       String
+  requireHandover  Boolean   @default(true)
+  requireUniform   Boolean   @default(true)
+  /// Minutos después del inicio del turno antes de considerarse vencido.
+  toleranceMinutes Int       @default(30)
+  /// Días de la semana en que aplica (0 = domingo ... 6 = sábado).
+  daysOfWeek       Int[]     @default([0, 1, 2, 3, 4, 5, 6])
+  active           Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+
+  client   Client   @relation(fields: [clientId], references: [id])
+  schedule Schedule @relation(fields: [scheduleId], references: [id])
+
+  @@unique([clientId, scheduleId])
+  @@index([clientId])
+}
+
+/// Entrega/recepción de un turno (Schedule) en un cliente para una fecha.
+/// `shiftDate` es la fecha en que INICIA el turno (un nocturno 19:00-07:00
+/// del día 5 tiene shiftDate = día 5).
+model ShiftHandover {
+  id               String    @id @default(uuid())
+  clientId         String
+  scheduleId       String
+  shiftDate        DateTime  @db.Date
+  credentialsCount Int?
+  tarjetonesCount  Int?
+  novedades        String?
+  /// [{ key: string, ok: boolean }] — claves de SHIFT_HANDOVER_CHECKLIST.
+  checklist        Json
+  reportedToAdmin  Boolean   @default(false)
+  createdById      String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
+
+  client    Client                 @relation(fields: [clientId], references: [id])
+  schedule  Schedule               @relation(fields: [scheduleId], references: [id])
+  createdBy User                   @relation("ShiftHandoverCreator", fields: [createdById], references: [id])
+  elements  ShiftHandoverElement[]
+
+  @@index([clientId, scheduleId, shiftDate])
+  @@index([shiftDate])
+}
+
+model ShiftHandoverElement {
+  id              String  @id @default(uuid())
+  shiftHandoverId String
+  guardId         String
+  /// Hora de entrada "HH:mm".
+  entryTime       String
+  /// Calculado contra el inicio del turno + tolerancia del plan.
+  punctual        Boolean @default(true)
+  observations    String?
+
+  shiftHandover ShiftHandover @relation(fields: [shiftHandoverId], references: [id], onDelete: Cascade)
+  guard         User          @relation("ShiftHandoverGuard", fields: [guardId], references: [id])
+
+  @@index([shiftHandoverId])
+  @@index([guardId])
+}
+
+/// Revisión de uniforme y aseo de un guardia.
+model UniformCheck {
+  id            String    @id @default(uuid())
+  guardId       String
+  clientId      String?
+  scheduleId    String?
+  /// Fecha de inicio del turno al que corresponde la revisión.
+  shiftDate     DateTime  @db.Date
+  evaluatedById String
+  /// [{ key: string, ok: boolean }] — claves de UNIFORM_CHECKLIST.
+  items         Json
+  /// Porcentaje 0-100 de elementos aprobados.
+  score         Int
+  compliant     Boolean
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
+
+  guard       User      @relation("UniformGuard", fields: [guardId], references: [id])
+  evaluatedBy User      @relation("UniformEvaluator", fields: [evaluatedById], references: [id])
+  client      Client?   @relation(fields: [clientId], references: [id])
+  schedule    Schedule? @relation(fields: [scheduleId], references: [id])
+
+  @@index([guardId, shiftDate])
+  @@index([clientId, shiftDate])
   @@index([createdAt])
 }

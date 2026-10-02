@@ -6,6 +6,7 @@ const router = Router();
 
 router.use(authenticate);
 
+router.get("/live", dashboardController.getLiveDashboardHandler);
 router.get("/overview", dashboardController.getOverviewHandler);
 router.get("/active-guards", dashboardController.getActiveGuardsHandler);
 router.get("/pending-counts", dashboardController.getPendingCountsHandler);

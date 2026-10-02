@@ -1,3 +1,5 @@
+import { IAgendaItem, IAgendaSummary } from "../shift-plans/shift-plan.dto";
+
 /**
  * DTOs para el dashboard administrativo / cliente.
  * Todos los endpoints filtran por clientId cuando el usuario es RESDN.
@@ -83,4 +85,98 @@ export interface IDashboardOverview {
   pendingCounts: IPendingCounts;
   generatedAt: string;
   scope: 'ALL' | 'CLIENT';
+}
+
+// ── Dashboard en vivo (`GET /dashboard/live`) ──
+
+export type LiveAlertType =
+  | 'PANIC'
+  | 'ROUND_STALLED'
+  | 'ROUND_ABANDONED'
+  | 'HANDOVER_OVERDUE'
+  | 'UNIFORM_OVERDUE'
+  | 'INCIDENT_OPEN';
+
+export type LiveAlertSeverity = 'critical' | 'high' | 'medium';
+
+export interface ILiveAlert {
+  id: string;
+  type: LiveAlertType;
+  severity: LiveAlertSeverity;
+  title: string;
+  detail: string | null;
+  clientName: string | null;
+  /** Momento que originó la alerta (para "hace X"). */
+  at: string | null;
+  /** Registro relacionado (ronda, incidencia, alerta de pánico...). */
+  refId: string | null;
+}
+
+export type LiveRoundState = 'ON_TRACK' | 'STALLED' | 'ABANDONED';
+
+export interface ILiveRoundLastScan {
+  locationName: string;
+  timestamp: string;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+export interface ILiveRound {
+  roundId: string;
+  guard: { id: string; name: string; lastName: string | null };
+  clientName: string | null;
+  routeId: string | null;
+  routeTitle: string | null;
+  startTime: string;
+  elapsedMinutes: number;
+  totalLocations: number | null;
+  scannedCount: number;
+  progressPercent: number | null;
+  minutesSinceLastScan: number;
+  lastScan: ILiveRoundLastScan | null;
+  state: LiveRoundState;
+}
+
+export interface ILiveMapPoint {
+  guardId: string;
+  guardName: string;
+  clientName: string | null;
+  roundId: string;
+  routeTitle: string | null;
+  latitude: number;
+  longitude: number;
+  timestamp: string;
+  state: LiveRoundState;
+}
+
+export interface ILiveUncoveredRoute {
+  id: string;
+  title: string;
+  clientName: string | null;
+}
+
+export interface ILiveDashboard {
+  generatedAt: string;
+  scope: 'ALL' | 'CLIENT';
+  kpis: {
+    activeRounds: number;
+    stalledRounds: number;
+    guardsOnShift: number;
+    openIncidents: number;
+    pendingPanic: number;
+    routesTotal: number;
+    routesCovered: number;
+    handoverCompliance: number | null;
+    uniformCompliance: number | null;
+  };
+  alerts: ILiveAlert[];
+  activeRounds: ILiveRound[];
+  mapPoints: ILiveMapPoint[];
+  uncoveredRoutes: ILiveUncoveredRoute[];
+  compliance: {
+    handover: IAgendaSummary;
+    uniform: IAgendaSummary;
+    /** Compromisos accionables ahora (en ventana o vencidos). */
+    pending: IAgendaItem[];
+  };
 }
