@@ -57,6 +57,20 @@ export const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutos
 export const RATE_LIMIT_MAX_REQUESTS = 100; // Máximo 100 req por IP
 
 /**
+ * Límite específico para el inicio de sesión (fuerza bruta de credenciales).
+ * Es mucho más estricto que el general: 10 intentos por IP cada 15 minutos.
+ */
+export const AUTH_RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutos
+export const AUTH_RATE_LIMIT_MAX_REQUESTS = 10; // 10 intentos de login por IP
+
+/**
+ * Cabecera que fuerza la aplicación del límite DENTRO de las pruebas, para
+ * poder verificar el 429 real sin que el resto de la suite se auto-bloquee.
+ * Fuera de `NODE_ENV=test` no tiene ningún efecto (no existe bypass en producción).
+ */
+export const RATE_LIMIT_TEST_HEADER = "x-force-rate-limit";
+
+/**
  * Opciones para transacciones interactivas que ejecutan bastante trabajo
  * (cascadas de borrado, sync, altas con escrituras anidadas). El timeout por
  * defecto de Prisma es de 5 s, insuficiente bajo carga o con muchos registros.

@@ -10,29 +10,10 @@ import { logger } from "@src/core/utils/logger";
 import { errorMiddleware } from "@src/core/middlewares/error.middleware";
 import apiRouter from "@src/modules/api.router";
 
-import {
-  RATE_LIMIT_MAX_REQUESTS,
-  RATE_LIMIT_WINDOW_MS,
-} from "@src/core/config/constants";
-import rateLimit from "express-rate-limit";
-
 // Load swagger once
 const swaggerDocument = YAML.load("./swagger.yaml");
 
 export const app = express();
-
-const limiter = rateLimit({
-  windowMs: RATE_LIMIT_WINDOW_MS,
-  max: RATE_LIMIT_MAX_REQUESTS,
-  message: {
-    success: false,
-    messages: [
-      "Demasiadas peticiones desde esta IP, por favor intente de nuevo más tarde.",
-    ],
-  },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
 
 app.use([
   cors({
@@ -44,7 +25,13 @@ app.use([
     crossOriginResourcePolicy: false,
     contentSecurityPolicy: false,
   }),
-  // limiter,
+  // NOTA sobre rate limiting: el límite estricto está en `POST /users/login`
+  // (ver `core/middlewares/rate-limit.middleware.ts`), que es la única ruta
+  // pública sensible a fuerza bruta. NO se aplica un límite global aquí porque
+  // el panel WEB consulta varios endpoints por sesión y varios usuarios pueden
+  // compartir una misma IP (NAT de oficina): un umbral bajo por IP rompería el
+  // uso legítimo. Si se quiere un límite general, usar `createRateLimiter(...)`
+  // con un umbral holgado y medirlo antes con tráfico real.
   morgan(env.NODE_ENV === "development" ? "dev" : "combined"),
 ]);
 

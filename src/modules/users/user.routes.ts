@@ -26,10 +26,13 @@ import {
 import { DataTableFetchParamsSchema } from "../../core/dto/datatable.schema";
 
 import { authenticate } from "@src/modules/common/middlewares/auth.middleware";
+import { authRateLimiter } from "@src/core/middlewares/rate-limit.middleware";
 
 const router = Router();
 
-router.post("/login", validate(loginSchema), login);
+// El login es la única ruta pública sensible: se limita por IP para frenar la
+// fuerza bruta de credenciales (10 intentos / 15 min).
+router.post("/login", authRateLimiter, validate(loginSchema), login);
 
 router.use(authenticate);
 
