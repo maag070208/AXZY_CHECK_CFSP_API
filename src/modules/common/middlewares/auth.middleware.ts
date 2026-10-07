@@ -1,3 +1,4 @@
+import { AuthenticatedUser } from "@src/core/types/auth.types";
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../../../core/utils/security';
 import { AppError } from '../../../core/errors/AppError';
@@ -26,9 +27,9 @@ export const authenticate = asyncHandler(async (req: Request, res: Response, nex
         throw new AppError('No se proporcionó un token', 401);
     }
 
-    let decoded: any;
+    let decoded: AuthenticatedUser;
     try {
-        decoded = await verifyToken(token);
+        decoded = (await verifyToken(token)) as unknown as AuthenticatedUser;
     } catch (error) {
         throw new AppError('Token inválido o expirado', 401);
     }

@@ -9,9 +9,9 @@
 
 ```
 Test Suites: 42 passed, 42 total
-Tests:       269 passed, 269 total   ← determinista
+Tests:       269 passed, 269 total   ← determinista (3 corridas seguidas)
 tsc --noEmit: limpio
-any en src:   87
+any en src:   40
 ```
 
 ### ✅ Ya blindado
@@ -29,6 +29,7 @@ any en src:   87
 | **e2e de flujos** | ✅ 10 flujos |
 | **Audit log en TODAS las mutaciones** | ✅ (7 módulos que faltaban, corregidos) |
 | **Validación Zod en todas las entradas con payload** | ✅ |
+| **`any` reducido 87 → 40** | ✅ (los 40 restantes son defendibles) |
 
 **Los 3 bugs reales que destapó el blindaje:**
 
@@ -44,56 +45,30 @@ any en src:   87
 
 ---
 
-## 1. ⏳ `any` restante — 87 ocurrencias
+## 1. `any` restante — 40 ocurrencias (todas defendibles o residuales)
 
-Es lo único grande que queda. Se divide en **defendibles** y **tipables**.
+Se eliminaron **47** en la última pasada (`rounds`, `incidents`, `maintenance`,
+`kardex`, `users`, `reports`, `clients`, controladores, cron, `pdf.utils`,
+`emailSender`). Lo que queda:
 
-### 1.1 Defendibles (librerías externas / Prisma genérico) — ~40
-
-| Archivo | Nº | Por qué es defendible |
+| Archivo | Nº | Por qué queda |
 |---|---:|---|
 | `core/config/database.ts` | 12 | Extensión de soft-delete sobre modelos **genéricos** (`$allOperations`) |
 | `clients/clients.cascade.ts` | 11 | Cliente Prisma **extendido** (no es `Prisma.TransactionClient`) |
-| `core/utils/emailSender.ts` | 6 | SDK de email + payloads HTML |
 | `sync/sync.service.ts` | 5 | Acceso **dinámico** a modelos (`prismaClient[model]`) |
-| `core/utils/pdf.utils.ts` | 2 | Tipos de librería PDF |
-| `core/errors/AppError.ts` | 2 | `stack` opcional del error |
-| `core/cron/scheduled-notifications.cron.ts` | 2 | Callbacks del cron |
+| `round.service.ts` (`cleanFilters`) | 1 | Filtro dinámico con valores objeto (no encaja en `Record<string, string|number|boolean>`) |
+| middlewares / utils | 11 | 1 por archivo, en firmas de Express/`asyncHandler` |
 
-> Recomendación: documentarlos como **excepción consciente** con un comentario.
-> Forzarlos a cero implica reescribir la extensión de soft-delete (riesgo alto,
-> beneficio bajo).
+**Conclusión honesta:** son **excepción consciente**. Forzar estos a cero implica
+reescribir la extensión de soft-delete y el acceso dinámico a modelos — riesgo
+alto, beneficio nulo. Documentados aquí como decisión, no como deuda olvidada.
 
-### 1.2 Tipables — ~47 (el trabajo real)
+**Bugs/secretos que se destaparon al tipar:**
 
-| Archivo | Nº | Qué tipar |
-|---|---:|---|
-| `rounds/round.pdf.service.ts` | 8 | Payload del PDF de ronda |
-| `rounds/round.service.ts` | 4 | `(s as any).assignment`, mappers |
-| `maintenance/maintenance.service.ts` | 3 | `whereClause`, media |
-| `incidents/incident.service.ts` | 3 | `whereClause`, filtros |
-| `rounds/round.dto.ts` | 2 | `round: any` del detalle |
-| `kardex/kardex.service.ts` | 2 | `media?: any[]` (campo `Json?`) |
-| `kardex/kardex.response.ts` | 2 | `media` en la respuesta |
-| `clients/clients.service.ts` | 2 | filtros |
-| `users/user.service.ts` | 1 | `data` de update |
-| `users/user.response.ts` | 1 | campo de respuesta |
-| `reports/report.service.ts` | 1 | `data: null as any` |
-| `reports/report.pdf.service.ts` | 1 | payload PDF |
-| `maintenance/maintenance.response.ts` | 1 | `media` |
-| `maintenance/maintenance.controller.ts` | 1 | `filters` de query |
-| `locations/locations.controller.ts` | 1 | buffer de PDF |
-| `incidents/incident.response.ts` | 1 | `media` |
-| `incidents/incident.controller.ts` | 1 | `filters` de query |
-| `sync/sync.controller.ts` | 1 | payload del push |
-
-**Patrones a usar:**
-
-- Resultados con relaciones → `Prisma.XGetPayload<{ include: ... }>`
-- Filtros → `Prisma.XWhereInput`
-- Entradas → `z.infer<typeof schema>["body"]`
-- Campos `Json?` → `Prisma.InputJsonValue` (entrada) / `Prisma.JsonValue` (salida)
-- Params que varían (include vs select) → interfaz explícita en `*.response.ts`
+- `panic.service`: campo FCM inválido `vibrate` → `vibrateTimingsMillis`.
+- `scheduled-notifications.cron`: **API key de Ably hardcodeada** → ahora `env.ABLY_API_KEY`.
+- `scheduled-notifications.cron`: `require("firebase-admin")` duplicado → util compartida.
+- `emailSender`: `media` era `any` → normalizado a `IEmailMedia[]`.
 
 ---
 

@@ -4,13 +4,20 @@ import { AppError } from '../errors/AppError';
 import { createTResult } from '../mappers/tresult.mapper';
 import { env } from '../config/env.config';
 
+/** Error con metadatos que agrega el middleware centralizado. */
+type TErrorWithMeta = Error & {
+  statusCode?: number;
+  code?: string;
+  errors?: string[] & { versionMismatch?: boolean };
+};
+
 export const errorMiddleware = (
-  err: any,
+  err: TErrorWithMeta,
   req: Request,
   res: Response,
   next: NextFunction
 ) => {
-  let { statusCode, message, errors } = err;
+  let { statusCode = 500, message, errors } = err;
 
   if (!(err instanceof AppError)) {
     statusCode = 500;

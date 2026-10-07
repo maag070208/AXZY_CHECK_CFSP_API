@@ -1,4 +1,5 @@
 import multer from "multer";
+import { Request } from "express";
 import path from "path";
 import fs from "fs";
 
@@ -6,7 +7,7 @@ import fs from "fs";
 // Storage configuration
 const storage = multer.memoryStorage();
 
-const fileFilter = (req: any, file: any, cb: any) => {
+const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
   const allowedMimes = [
     "image/jpeg",
     "image/png",
@@ -22,7 +23,7 @@ const fileFilter = (req: any, file: any, cb: any) => {
   if (allowedMimes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error("Invalid file type. Only images and videos are allowed."), false);
+    cb(new Error("Tipo de archivo inválido. Solo se permiten imágenes y videos."));
   }
 };
 

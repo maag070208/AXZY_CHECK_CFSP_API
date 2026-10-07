@@ -1,3 +1,4 @@
+import fs from "fs";
 import { prismaClient } from "@src/core/config/database";
 
 /**
@@ -13,4 +14,11 @@ import { prismaClient } from "@src/core/config/database";
  */
 afterAll(async () => {
   await prismaClient.$disconnect().catch(() => {});
+});
+
+// Diagnóstico temporal: registra rechazos sin manejar (posible crash → ECONNRESET).
+process.on("unhandledRejection", (reason) => {
+  try {
+    fs.appendFileSync("/tmp/unhandled.txt", `${new Date().toISOString()} UNHANDLED: ${String(reason)}\n${reason instanceof Error ? reason.stack : ""}\n\n`);
+  } catch {}
 });

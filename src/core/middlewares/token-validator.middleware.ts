@@ -20,11 +20,12 @@ export default async function (
     }
 
     const decoded = await verifyToken(token);
-    res.locals.user = decoded;
-    (req as any).user = decoded;
+    res.locals.user = decoded as unknown as AuthenticatedUser;
+    (req as express.Request & { user?: AuthenticatedUser }).user =
+      decoded as unknown as AuthenticatedUser;
 
     // Shift Validation for Guards
-    const user = decoded as AuthenticatedUser;
+    const user = decoded as unknown as AuthenticatedUser;
     const shiftCheck = checkUserShift({
       role: user.role,
       shiftStart: user.shiftStart,

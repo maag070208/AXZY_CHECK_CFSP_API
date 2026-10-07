@@ -1,10 +1,14 @@
+import { prismaClient } from "@src/core/config/database";
+
+/** Tipo real del cliente de transacción (cliente Prisma extendido). */
+type TExtendedTx = Parameters<Parameters<typeof prismaClient.$transaction>[0]>[0];
 import { ROLE_CLIENT } from "@src/core/config/constants";
 
 /**
  * Handles cascade deletion of client-related data.
  * Used by both clients.service and user.service when a client-owner is deleted.
  */
-export async function deleteClientDataCascade(tx: any, clientId: string, userIdToExclude?: string) {
+export async function deleteClientDataCascade(tx: TExtendedTx, clientId: string, userIdToExclude?: string) {
   // 1. Get all users associated with this client
   const allClientUsers = await tx.user.findMany({
     where: {
@@ -14,13 +18,13 @@ export async function deleteClientDataCascade(tx: any, clientId: string, userIdT
     include: { role: true }
   });
 
-  const usersToDelete = allClientUsers.filter((u: any) => u.role?.name === ROLE_CLIENT);
-  const usersToUnassign = allClientUsers.filter((u: any) => u.role?.name !== ROLE_CLIENT);
+  const usersToDelete = allClientUsers.filter((u) => u.role?.name === ROLE_CLIENT);
+  const usersToUnassign = allClientUsers.filter((u) => u.role?.name !== ROLE_CLIENT);
 
   // 2. Unassign guards/staff (clientId = null)
   if (usersToUnassign.length > 0) {
     await tx.user.updateMany({
-      where: { id: { in: usersToUnassign.map((u: any) => u.id) } },
+      where: { id: { in: usersToUnassign.map((u) => u.id) } },
       data: { clientId: null }
     });
   }
@@ -28,7 +32,7 @@ export async function deleteClientDataCascade(tx: any, clientId: string, userIdT
   // 3. Physical delete all users that ARE client users
   if (usersToDelete.length > 0) {
     await tx.user.deleteMany({
-      where: { id: { in: usersToDelete.map((u: any) => u.id) } }
+      where: { id: { in: usersToDelete.map((u) => u.id) } }
     });
   }
 
@@ -37,14 +41,14 @@ export async function deleteClientDataCascade(tx: any, clientId: string, userIdT
     where: { clientId },
     select: { id: true },
   });
-  const configIds = configs.map((c: any) => c.id);
+  const configIds = configs.map((c) => c.id);
 
   if (configIds.length > 0) {
     const recurringLocs = await tx.recurringLocation.findMany({
       where: { recurringConfigurationId: { in: configIds } },
       select: { id: true },
     });
-    const recLocIds = recurringLocs.map((rl: any) => rl.id);
+    const recLocIds = recurringLocs.map((rl) => rl.id);
 
     if (recLocIds.length > 0) {
       await tx.recurringTask.deleteMany({
@@ -62,7 +66,7 @@ export async function deleteClientDataCascade(tx: any, clientId: string, userIdT
     where: { clientId },
     select: { id: true },
   });
-  const locationIds = locations.map((l: any) => l.id);
+  const locationIds = locations.map((l) => l.id);
 
   if (locationIds.length > 0) {
     await tx.recurringLocation.deleteMany({ where: { locationId: { in: locationIds } } });
@@ -72,7 +76,7 @@ export async function deleteClientDataCascade(tx: any, clientId: string, userIdT
       where: { locationId: { in: locationIds } },
       select: { id: true }
     });
-    const assignIds = assignments.map((a: any) => a.id);
+    const assignIds = assignments.map((a) => a.id);
     if (assignIds.length > 0) {
       await tx.assignmentTask.deleteMany({ where: { assignmentId: { in: assignIds } } });
     }
@@ -88,14 +92,14 @@ export async function deleteClientDataCascade(tx: any, clientId: string, userIdT
   await tx.zone.deleteMany({ where: { clientId } });
   
   // 6. Data associated with users of this client (guards/staff)
-  const clientUserIds = usersToUnassign.map((u: any) => u.id);
+  const clientUserIds = usersToUnassign.map((u) => u.id);
 
   if (clientUserIds.length > 0) {
     const userAssignments = await tx.assignment.findMany({
       where: { guardId: { in: clientUserIds } },
       select: { id: true },
     });
-    const userAssignIds = userAssignments.map((a: any) => a.id);
+    const userAssignIds = userAssignments.map((a) => a.id);
     if (userAssignIds.length > 0) {
       await tx.assignmentTask.deleteMany({
         where: { assignmentId: { in: userAssignIds } },

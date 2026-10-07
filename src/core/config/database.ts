@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 
 /**
  * Singleton global del cliente EXTENDIDO.
@@ -13,6 +13,20 @@ const globalForPrisma = globalThis as unknown as {
   __prisma?: ReturnType<typeof buildExtendedClient>;
 };
 
+/**
+ * Vista laxa del cliente base para el acceso **dinámico** por nombre de modelo
+ * (`basePrisma[modelo]`). La extensión opera sobre modelos genéricos, así que no
+ * se puede indexar con un tipo concreto.
+ */
+interface ISoftDeleteDelegate {
+  update: (args: Record<string, unknown>) => Promise<unknown>;
+  updateMany: (args: Record<string, unknown>) => Promise<{ count: number }>;
+}
+type TDynamicBasePrisma = Record<string, ISoftDeleteDelegate>;
+
+/** Argumentos genéricos de una operación extendida. */
+type TQueryArgs = { where?: Record<string, unknown> };
+
 function buildExtendedClient() {
   const basePrisma = new PrismaClient();
 
@@ -25,7 +39,7 @@ function buildExtendedClient() {
           if (model && softDeleteModels.includes(model)) {
             // Filter out soft-deleted records for read operations
             if (['findFirst', 'findMany', 'findUnique', 'count', 'aggregate', 'groupBy'].includes(operation)) {
-              const a = args as any;
+              const a = args as unknown as TQueryArgs;
               a.where = a.where || {};
               if (a.where.softDelete === undefined) {
                 a.where.softDelete = false;
@@ -35,22 +49,22 @@ function buildExtendedClient() {
             // Intercept delete to perform soft delete
             if (operation === 'delete') {
               const modelKey = model.charAt(0).toLowerCase() + model.slice(1);
-              const where = (args as any).where;
-              const updateData: any = { softDelete: true, active: false, deletedAt: new Date() };
+              const where = (args as unknown as TQueryArgs).where as Record<string, unknown>;
+              const updateData: Record<string, unknown> = { softDelete: true, active: false, deletedAt: new Date() };
 
               if (model === 'User') {
-                const record = await (basePrisma as any).user.findUnique({ where, select: { username: true } });
+                const record = await basePrisma.user.findUnique({ where: where as Prisma.UserWhereUniqueInput, select: { username: true } });
                 if (record && !record.username.includes('_deleted_')) {
                   updateData.username = `${record.username}_deleted_${Date.now()}`;
                 }
               } else if (model === 'Client') {
-                const record = await (basePrisma as any).client.findUnique({ where, select: { name: true } });
+                const record = await basePrisma.client.findUnique({ where: where as Prisma.ClientWhereUniqueInput, select: { name: true } });
                 if (record && !record.name.includes('_deleted_')) {
                   updateData.name = `${record.name}_deleted_${Date.now()}`;
                 }
               }
 
-              return (basePrisma as any)[modelKey].update({
+              return (basePrisma as unknown as TDynamicBasePrisma)[modelKey].update({
                 where,
                 data: updateData,
               });
@@ -58,13 +72,13 @@ function buildExtendedClient() {
 
             if (operation === 'deleteMany') {
               const modelKey = model.charAt(0).toLowerCase() + model.slice(1);
-              const where = (args as any).where;
+              const where = (args as unknown as TQueryArgs).where as Record<string, unknown>;
 
               if (model === 'User') {
-                const records = await (basePrisma as any).user.findMany({ where, select: { id: true, username: true } });
+                const records = await basePrisma.user.findMany({ where: where as Prisma.UserWhereInput, select: { id: true, username: true } });
                 for (const record of records) {
                   if (!record.username.includes('_deleted_')) {
-                    await (basePrisma as any).user.update({
+                    await basePrisma.user.update({
                       where: { id: record.id },
                       data: {
                         softDelete: true,
@@ -77,10 +91,10 @@ function buildExtendedClient() {
                 }
                 return { count: records.length };
               } else if (model === 'Client') {
-                const records = await (basePrisma as any).client.findMany({ where, select: { id: true, name: true } });
+                const records = await basePrisma.client.findMany({ where: where as Prisma.ClientWhereInput, select: { id: true, name: true } });
                 for (const record of records) {
                   if (!record.name.includes('_deleted_')) {
-                    await (basePrisma as any).client.update({
+                    await basePrisma.client.update({
                       where: { id: record.id },
                       data: {
                         softDelete: true,
@@ -94,7 +108,7 @@ function buildExtendedClient() {
                 return { count: records.length };
               }
 
-              return (basePrisma as any)[modelKey].updateMany({
+              return (basePrisma as unknown as TDynamicBasePrisma)[modelKey].updateMany({
                 where,
                 data: { softDelete: true, active: false, deletedAt: new Date() },
               });

@@ -3428,8 +3428,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-
-
   /guard-logs/clock-out:
     patch:
       tags:
@@ -3460,8 +3458,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-
-
   /guard-logs/datatable:
     post:
       tags:
@@ -3498,8 +3494,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-
-
   /guard-discipline/datatable:
     post:
       tags:
@@ -3536,8 +3530,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-
-
   /guard-discipline:
     post:
       tags:
@@ -3568,9 +3560,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-
-
-  /guard-discipline/{id}/resolve:
+  '/guard-discipline/{id}/resolve':
     put:
       tags:
         - guard-discipline
@@ -3600,9 +3590,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-
-
-  /guard-discipline/{id}:
+  '/guard-discipline/{id}':
     delete:
       tags:
         - guard-discipline
@@ -3632,8 +3620,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-
-
   /guard-discipline/categories/datatable:
     post:
       tags:
@@ -3670,8 +3656,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-
-
   /guard-discipline/categories:
     post:
       tags:
@@ -3702,8 +3686,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-
-
   /guard-discipline/types/datatable:
     post:
       tags:
@@ -3740,8 +3722,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-
-
   /guard-discipline/types:
     post:
       tags:
@@ -3772,8 +3752,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-
-
   /notifications/send:
     post:
       tags:
@@ -3804,8 +3782,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-
-
   /notifications/my:
     get:
       tags:
@@ -3836,9 +3812,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-
-
-  /notifications/{id}/read:
+  '/notifications/{id}/read':
     patch:
       tags:
         - notifications
@@ -3868,8 +3842,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-
-
   /notifications/read-all:
     patch:
       tags:
@@ -3900,8 +3872,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-
-
   /panic-alerts:
     post:
       tags:
@@ -3932,8 +3902,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-
-
   /panic-alerts/datatable:
     post:
       tags:
@@ -3970,8 +3938,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-
-
   /panic-alerts/recent:
     get:
       tags:
@@ -4002,9 +3968,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-
-
-  /panic-alerts/{id}:
+  '/panic-alerts/{id}':
     get:
       tags:
         - panic-alerts
@@ -4034,9 +3998,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-
-
-  /panic-alerts/{id}/resolve:
+  '/panic-alerts/{id}/resolve':
     put:
       tags:
         - panic-alerts
@@ -4066,8 +4028,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-
-
   /scheduled-notifications/datatable:
     post:
       tags:
@@ -4104,9 +4064,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-
-
-  /scheduled-notifications/{id}:
+  '/scheduled-notifications/{id}':
     get:
       tags:
         - scheduled-notifications
@@ -4136,8 +4094,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-
-
   /scheduled-notifications:
     post:
       tags:
@@ -4168,72 +4124,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-
-
-  /scheduled-notifications/{id}:
-    put:
-      tags:
-        - scheduled-notifications
-      summary: 'Actualizar un aviso programado'
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultScheduledNotification'
-        '400':
-          description: 'Error de validación'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultError'
-        '401':
-          description: 'No autorizado'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultError'
-        '500':
-          description: 'Error interno del servidor'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultError'
-
-
-  /scheduled-notifications/{id}:
-    delete:
-      tags:
-        - scheduled-notifications
-      summary: 'Eliminar un aviso programado'
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResult'
-        '400':
-          description: 'Error de validación'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultError'
-        '401':
-          description: 'No autorizado'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultError'
-        '500':
-          description: 'Error interno del servidor'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultError'
-
-
   /subscription/config:
     get:
       tags:
@@ -4264,39 +4154,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-
-
-  /subscription/config:
-    put:
-      tags:
-        - subscription
-      summary: 'Actualizar configuración de suscripción'
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultSubscriptionConfig'
-        '400':
-          description: 'Error de validación'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultError'
-        '401':
-          description: 'No autorizado'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultError'
-        '500':
-          description: 'Error interno del servidor'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultError'
-
 components:
   schemas:
     UserLogin:

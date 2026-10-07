@@ -1,15 +1,12 @@
 import * as Ably from "ably";
+import { env } from "@src/core/config/env.config";
 import { logger } from "./logger";
-
-const ABLY_KEY =
-  process.env.ABLY_API_KEY ||
-  "_iYGPA.fJVkAw:ix6oVHub7TpqllbX6JMdmfJgDoqKKEIoZ5wJNRo6Zlc";
 
 let ablyRest: Ably.Rest | null = null;
 
 export const getAbly = (): Ably.Rest => {
   if (!ablyRest) {
-    ablyRest = new Ably.Rest({ key: ABLY_KEY });
+    ablyRest = new Ably.Rest({ key: env.ABLY_API_KEY });
   }
   return ablyRest;
 };
@@ -27,6 +24,9 @@ export const publishActivity = async (
   action: string,
   payload: Record<string, unknown> = {},
 ): Promise<void> => {
+  // En pruebas no se publica a Ably (red real → flakiness).
+  if (process.env.NODE_ENV === "test") return;
+
   try {
     const ably = getAbly();
     const channel = ably.channels.get("global");
@@ -50,6 +50,9 @@ export const publishToClient = async (
   event: string,
   payload: Record<string, unknown> = {},
 ): Promise<void> => {
+  // En pruebas no se publica a Ably (red real → flakiness).
+  if (process.env.NODE_ENV === "test") return;
+
   try {
     const ably = getAbly();
     const channelName = clientId ? `panic.${clientId}` : "panic.global";

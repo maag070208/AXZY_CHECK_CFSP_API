@@ -37,6 +37,10 @@ interface IEmailReporter {
 
 export const sendIncidentEmail = async (incident: IIncidentEmailData, guard: IEmailReporter) => {
   try {
+  // En pruebas no se envían notificaciones externas (Resend/WhatsApp): son
+  // llamadas de red reales y hacían la suite lenta e intermitente.
+  if (process.env.NODE_ENV === "test") return;
+
     // 1. Get recipients from SysConfig
     const config = await prisma.sysConfig.findUnique({
       where: { key: "INCIDENT_EMAIL" },
@@ -155,6 +159,10 @@ export const sendIncidentEmail = async (incident: IIncidentEmailData, guard: IEm
 
 export const sendMaintenanceEmail = async (maintenance: IMaintenanceEmailData, guard: IEmailReporter) => {
   try {
+  // En pruebas no se envían notificaciones externas (Resend/WhatsApp): son
+  // llamadas de red reales y hacían la suite lenta e intermitente.
+  if (process.env.NODE_ENV === "test") return;
+
     const config = await prisma.sysConfig.findUnique({
       where: { key: "MAINTENANCE_EMAIL" },
     });
@@ -263,6 +271,10 @@ export const sendMaintenanceEmail = async (maintenance: IMaintenanceEmailData, g
 
 export const sendIncidentWhatsApp = async (incident: IIncidentEmailData, guard: IEmailReporter) => {
   try {
+  // En pruebas no se envían notificaciones externas (Resend/WhatsApp): son
+  // llamadas de red reales y hacían la suite lenta e intermitente.
+  if (process.env.NODE_ENV === "test") return;
+
     const config = await prisma.sysConfig.findUnique({
       where: { key: "INCIDENT_WHATSAPP" },
     });
@@ -281,6 +293,10 @@ export const sendIncidentWhatsApp = async (incident: IIncidentEmailData, guard: 
 
 export const sendMaintenanceWhatsApp = async (maintenance: IMaintenanceEmailData, guard: IEmailReporter) => {
   try {
+  // En pruebas no se envían notificaciones externas (Resend/WhatsApp): son
+  // llamadas de red reales y hacían la suite lenta e intermitente.
+  if (process.env.NODE_ENV === "test") return;
+
     const config = await prisma.sysConfig.findUnique({
       where: { key: "MAINTENANCE_WHATSAPP" },
     });

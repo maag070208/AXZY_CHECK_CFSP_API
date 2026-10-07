@@ -1,4 +1,23 @@
 import { prismaClient } from "@src/core/config/database";
+
+/** Tipo real del cliente de transacción (cliente Prisma extendido). */
+type TExtendedTx = Parameters<Parameters<typeof prismaClient.$transaction>[0]>[0];
+
+/**
+ * Vista "laxa" del cliente para el acceso **dinámico** por nombre de modelo
+ * (`prisma[model]`). La sincronización itera modelos por su nombre en runtime,
+ * así que el cliente no se puede indexar con un tipo concreto.
+ */
+interface IDynamicDelegate {
+  findMany: (args?: Record<string, unknown>) => Promise<Array<Record<string, unknown>>>;
+  findUnique: (args: Record<string, unknown>) => Promise<Record<string, unknown> | null>;
+  count: (args?: Record<string, unknown>) => Promise<number>;
+  create: (args: Record<string, unknown>) => Promise<Record<string, unknown>>;
+  update: (args: Record<string, unknown>) => Promise<Record<string, unknown>>;
+  delete: (args: Record<string, unknown>) => Promise<Record<string, unknown>>;
+  updateMany: (args: Record<string, unknown>) => Promise<{ count: number }>;
+}
+type TDynamicPrisma = Record<string, IDynamicDelegate>;
 import { ZodError, ZodTypeAny } from "zod";
 import {
   OPERATIONAL_ROLES,
@@ -133,7 +152,7 @@ const validateBody = <T>(schema: ZodTypeAny, body: unknown, label: string): T =>
 };
 
 type CustomPush = (
-  tx: any,
+  tx: TExtendedTx,
   record: SyncRecord,
   user: IAuthUser,
   now: Date,
@@ -248,15 +267,15 @@ const sanitize = (model: string, rows: Record<string, unknown>[]) => {
  * `deletedAt`.
  */
 const findDeletedIds = async (model: string, since: Date, scope: Record<string, unknown>): Promise<string[]> => {
-  const prisma = prismaClient as any;
+  const prisma = prismaClient as unknown as TDynamicPrisma;
   const where = { ...scope, deletedAt: { gt: since } };
-  const rows: { id: string }[] = SOFT_DELETE_MODELS.has(model)
+  const rows = SOFT_DELETE_MODELS.has(model)
     ? [
         ...(await prisma[model].findMany({ where: { ...where, softDelete: true }, select: { id: true } })),
         ...(await prisma[model].findMany({ where: { ...where, softDelete: false }, select: { id: true } })),
       ]
     : await prisma[model].findMany({ where, select: { id: true } });
-  return [...new Set(rows.map((r) => r.id))];
+  return [...new Set(rows.map((r) => String(r.id)))];
 };
 
 export const pullChanges = async (params: SyncPullParams) => {
@@ -268,7 +287,7 @@ export const pullChanges = async (params: SyncPullParams) => {
   const clientId = params.user?.clientId;
 
   const changes: Record<string, { created: unknown[]; updated: unknown[]; deleted: string[] }> = {};
-  const prisma = prismaClient as any;
+  const prisma = prismaClient as unknown as TDynamicPrisma;
 
   await Promise.all(
     MODELS_TO_SYNC.map(async (model) => {
@@ -356,7 +375,7 @@ export const pushChanges = async (params: SyncPushParams) => {
 
   await prismaClient.$transaction(
     async (tx) => {
-      const db = tx as any;
+      const db = tx as unknown as TDynamicPrisma;
       for (const table of PUSH_ORDER) {
         const change = changes[table];
         if (!change) continue;
@@ -367,7 +386,7 @@ export const pushChanges = async (params: SyncPushParams) => {
           if (records.length > 0 && !SUPERVISION_ROLES.includes(user.role)) {
             throw new AppError(`Tu rol no puede registrar ${table}`, 403);
           }
-          for (const record of records) await custom(db, record, user, now);
+          for (const record of records) await custom(tx, record, user, now);
           summary[table] = { created: records.length, updated: 0, deleted: 0 };
           continue;
         }
@@ -440,7 +459,7 @@ export const pushChanges = async (params: SyncPushParams) => {
 
 export const hasChangesSince = async (params: SyncPullParams): Promise<boolean> => {
   const lastPulledAt = params.lastPulledAt ? new Date(params.lastPulledAt) : new Date(0);
-  const prisma = prismaClient as any;
+  const prisma = prismaClient as unknown as TDynamicPrisma;
   const clientId = params.user?.clientId;
 
   const results = await Promise.all(

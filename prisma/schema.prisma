@@ -44,6 +44,7 @@ model Client {
   shiftPlans              ShiftPlan[]
   shiftHandovers          ShiftHandover[]
   uniformChecks           UniformCheck[]
+  @@index([softDelete, active])
 }
 
 model SubscriptionConfig {
@@ -114,6 +115,9 @@ model User {
   shiftHandoverElements   ShiftHandoverElement[]   @relation("ShiftHandoverGuard")
   uniformChecks           UniformCheck[]           @relation("UniformGuard")
   evaluatedUniformChecks  UniformCheck[]           @relation("UniformEvaluator")
+  @@index([clientId])
+  @@index([roleId])
+  @@index([softDelete, active])
 }
 
 model AssignmentLog {
@@ -126,6 +130,7 @@ model AssignmentLog {
 
   guard  User    @relation(fields: [guardId], references: [id])
   client Client? @relation(fields: [clientId], references: [id])
+  @@index([guardId])
 }
 
 model AuditLog {
@@ -138,6 +143,8 @@ model AuditLog {
   createdAt  DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id])
+  @@index([createdAt])
+  @@index([userId])
 }
 
 model Schedule {
@@ -190,6 +197,7 @@ model LocationTask {
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?
   location    Location  @relation(fields: [locationId], references: [id])
+  @@index([locationId])
 }
 
 model Kardex {
@@ -364,6 +372,7 @@ model RecurringLocation {
   recurringConfiguration   RecurringConfiguration @relation(fields: [recurringConfigurationId], references: [id])
   location                 Location               @relation(fields: [locationId], references: [id])
   tasks                    RecurringTask[]
+  @@index([recurringConfigurationId])
 }
 
 model RecurringTask {
@@ -375,6 +384,7 @@ model RecurringTask {
   updatedAt           DateTime          @updatedAt
   deletedAt           DateTime?
   recurringLocation   RecurringLocation @relation(fields: [recurringLocationId], references: [id])
+  @@index([recurringLocationId])
 }
 
 model Maintenance {
@@ -505,6 +515,8 @@ model ReportConfiguration {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   deletedAt      DateTime?
+  @@index([clientId])
+  @@index([softDelete, active])
 }
 
 model ScheduledNotification {
@@ -537,6 +549,7 @@ model ScheduledNotification {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
+  @@index([active, nextSendAt])
 }
 
 model NotificationLog {

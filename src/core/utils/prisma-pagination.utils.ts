@@ -17,7 +17,11 @@ export function getPrismaPaginationParams(params: ITDataTableFetchParams) {
     : { createdAt: "desc" as const }; // Default sort
 
   // Filtering
-  const where: any = {};
+  // Helper genérico: el `where` resultante se usa como input de cualquier modelo Prisma.
+  // Excepción consciente: este `where` genérico se usa como input de CUALQUIER
+  // modelo Prisma (los servicios le agregan campos de su propio modelo). Tiparlo
+  // con un modelo concreto obligaría a castear en cada uno de los ~20 llamadores.
+  const where: Record<string, any> = {};
   
   if (filters) {
     Object.entries(filters).forEach(([key, value]) => {

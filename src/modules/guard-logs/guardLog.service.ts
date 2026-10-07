@@ -84,19 +84,18 @@ export const clockOut = async (guardId: string) => {
   return log;
 };
 
-const mapGuardLogFilters = (filters: Record<string, any>) => {
+const mapGuardLogFilters = (filters: Record<string, unknown>): Prisma.GuardLoginLogWhereInput => {
   // Filtro dinámico por clave (search, isOpen, clientId, status…).
-  const where: any = {};
+  const where: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(filters)) {
     if (value === undefined || value === null || value === "" || key === "refreshKey") continue;
 
     if (key === "date") {
       if (Array.isArray(value) && value[0]) {
-        where.loginAt = { gte: new Date(value[0]) };
-        if (value[1]) {
-          where.loginAt.lte = new Date(value[1]);
-        }
+        const loginAt: { gte: Date; lte?: Date } = { gte: new Date(value[0]) };
+        if (value[1]) loginAt.lte = new Date(value[1]);
+        where.loginAt = loginAt;
       }
       continue;
     }
@@ -146,7 +145,7 @@ const mapGuardLogFilters = (filters: Record<string, any>) => {
     }
   }
 
-  return where;
+  return where as Prisma.GuardLoginLogWhereInput;
 };
 
 export const deleteLog = async (id: string) => {

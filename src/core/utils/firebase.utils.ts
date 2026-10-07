@@ -30,6 +30,10 @@ let firebaseApp: IFirebaseApp | null = null;
  * warning y se devuelve `null`.
  */
 export const getFirebaseApp = (): IFirebaseApp | null => {
+  // En pruebas no se inicializa Firebase: el service account existe en disco y
+  // hacerlo dispara llamadas reales de red (flakiness / "socket hang up").
+  if (process.env.NODE_ENV === "test") return null;
+
   if (!firebaseApp) {
     try {
       // tslint:disable-next-line

@@ -50,7 +50,9 @@ export const getDataTableRounds = async (
   user?: AuthenticatedUser,
 ): Promise<ITDataTableResponse<IRoundResponse>> => {
   const customFilters = params.filters || {};
-  const cleanFilters: any = {};
+  // Filtro dinámico: algunas claves llevan objetos de Prisma (p. ej. `guard`),
+  // por eso no encaja en el tipo escalar de `filters` y se castea al usarlo.
+  const cleanFilters: Record<string, unknown> = {};
   let clientIdFilter: string | undefined;
 
   if (params.filters) {
@@ -77,7 +79,7 @@ export const getDataTableRounds = async (
 
   const prismaParams = getPrismaPaginationParams({
     ...params,
-    filters: cleanFilters,
+    filters: cleanFilters as Record<string, string | number | boolean>,
     sort: params.sort || { key: "startTime", direction: "desc" },
   });
 

@@ -75,7 +75,26 @@ export const deleteType = async (id: string) => {
 // ── Guard Discipline (Notices) ──
 
 
-export const getPaginatedDisciplines = async (params: ITDataTableFetchParams, userId: string, userRole: string, userClientId: string | null): Promise<ITDataTableResponse<any>> => {
+/** Campos que devuelve el listado de quejas (compartido por consulta y tipo). */
+const DISCIPLINE_SELECT = {
+  id: true,
+  guardId: true,
+  title: true,
+  description: true,
+  media: true,
+  status: true,
+  createdAt: true,
+  updatedAt: true,
+  guard: { select: { id: true, name: true, lastName: true, username: true } },
+  createdBy: { select: { id: true, name: true, lastName: true, username: true } },
+  category: { select: { id: true, name: true, color: true, icon: true } },
+  type: { select: { id: true, name: true } },
+  client: { select: { id: true, name: true } },
+} as const;
+
+type TDisciplineRow = Prisma.GuardDisciplineGetPayload<{ select: typeof DISCIPLINE_SELECT }>;
+
+export const getPaginatedDisciplines = async (params: ITDataTableFetchParams, userId: string, userRole: string, userClientId: string | null): Promise<ITDataTableResponse<TDisciplineRow>> => {
   const prismaParams = getPrismaPaginationParams(params);
   const searchVal = String(params.filters?.search || "").trim();
   delete prismaParams.where.search;
@@ -114,21 +133,7 @@ export const getPaginatedDisciplines = async (params: ITDataTableFetchParams, us
       take: prismaParams.take,
       where,
       orderBy,
-      select: {
-        id: true,
-        guardId: true,
-        title: true,
-        description: true,
-        media: true,
-        status: true,
-        createdAt: true,
-        updatedAt: true,
-        guard: { select: { id: true, name: true, lastName: true, username: true } },
-        createdBy: { select: { id: true, name: true, lastName: true, username: true } },
-        category: { select: { id: true, name: true, color: true, icon: true } },
-        type: { select: { id: true, name: true } },
-        client: { select: { id: true, name: true } },
-      },
+      select: DISCIPLINE_SELECT,
     }),
     prisma.guardDiscipline.count({ where }),
   ]);

@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prismaClient as prisma } from "@src/core/config/database";
 import { ROLE_ADMIN } from "@src/core/config/constants";
 import { logger } from "@src/core/utils/logger";
@@ -7,7 +8,7 @@ export interface IAuditCreate {
   module: string;
   action: string;
   resourceId?: string;
-  details?: any;
+  details?: Prisma.InputJsonValue;
 }
 
 /**

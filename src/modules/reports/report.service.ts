@@ -428,7 +428,7 @@ export const generateAdministrativeMatrixReport = async (params: AdministrativeR
         orderBy: { location: { name: 'asc' } }
     });
 
-    const locationMap = new Map<string, any>();
+    const locationMap = new Map<string, NonNullable<(typeof recurringLocations)[number]['location']>>();
     recurringLocations.forEach(rl => {
         if (rl.location && !locationMap.has(rl.location.id)) {
             locationMap.set(rl.location.id, rl.location);
