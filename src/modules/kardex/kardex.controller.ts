@@ -12,6 +12,7 @@ import {
 import { StorageService } from "../storage/storage.service";
 import { logger } from "@src/core/utils/logger";
 import { asyncHandler } from "@src/core/utils/asyncHandler";
+import { getAuthUserId } from "@src/core/utils/auth-user.utils";
 import { AppError } from "@src/core/errors/AppError";
 
 const storageService = new StorageService();
@@ -49,7 +50,7 @@ export const updateKardexEntry = asyncHandler(async (req: Request, res: Response
     media,
     latitude,
     longitude,
-  });
+  }, getAuthUserId(res));
 
   return res.status(200).json(createTResult(entry));
 });
@@ -99,7 +100,7 @@ export const deleteKardexEntry = asyncHandler(async (req: Request, res: Response
     throw new AppError("Registro no encontrado", 404);
   }
 
-  await deleteKardex(id);
+  await deleteKardex(id, getAuthUserId(res));
   return res.status(200).json(createTResult(true));
 });
 
@@ -125,8 +126,8 @@ export const deleteMedia = asyncHandler(async (req: Request, res: Response) => {
     }
   }
 
-  const media = entry.media as any[];
-  const updatedMedia = media.filter((m: any) => {
+  const media = entry.media as Array<{ key?: string; url?: string }>;
+  const updatedMedia = media.filter((m: { key?: string; url?: string }) => {
     if (!m) return false;
     const mKey =
       m.key || (typeof m.url === "string" ? m.url.split("/").pop() : null);

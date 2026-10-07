@@ -21,4 +21,6 @@ export const env = {
     API_KEY_SECRET: process.env.TWILIO_API_KEY_SECRET,
   },
   RESEND_API_KEY: process.env.RESEND_API_KEY,
+  ABLY_API_KEY: process.env.ABLY_API_KEY || "",
+  FIREBASE_SERVICE_ACCOUNT: process.env.FIREBASE_SERVICE_ACCOUNT,
 };

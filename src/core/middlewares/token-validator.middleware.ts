@@ -1,3 +1,4 @@
+import { AuthenticatedUser } from "@src/core/types/auth.types";
 import express from "express";
 import { verifyToken } from "@src/core/utils/security";
 import { OPERATIONAL_ROLES } from "@src/core/config/constants";
@@ -23,7 +24,7 @@ export default async function (
     (req as any).user = decoded;
 
     // Shift Validation for Guards
-    const user = decoded as any;
+    const user = decoded as AuthenticatedUser;
     const shiftCheck = checkUserShift({
       role: user.role,
       shiftStart: user.shiftStart,

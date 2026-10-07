@@ -23,5 +23,5 @@ export interface IUserResponse {
     startTime: string;
     endTime: string;
   } | null;
-  assignmentLogs?: any[];
+  assignmentLogs?: Array<Record<string, unknown>>;
 }

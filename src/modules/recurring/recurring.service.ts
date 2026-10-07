@@ -1,20 +1,23 @@
+import { Prisma } from "@prisma/client";
+import { IRecurringCreateRequest, IRecurringUpdateRequest, IRecurringLocation } from "./schemas/recurring.schema";
+import { ITDataTableFetchParams } from "@src/core/dto/datatable.dto";
 import { prismaClient as prisma } from "@src/core/config/database";
 import { createAuditLog } from "../audit/audit.service";
 
-export const getRecurringDataTable = async (body: any) => {
+export const getRecurringDataTable = async (body: ITDataTableFetchParams) => {
     const { page = 1, limit = 10, filters } = body;
     const { title, search, clientId } = filters || {};
-    const filterText = search || title || "";
+    const filterText = (search || title || "") as string;
 
-    const where: any = {
+    const where: Prisma.RecurringConfigurationWhereInput = {
         softDelete: false,
         title: { contains: filterText, mode: "insensitive" }
     };
 
     if (clientId) {
         where.OR = [
-            { clientId: clientId },
-            { recurringLocations: { some: { location: { clientId: clientId } } } }
+            { clientId: clientId as string },
+            { recurringLocations: { some: { location: { clientId: clientId as string } } } }
         ];
     }
 
@@ -43,7 +46,7 @@ export const getRecurringDataTable = async (body: any) => {
     return { rows, total };
 };
 
-export const createRecurring = async (data: any, userId: string) => {
+export const createRecurring = async (data: IRecurringCreateRequest, userId: string) => {
     const { title, locations, guardIds, clientId, active = true } = data;
 
     const config = await prisma.$transaction(async (tx) => {
@@ -58,19 +61,19 @@ export const createRecurring = async (data: any, userId: string) => {
             }
         });
 
-        const createdLocs = await (tx.recurringLocation as any).createManyAndReturn({
-            data: locations.map((loc: any) => ({
+        const createdLocs = await tx.recurringLocation.createManyAndReturn({
+            data: locations.map((loc) => ({
                 recurringConfigurationId: newConfig.id,
                 locationId: loc.locationId as string,
             }))
         });
 
-        const tasksData: any[] = [];
-        locations.forEach((loc: any) => {
+        const tasksData: Array<{ recurringLocationId: string; description: string; reqPhoto: boolean }> = [];
+        locations.forEach((loc) => {
             if (loc.tasks && loc.tasks.length > 0) {
-                const rLoc = createdLocs.find((rl: any) => rl.locationId === (loc.locationId as string));
+                const rLoc = createdLocs.find((rl) => rl.locationId === (loc.locationId as string));
                 if (rLoc) {
-                    loc.tasks.forEach((t: any) => {
+                    loc.tasks.forEach((t) => {
                         tasksData.push({
                             recurringLocationId: rLoc.id,
                             description: t.description,
@@ -102,8 +105,9 @@ export const createRecurring = async (data: any, userId: string) => {
     return config;
 };
 
-export const updateRecurring = async (id: string, data: any, userId: string) => {
-    const { title, locations, guardIds, clientId, active } = data;
+export const updateRecurring = async (id: string, data: IRecurringUpdateRequest, userId: string) => {
+    const { title, locations: rawLocations, guardIds, clientId, active } = data;
+    const locations = rawLocations || [];
 
     const config = await prisma.$transaction(async (tx) => {
         const oldLocations = await tx.recurringLocation.findMany({
@@ -127,19 +131,19 @@ export const updateRecurring = async (id: string, data: any, userId: string) => 
             }
         });
 
-        const createdLocs = await (tx.recurringLocation as any).createManyAndReturn({
-            data: locations.map((loc: any) => ({
+        const createdLocs = await tx.recurringLocation.createManyAndReturn({
+            data: locations.map((loc) => ({
                 recurringConfigurationId: updatedConfig.id,
                 locationId: loc.locationId as string,
             }))
         });
 
-        const tasksData: any[] = [];
-        locations.forEach((loc: any) => {
+        const tasksData: Array<{ recurringLocationId: string; description: string; reqPhoto: boolean }> = [];
+        locations.forEach((loc) => {
             if (loc.tasks && loc.tasks.length > 0) {
-                const rLoc = createdLocs.find((rl: any) => rl.locationId === (loc.locationId as string));
+                const rLoc = createdLocs.find((rl) => rl.locationId === (loc.locationId as string));
                 if (rLoc) {
-                    loc.tasks.forEach((t: any) => {
+                    loc.tasks.forEach((t) => {
                         tasksData.push({
                             recurringLocationId: rLoc.id,
                             description: t.description,

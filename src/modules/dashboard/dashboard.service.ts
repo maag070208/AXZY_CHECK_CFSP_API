@@ -1,3 +1,4 @@
+import { AuthenticatedUser } from "@src/core/types/auth.types";
 import { prismaClient as prisma } from "@src/core/config/database";
 import {
   ROLE_CLIENT,
@@ -22,14 +23,14 @@ import {
  * Construye el where clause base filtrado por clientId cuando
  * el usuario es RESDN/cliente. ADMIN ve todo.
  */
-const buildClientFilter = (user: any) => {
+const buildClientFilter = (user: AuthenticatedUser) => {
   if (user?.role === ROLE_CLIENT && user.clientId) {
     return { clientId: user.clientId };
   }
   return {};
 };
 
-const buildGuardFilter = (user: any) => {
+const buildGuardFilter = (user: AuthenticatedUser) => {
   if (user?.role === ROLE_CLIENT && user.clientId) {
     return { clientId: user.clientId };
   }
@@ -41,7 +42,7 @@ const buildGuardFilter = (user: any) => {
  * Retorna el dato crudo (no TResult) para que el controller haga el wrap.
  */
 export const getOverview = async (
-  user: any,
+  user: AuthenticatedUser,
 ): Promise<IDashboardOverview> => {
   const clientWhere = buildClientFilter(user);
 
@@ -175,7 +176,7 @@ export const getOverview = async (
  * Vista 2: Guardias activos en tiempo real.
  */
 export const getActiveGuards = async (
-  user: any,
+  user: AuthenticatedUser,
 ): Promise<IActiveGuard[]> => {
   const guards = await prisma.user.findMany({
     where: {
@@ -242,7 +243,7 @@ export const getActiveGuards = async (
  * Vista 3: Conteo de pendientes.
  */
 export const getPendingCounts = async (
-  user: any,
+  user: AuthenticatedUser,
 ): Promise<IPendingCounts> => {
   const clientWhere = buildClientFilter(user);
   const [incidents, maintenances, disciplines, activeRounds, panicAlerts] =
@@ -271,7 +272,7 @@ export const getPendingCounts = async (
  * Vista 4: Feed unificado de actividad reciente.
  */
 export const getRecentActivity = async (
-  user: any,
+  user: AuthenticatedUser,
   limit: number = 20,
 ): Promise<IActivityItem[]> => {
   const take = Math.min(Math.max(limit, 1), 50);
@@ -398,7 +399,7 @@ export const getRecentActivity = async (
  * Vista 5: Lista dedicada de alertas de pánico recientes.
  */
 export const getRecentPanicAlerts = async (
-  user: any,
+  user: AuthenticatedUser,
   limit: number = 10,
 ): Promise<IPanicAlertListItem[]> => {
   const take = Math.min(Math.max(limit, 1), 50);

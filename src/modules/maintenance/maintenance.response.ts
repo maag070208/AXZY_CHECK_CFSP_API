@@ -1,4 +1,4 @@
-import { MaintenanceStatus } from "@prisma/client";
+import { MaintenanceStatus, Prisma } from "@prisma/client";
 
 export interface IMaintenanceResponse {
   id: string;
@@ -8,7 +8,7 @@ export interface IMaintenanceResponse {
   typeId: string | null;
   category: string | null;
   description: string | null;
-  media: any;
+  media: Prisma.JsonValue;
   latitude: number | null;
   longitude: number | null;
   createdAt: Date;

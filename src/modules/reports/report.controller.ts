@@ -1,3 +1,4 @@
+import { getErrorMessage } from "@src/core/utils/error.utils";
 import { Request, Response } from 'express';
 import * as ReportService from './report.service';
 import { asyncHandler } from "@src/core/utils/asyncHandler";
@@ -103,7 +104,7 @@ export const generateAdministrativeReport = asyncHandler(async (req: Request, re
             `inline; filename=Matriz_Administrativa_${new Date().getTime()}.pdf`
         );
         res.status(200).send(buffer);
-    } catch (error: any) {
-        res.status(500).json({ success: false, messages: [error.message], data: null });
+    } catch (error: unknown) {
+        res.status(500).json({ success: false, messages: [getErrorMessage(error)], data: null });
     }
 });

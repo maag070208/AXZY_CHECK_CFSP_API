@@ -1,8 +1,16 @@
+import type { Message } from "firebase-admin/messaging";
+import * as Ably from "ably";
+import { ScheduledNotification } from "@prisma/client";
 import { prismaClient as prisma } from "@src/core/config/database";
+import { env } from "@src/core/config/env.config";
+import { logger } from "@src/core/utils/logger";
+import { getFirebaseApp } from "@src/core/utils/firebase.utils";
 import { ITDataTableFetchParams, ITDataTableResponse } from "@src/core/dto/datatable.dto";
 import { getPrismaPaginationParams } from "@src/core/utils/prisma-pagination.utils";
+import { createAuditLog } from "../audit/audit.service";
+import { IScheduledCreate, IScheduledUpdate } from "./schemas/scheduled.schema";
 
-export const getDataTable = async (params: ITDataTableFetchParams): Promise<ITDataTableResponse<any>> => {
+export const getDataTable = async (params: ITDataTableFetchParams): Promise<ITDataTableResponse<ScheduledNotification>> => {
   const prismaParams = getPrismaPaginationParams(params);
   const search = params.filters?.search;
 
@@ -40,24 +48,63 @@ export const getById = async (id: string) => {
   });
 };
 
-export const create = async (data: any) => {
+export const create = async (data: IScheduledCreate, userId: string) => {
   const nextSend = computeNextSend(data);
-  return prisma.scheduledNotification.create({
+  const record = await prisma.scheduledNotification.create({
     data: { ...data, nextSendAt: nextSend },
   });
+
+  await createAuditLog({
+    userId,
+    module: "SCHEDULED_NOTIFICATIONS",
+    action: "CREATE",
+    resourceId: record.id,
+    details: { title: data.title, frequency: data.frequency },
+  });
+
+  // Si es ONE-TIME y ya venció, se despacha de inmediato y se cierra.
+  if (data.frequency === "ONCE" && (!data.scheduledAt || new Date(data.scheduledAt) <= new Date())) {
+    try {
+      await dispatchNotification(record);
+      await markAsSent(record.id, null);
+      await disableCompleted(record.id);
+    } catch (e) {
+      logger.warn("[Scheduled] No se pudo despachar la notificación inmediata:", e);
+    }
+  }
+
+  return record;
 };
 
-export const update = async (id: string, data: any) => {
+export const update = async (id: string, data: IScheduledUpdate & { nextSendAt?: Date | null }, userId: string) => {
   if (data.frequency !== undefined || data.timeOfDay !== undefined) {
     const existing = await prisma.scheduledNotification.findUnique({ where: { id } });
     const merged = { ...existing, ...data };
     data.nextSendAt = computeNextSend(merged);
   }
-  return prisma.scheduledNotification.update({ where: { id }, data });
+  const record = await prisma.scheduledNotification.update({ where: { id }, data });
+
+  await createAuditLog({
+    userId,
+    module: "SCHEDULED_NOTIFICATIONS",
+    action: "UPDATE",
+    resourceId: id,
+  });
+
+  return record;
 };
 
-export const remove = async (id: string) => {
-  return prisma.scheduledNotification.delete({ where: { id } });
+export const remove = async (id: string, userId: string) => {
+  const record = await prisma.scheduledNotification.delete({ where: { id } });
+
+  await createAuditLog({
+    userId,
+    module: "SCHEDULED_NOTIFICATIONS",
+    action: "DELETE",
+    resourceId: id,
+  });
+
+  return record;
 };
 
 export const getDueNotifications = async () => {
@@ -68,7 +115,7 @@ export const getDueNotifications = async () => {
       nextSendAt: { lte: now },
       OR: [
         { maxSends: null },
-        { sendCount: { lt: prisma.scheduledNotification.fields.maxSends as any } },
+        { sendCount: { lt: prisma.scheduledNotification.fields.maxSends } },
       ],
     },
   });
@@ -92,7 +139,79 @@ export const disableCompleted = async (id: string) => {
   });
 };
 
-export function computeNextSend(data: any): Date | null {
+export interface IDispatchNotificationInput {
+  title: string | null;
+  message: string;
+  type: string;
+  channel: string;
+  persistent: boolean;
+  userId: string | null;
+}
+
+/**
+ * Despacha una notificación programada: publica en Ably (tiempo real) y, si hay
+ * destinatario, envía el push FCM. Todo best-effort: los errores se registran y
+ * no revientan el flujo.
+ */
+export const dispatchNotification = async (notif: IDispatchNotificationInput): Promise<void> => {
+  // 1. Ably
+  try {
+    const ably = new Ably.Rest({ key: env.ABLY_API_KEY });
+    const ch = ably.channels.get(notif.channel || "global");
+    await ch.publish("notification", {
+      title: notif.title,
+      message: notif.message,
+      type: notif.type,
+      timestamp: new Date().toISOString(),
+      persistent: notif.persistent,
+    });
+  } catch (e) {
+    logger.warn("[Scheduled] No se pudo publicar en Ably:", e);
+  }
+
+  // 2. FCM
+  if (notif.userId) {
+    try {
+      const fcm = getFirebaseApp();
+      if (fcm) {
+        const user = await prisma.user.findUnique({
+          where: { id: notif.userId },
+          select: { fcmToken: true },
+        });
+        if (user?.fcmToken) {
+          const payload: Message = {
+            token: user.fcmToken,
+            data: {
+              type: notif.type,
+              persistent: String(notif.persistent),
+              title: notif.title || "",
+              message: notif.message,
+            },
+            android: { priority: "high" },
+            apns: { payload: { aps: { contentAvailable: true, sound: "default", badge: 1 } } },
+          };
+          if (!notif.persistent) {
+            payload.notification = { title: notif.title || "Notificación", body: notif.message };
+            payload.android = {
+              ...payload.android,
+              notification: { channelId: "fansal-default", color: "#10b981" },
+            };
+          }
+          await fcm.messaging().send(payload);
+        }
+      }
+    } catch (e) {
+      logger.warn("[Scheduled] No se pudo enviar el push FCM:", e);
+    }
+  }
+};
+
+export function computeNextSend(data: {
+  frequency?: string | null;
+  timeOfDay?: string | null;
+  scheduledAt?: string | Date | null;
+  daysOfWeek?: string | null;
+}): Date | null {
   const { frequency, timeOfDay, scheduledAt, daysOfWeek } = data;
   const now = new Date();
 
@@ -111,7 +230,6 @@ export function computeNextSend(data: any): Date | null {
 
   if (frequency === "EVERY_2_DAYS") {
     if (next <= now) next.setDate(next.getDate() + 1);
-    // Ensure it's an even offset from epoch
     while (Math.floor(next.getTime() / 86400000) % 2 !== 0) {
       next.setDate(next.getDate() + 1);
     }

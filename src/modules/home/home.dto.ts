@@ -1,6 +1,16 @@
+import { Prisma } from "@prisma/client";
+
+/** Ronda activa incluida en el dashboard (guardia y cliente reducidos). */
+export type TActiveRound = Prisma.RoundGetPayload<{
+  include: {
+    guard: { select: { name: true; lastName: true } };
+    client: { select: { name: true } };
+  };
+}>;
+
 export interface IDashboardStats {
   activeRoundsCount: number;
-  activeRounds: any[]; // Using any[] here because it's Prisma included types, or I could define it better
+  activeRounds: TActiveRound[];
   pendingIncidentsCount: number;
   pendingMaintenanceCount: number;
 }

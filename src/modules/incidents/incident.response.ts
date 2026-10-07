@@ -1,4 +1,4 @@
-import { IncidentStatus } from "@prisma/client";
+import { IncidentStatus, Prisma } from "@prisma/client";
 
 export interface IIncidentResponse {
   id: string;
@@ -7,7 +7,7 @@ export interface IIncidentResponse {
   categoryId: string | null;
   typeId: string | null;
   description: string | null;
-  media: any;
+  media: Prisma.JsonValue;
   latitude: number | null;
   longitude: number | null;
   createdAt: Date;

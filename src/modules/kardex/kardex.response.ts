@@ -1,4 +1,4 @@
-import { ScanType } from "@prisma/client";
+import { ScanType, Prisma } from "@prisma/client";
 
 export interface IKardexResponse {
   id: string;
@@ -6,7 +6,7 @@ export interface IKardexResponse {
   locationId: string;
   timestamp: Date;
   notes: string | null;
-  media: any;
+  media: Prisma.JsonValue;
   latitude: number | null;
   longitude: number | null;
   assignmentId: string | null;
@@ -26,6 +26,6 @@ export interface IKardexResponse {
   assignment?: {
     id: string;
     status: string;
-    tasks?: any[];
+    tasks?: Array<{ id: string; description: string; completed: boolean; reqPhoto: boolean }>;
   } | null;
 }

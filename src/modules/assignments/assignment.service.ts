@@ -1,6 +1,6 @@
 
 import { prismaClient } from "@src/core/config/database";
-import { PrismaClient, AssignmentStatus } from "@prisma/client";
+import { PrismaClient, AssignmentStatus, Prisma } from "@prisma/client";
 import { ITDataTableFetchParams, ITDataTableResponse } from "@src/core/dto/datatable.dto";
 import { getPrismaPaginationParams } from "@src/core/utils/prisma-pagination.utils";
 import { now } from "@src/core/utils/date-time.utils";
@@ -145,7 +145,7 @@ export const getAssignmentsByGuard = async (guardId: string) => {
 
 // Get all assignments (filtering optional)
 export const getAllAssignments = async (filters: { guardId?: string; status?: AssignmentStatus; id?: string }) => {
-  const where: any = { deletedAt: null };
+  const where: Prisma.AssignmentWhereInput = { deletedAt: null };
   if (filters.id) where.id = filters.id;
   if (filters.guardId) where.guardId = filters.guardId;
   if (filters.status) where.status = filters.status;

@@ -10,6 +10,7 @@ import { IUserCreateRequest, IUserUpdateRequest } from "./user.dto";
 import * as userService from "./user.service";
 import { asyncHandler } from "@src/core/utils/asyncHandler";
 import { AppError } from "@src/core/errors/AppError";
+import { getAuthUserId } from "@src/core/utils/auth-user.utils";
 import { createAuditLog } from "../audit/audit.service";
 import { publishActivity } from "@src/core/utils/ably-publisher";
 
@@ -114,12 +115,8 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const registerFCMToken = asyncHandler(async (req: Request, res: Response) => {
-  const { token, platform } = req.body;
-  const userId = res.locals.user?.id;
-
-  if (!token || !userId) {
-    return res.status(400).json(createTResult(null, ["Token y usuario requeridos"]));
-  }
+  const { token } = req.body;
+  const userId = getAuthUserId(res);
 
   await userService.updateFCMToken(userId, token);
   return res.status(200).json(createTResult({ registered: true }));

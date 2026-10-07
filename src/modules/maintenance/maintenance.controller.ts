@@ -47,7 +47,7 @@ export const createMaintenance = asyncHandler(async (req: Request, res: Response
 export const getMaintenances = asyncHandler(async (req: Request, res: Response) => {
   const { startDate, endDate, guardId, category, title } = req.query;
 
-  const filters: any = {};
+  const filters: Parameters<typeof maintenanceService.getMaintenances>[0] = {};
   if (startDate) filters.startDate = new Date(String(startDate));
   if (endDate) filters.endDate = new Date(String(endDate));
   if (guardId) filters.guardId = guardId as string;
@@ -115,8 +115,8 @@ export const deleteMedia = asyncHandler(async (req: Request, res: Response) => {
     throw new AppError("Mantenimiento o media no encontrada", 404);
   }
 
-  const media = maintenance.media as any[];
-  const updatedMedia = media.filter((m: any) => {
+  const media = maintenance.media as Array<{ key?: string; url?: string }>;
+  const updatedMedia = media.filter((m: { key?: string; url?: string }) => {
     if (!m) return false;
     const mKey = m.key || (typeof m.url === 'string' ? m.url.split('/').pop() : null);
     return mKey !== String(key);

@@ -71,6 +71,24 @@ tags:
   -
     name: dashboard
     description: 'Dashboard operativo en vivo'
+  -
+    name: guard-logs
+    description: 'Prenómina: entradas y salidas del personal'
+  -
+    name: guard-discipline
+    description: 'Quejas y faltas del personal'
+  -
+    name: notifications
+    description: 'Avisos y notificaciones'
+  -
+    name: panic-alerts
+    description: 'Alertas de pánico'
+  -
+    name: scheduled-notifications
+    description: 'Notificaciones programadas'
+  -
+    name: subscription
+    description: 'Configuración de suscripción'
 paths:
   /home/stats:
     get:
@@ -3338,6 +3356,947 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
+  /dashboard/attendance:
+    get:
+      tags:
+        - dashboard
+      summary: 'Asistencia del personal contra su horario'
+      description: 'Quién está en turno, quién llegó tarde y quién no se presentó para la fecha indicada.'
+      parameters:
+        -
+          in: query
+          name: clientId
+          required: false
+          description: 'Filtra por cliente (ignorado para usuarios RESDN)'
+          schema:
+            type: string
+            format: uuid
+        -
+          in: query
+          name: date
+          required: false
+          description: 'Fecha de inicio del turno (YYYY-MM-DD). Por defecto, hoy.'
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultAttendanceReport'
+        '400':
+          description: 'Parámetros inválidos'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autenticado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /guard-logs/clock-in:
+    post:
+      tags:
+        - guard-logs
+      summary: 'Registrar entrada de un guardia'
+      responses:
+        '201':
+          description: Creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultGuardLoginLog'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+
+
+  /guard-logs/clock-out:
+    patch:
+      tags:
+        - guard-logs
+      summary: 'Cerrar la entrada abierta de un guardia'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultGuardLoginLog'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+
+
+  /guard-logs/datatable:
+    post:
+      tags:
+        - guard-logs
+      summary: 'Listado paginado de prenómina'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataTableFetchParams'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableGuardLoginLog'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+
+
+  /guard-discipline/datatable:
+    post:
+      tags:
+        - guard-discipline
+      summary: 'Listado paginado de quejas'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataTableFetchParams'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableGuardDiscipline'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+
+
+  /guard-discipline:
+    post:
+      tags:
+        - guard-discipline
+      summary: 'Registrar una queja o falta'
+      responses:
+        '201':
+          description: Creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultGuardDiscipline'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+
+
+  /guard-discipline/{id}/resolve:
+    put:
+      tags:
+        - guard-discipline
+      summary: 'Resolver una queja'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultGuardDiscipline'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+
+
+  /guard-discipline/{id}:
+    delete:
+      tags:
+        - guard-discipline
+      summary: 'Eliminar una queja'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+
+
+  /guard-discipline/categories/datatable:
+    post:
+      tags:
+        - guard-discipline
+      summary: 'Listado paginado de categorías'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataTableFetchParams'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableIncidentCategory'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+
+
+  /guard-discipline/categories:
+    post:
+      tags:
+        - guard-discipline
+      summary: 'Crear categoría de disciplina'
+      responses:
+        '201':
+          description: Creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultIncidentCategory'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+
+
+  /guard-discipline/types/datatable:
+    post:
+      tags:
+        - guard-discipline
+      summary: 'Listado paginado de tipos'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataTableFetchParams'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableIncidentType'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+
+
+  /guard-discipline/types:
+    post:
+      tags:
+        - guard-discipline
+      summary: 'Crear tipo de disciplina'
+      responses:
+        '201':
+          description: Creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultIncidentType'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+
+
+  /notifications/send:
+    post:
+      tags:
+        - notifications
+      summary: 'Enviar una notificación'
+      responses:
+        '200':
+          description: 'Notificación enviada'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+
+
+  /notifications/my:
+    get:
+      tags:
+        - notifications
+      summary: 'Bandeja de notificaciones del usuario'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListNotificationLog'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+
+
+  /notifications/{id}/read:
+    patch:
+      tags:
+        - notifications
+      summary: 'Marcar notificación como leída'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+
+
+  /notifications/read-all:
+    patch:
+      tags:
+        - notifications
+      summary: 'Marcar todas como leídas'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+
+
+  /panic-alerts:
+    post:
+      tags:
+        - panic-alerts
+      summary: 'Crear alerta de pánico'
+      responses:
+        '201':
+          description: Creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultPanicAlert'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+
+
+  /panic-alerts/datatable:
+    post:
+      tags:
+        - panic-alerts
+      summary: 'Listado paginado de alertas de pánico'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataTableFetchParams'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatablePanicAlert'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+
+
+  /panic-alerts/recent:
+    get:
+      tags:
+        - panic-alerts
+      summary: 'Alertas de pánico recientes'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListPanicAlert'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+
+
+  /panic-alerts/{id}:
+    get:
+      tags:
+        - panic-alerts
+      summary: 'Detalle de una alerta de pánico'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultPanicAlert'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+
+
+  /panic-alerts/{id}/resolve:
+    put:
+      tags:
+        - panic-alerts
+      summary: 'Resolver una alerta de pánico'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultPanicAlert'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+
+
+  /scheduled-notifications/datatable:
+    post:
+      tags:
+        - scheduled-notifications
+      summary: 'Listado paginado de avisos programados'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataTableFetchParams'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDatatableScheduledNotification'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+
+
+  /scheduled-notifications/{id}:
+    get:
+      tags:
+        - scheduled-notifications
+      summary: 'Detalle de un aviso programado'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultScheduledNotification'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+
+
+  /scheduled-notifications:
+    post:
+      tags:
+        - scheduled-notifications
+      summary: 'Crear un aviso programado'
+      responses:
+        '201':
+          description: Creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultScheduledNotification'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+
+
+  /scheduled-notifications/{id}:
+    put:
+      tags:
+        - scheduled-notifications
+      summary: 'Actualizar un aviso programado'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultScheduledNotification'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+
+
+  /scheduled-notifications/{id}:
+    delete:
+      tags:
+        - scheduled-notifications
+      summary: 'Eliminar un aviso programado'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+
+
+  /subscription/config:
+    get:
+      tags:
+        - subscription
+      summary: 'Obtener configuración de suscripción'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultSubscriptionConfig'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+
+
+  /subscription/config:
+    put:
+      tags:
+        - subscription
+      summary: 'Actualizar configuración de suscripción'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultSubscriptionConfig'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '500':
+          description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+
 components:
   schemas:
     UserLogin:
@@ -8203,3 +9162,95 @@ components:
         data:
           type: object
           description: 'kpis, alerts (PANIC, HANDOVER_OVERDUE, UNIFORM_OVERDUE, ROUND_STALLED, ROUND_ABANDONED, INCIDENT_OPEN), activeRounds, mapPoints, uncoveredRoutes y compliance'
+    AttendanceItem:
+      type: object
+      properties:
+        guardId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        lastName:
+          type: string
+          nullable: true
+        role:
+          type: string
+          enum:
+            - GUARD
+            - SHIFT
+            - MAINT
+        clientId:
+          type: string
+          format: uuid
+          nullable: true
+        clientName:
+          type: string
+          nullable: true
+        scheduleId:
+          type: string
+          format: uuid
+          nullable: true
+        scheduleName:
+          type: string
+          nullable: true
+        scheduledStart:
+          type: string
+          format: date-time
+        checkInAt:
+          type: string
+          format: date-time
+          nullable: true
+        status:
+          type: string
+          enum:
+            - ON_TIME
+            - LATE
+            - ABSENT
+            - PENDING
+          description: 'ON_TIME: en tolerancia · LATE: retardo · ABSENT: falta · PENDING: aún no inicia'
+        minutesLate:
+          type: integer
+          nullable: true
+          description: 'Minutos de retardo (positivo = tarde)'
+    AttendanceReport:
+      type: object
+      properties:
+        generatedAt:
+          type: string
+          format: date-time
+        shiftDate:
+          type: string
+          format: date
+        scope:
+          type: string
+          enum:
+            - ALL
+            - CLIENT
+        totals:
+          type: object
+          properties:
+            expected:
+              type: integer
+            onTime:
+              type: integer
+            late:
+              type: integer
+            absent:
+              type: integer
+            pending:
+              type: integer
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttendanceItem'
+    TResultAttendanceReport:
+      type: object
+      properties:
+        success:
+          type: boolean
+        messages:
+          type: array
+          items:
+            type: string
+        data:
+          $ref: '#/components/schemas/AttendanceReport'

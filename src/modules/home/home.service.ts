@@ -1,3 +1,5 @@
+import { getErrorMessage } from "@src/core/utils/error.utils";
+import { AuthenticatedUser } from "@src/core/types/auth.types";
 import { prismaClient as prisma } from "@src/core/config/database";
 import { TResult } from "@src/core/dto/TResult";
 import {
@@ -9,7 +11,7 @@ import {
 import { IDashboardStats } from "./home.dto";
 
 export const getDashboardStats = async (
-  user: any,
+  user: AuthenticatedUser,
 ): Promise<TResult<IDashboardStats>> => {
   try {
     const where: { clientId?: string } = {};
@@ -53,11 +55,11 @@ export const getDashboardStats = async (
       },
       messages: [],
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     return {
       success: false,
       data: null as unknown as IDashboardStats,
-      messages: [error.message],
+      messages: [getErrorMessage(error)],
     };
   }
 };

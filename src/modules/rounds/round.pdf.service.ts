@@ -4,6 +4,7 @@ import axios from "axios";
 import fs from "fs";
 import path from "path";
 import PDFDocument from "pdfkit";
+import { IRoundTimelineEvent, TRoundDetailRound } from "./round.dto";
 
 const fetchImageAsBuffer = async (url: string): Promise<Buffer | null> => {
   try {
@@ -22,8 +23,8 @@ const fetchImageAsBuffer = async (url: string): Promise<Buffer | null> => {
 };
 
 export const generateRoundPDFBuffer = async (
-  round: any,
-  timeline: any[],
+  round: TRoundDetailRound,
+  timeline: IRoundTimelineEvent[],
 ): Promise<Buffer> => {
   const clientName =
     round.client?.name ||
@@ -32,7 +33,7 @@ export const generateRoundPDFBuffer = async (
     "Sin Cliente";
 
   const doc = new PDFDocument({ margin: 0, size: "LETTER", bufferPages: true });
-  const buffers: any[] = [];
+  const buffers: Buffer[] = [];
   doc.on("data", buffers.push.bind(buffers));
 
   const C_DARK = "#1e293b"; // Slate 800
@@ -51,19 +52,20 @@ export const generateRoundPDFBuffer = async (
   const durationMs = end.getTime() - start.getTime();
   const durationStr = `${Math.floor(durationMs / 60000)}m ${Math.floor((durationMs % 60000) / 1000)}s`;
 
-  const scans = timeline.filter((e: any) => e.type === TIMELINE_EVENT_SCAN);
+  const scans = timeline.filter((e) => e.type === TIMELINE_EVENT_SCAN);
   const expectedLocs = round.recurringConfiguration?.recurringLocations || [];
 
   const visitedSet = new Set<string>();
   let completedCount = 0;
   let incompleteCount = 0;
 
-  scans.forEach((scan: any) => {
+  scans.forEach((scan) => {
     const locId = String(scan.data?.location?.id);
-    const hasMedia =
+    const hasMedia = Boolean(
       scan.data?.media &&
-      Array.isArray(scan.data.media) &&
-      scan.data.media.length > 0;
+        Array.isArray(scan.data.media) &&
+        scan.data.media.length > 0,
+    );
     if (!visitedSet.has(locId)) {
       visitedSet.add(locId);
       if (hasMedia) completedCount++;
@@ -72,7 +74,7 @@ export const generateRoundPDFBuffer = async (
   });
 
   const missingLocs = expectedLocs.filter(
-    (rl: any) => !visitedSet.has(String(rl.location?.id || rl.locationId)),
+    (rl) => !visitedSet.has(String(rl.location?.id || rl.locationId)),
   );
   const missingCount = missingLocs.length;
   const totalPoints = completedCount + incompleteCount + missingCount || 1;
@@ -357,15 +359,16 @@ export const generateRoundPDFBuffer = async (
     rowNum++;
   };
 
-  scans.forEach((scan: any) => {
+  scans.forEach((scan) => {
     const locName = scan.data?.location?.name || "Punto";
-    const hasMedia =
+    const hasMedia = Boolean(
       scan.data?.media &&
-      Array.isArray(scan.data.media) &&
-      scan.data.media.length > 0;
+        Array.isArray(scan.data.media) &&
+        scan.data.media.length > 0,
+    );
     drawRow(locName, hasMedia ? "COMPLETADO" : "INCOMPLETO", hasMedia);
   });
-  missingLocs.forEach((rl: any) => {
+  missingLocs.forEach((rl) => {
     drawRow(rl.location?.name || "Punto", "FALTANTE", false);
   });
 

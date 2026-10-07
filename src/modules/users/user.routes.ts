@@ -20,7 +20,8 @@ import {
   userIdParamSchema,
   updateUserSchema,
   updatePasswordSchema,
-  resetPasswordSchema
+  resetPasswordSchema,
+  fcmTokenSchema
 } from "./user.schema";
 import { DataTableFetchParamsSchema } from "../../core/dto/datatable.schema";
 
@@ -39,7 +40,7 @@ router.post("/", validate(createUserSchema), createUser);
 router.put("/:id", validate(updateUserSchema), updateUserProfile);
 router.put("/:id/password", validate(updatePasswordSchema), changePassword);
 router.put("/:id/reset-password", validate(resetPasswordSchema), resetPassword);
-router.post("/fcm-token", registerFCMToken);
+router.post("/fcm-token", validate(fcmTokenSchema), registerFCMToken);
 router.post("/logout", logout);
 router.delete("/:id", validate(userIdParamSchema), deleteUser);
 

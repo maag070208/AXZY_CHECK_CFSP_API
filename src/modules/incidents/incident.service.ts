@@ -1,3 +1,5 @@
+import { AuthenticatedUser } from "@src/core/types/auth.types";
+import { Prisma } from "@prisma/client";
 import { prismaClient } from "@src/core/config/database";
 import {
   ITDataTableFetchParams,
@@ -19,7 +21,7 @@ import { ROLE_CLIENT } from "@src/core/config/constants";
 
 export const getDataTableIncidents = async (
   params: ITDataTableFetchParams,
-  user?: any,
+  user?: AuthenticatedUser,
 ): Promise<ITDataTableResponse<IIncidentResponse>> => {
   const prismaParams = getPrismaPaginationParams(params);
 
@@ -84,7 +86,7 @@ export const createIncident = async (data: {
   categoryId?: string;
   typeId?: string;
   description?: string;
-  media?: any;
+  media?: Prisma.InputJsonValue;
   latitude?: number;
   longitude?: number;
   clientId?: string;
@@ -168,7 +170,7 @@ export const getIncidents = async (filters: {
   title?: string;
   clientId?: string;
 }) => {
-  const whereClause: any = {};
+  const whereClause: Prisma.IncidentWhereInput = {};
 
   if (filters.startDate && filters.endDate) {
     whereClause.createdAt = {
@@ -180,7 +182,7 @@ export const getIncidents = async (filters: {
   }
 
   if (filters.guardId) whereClause.guardId = filters.guardId;
-  if (filters.category) whereClause.category = filters.category;
+  if (filters.category) whereClause.category = { name: filters.category as string };
   if (filters.title)
     whereClause.title = { contains: filters.title, mode: "insensitive" };
   if (filters.clientId) whereClause.clientId = filters.clientId;
@@ -261,7 +263,7 @@ export const deleteIncident = async (id: string) => {
   });
 };
 
-export const updateIncidentMedia = async (id: string, media: any[]) => {
+export const updateIncidentMedia = async (id: string, media: Prisma.InputJsonValue) => {
   return prismaClient.incident.update({
     where: { id },
     data: { media },

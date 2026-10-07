@@ -35,3 +35,6 @@ export const UpdateScheduledSchema = z.object({
 export const ScheduledIdParam = z.object({
   params: z.object({ id: z.string().uuid() }),
 });
+
+export type IScheduledCreate = z.infer<typeof CreateScheduledSchema>["body"];
+export type IScheduledUpdate = z.infer<typeof UpdateScheduledSchema>["body"];

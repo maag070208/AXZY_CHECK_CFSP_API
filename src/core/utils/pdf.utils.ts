@@ -1,7 +1,7 @@
 import PDFDocument from "pdfkit";
 import { prismaClient as prisma } from "@src/core/config/database";
 
-export const drawTrialWatermark = async (doc: any, pageWidth: number, pageHeight: number) => {
+export const drawTrialWatermark = async (doc: PDFKit.PDFDocument, pageWidth: number, pageHeight: number) => {
   const config = await prisma.subscriptionConfig.findFirst({ select: { paid: true, trialDaysRemaining: true, showTrialWatermark: true, showTrialBadge: true } });
   if (!config || config.paid) return;
 
@@ -34,7 +34,7 @@ export const drawTrialWatermark = async (doc: any, pageWidth: number, pageHeight
 };
 
 export const drawGenericFooter = (
-  doc: any,
+  doc: PDFKit.PDFDocument,
   pageWidth: number,
   pageHeight: number,
   pageIdx: number,

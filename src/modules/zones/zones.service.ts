@@ -1,21 +1,24 @@
+import { Prisma } from "@prisma/client";
+import { ITDataTableFetchParams } from "@src/core/dto/datatable.dto";
 import { prismaClient as prisma } from "@src/core/config/database";
+import { createAuditLog } from "../audit/audit.service";
 
-export const getZonesDataTable = async (body: any) => {
+export const getZonesDataTable = async (body: ITDataTableFetchParams) => {
     const { filters } = body;
     const clientId = filters?.clientId;
     const search = filters?.search;
 
-    const where: any = {
+    const where: Prisma.ZoneWhereInput = {
         softDelete: false,
         active: true
     };
 
     if (clientId) {
-        where.clientId = clientId;
+        where.clientId = clientId as string;
     }
 
     if (search) {
-        where.name = { contains: search, mode: 'insensitive' };
+        where.name = { contains: search as string, mode: 'insensitive' };
     }
 
     const rows = await prisma.zone.findMany({
@@ -39,22 +42,51 @@ export const getZonesByClient = async (clientId: string) => {
     });
 };
 
-export const createZone = async (data: { clientId: string; name: string }) => {
-    return prisma.zone.create({
+export const createZone = async (data: { clientId: string; name: string }, userId: string) => {
+    const zone = await prisma.zone.create({
         data
     });
+
+    await createAuditLog({
+        userId,
+        module: "ZONES",
+        action: "CREATE",
+        resourceId: zone.id,
+        details: { name: zone.name, clientId: zone.clientId },
+    });
+
+    return zone;
 };
 
-export const updateZone = async (id: string, data: { name?: string; active?: boolean }) => {
-    return prisma.zone.update({
+export const updateZone = async (id: string, data: { name?: string; active?: boolean }, userId: string) => {
+    const zone = await prisma.zone.update({
         where: { id },
         data
     });
+
+    await createAuditLog({
+        userId,
+        module: "ZONES",
+        action: "UPDATE",
+        resourceId: id,
+        details: data,
+    });
+
+    return zone;
 };
 
-export const deleteZone = async (id: string) => {
-    return prisma.zone.update({
+export const deleteZone = async (id: string, userId: string) => {
+    const zone = await prisma.zone.update({
         where: { id },
         data: { softDelete: true, active: false }
     });
+
+    await createAuditLog({
+        userId,
+        module: "ZONES",
+        action: "DELETE",
+        resourceId: id,
+    });
+
+    return zone;
 };

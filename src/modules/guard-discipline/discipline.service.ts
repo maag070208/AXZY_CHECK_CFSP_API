@@ -1,4 +1,7 @@
+import { ICreateDiscipline } from "./schemas/discipline.schema";
+import { Prisma, GuardDisciplineStatus, IncidentCategory, IncidentType, GuardDiscipline } from "@prisma/client";
 import { prismaClient } from "@src/core/config/database";
+import { OPERATIONAL_ROLES, ROLE_CLIENT } from "@src/core/config/constants";
 import { AppError } from "@src/core/errors/AppError";
 import { ITDataTableFetchParams, ITDataTableResponse } from "@src/core/dto/datatable.dto";
 import { getPrismaPaginationParams } from "@src/core/utils/prisma-pagination.utils";
@@ -8,7 +11,7 @@ import { publishActivity } from "@src/core/utils/ably-publisher";
 const prisma = prismaClient;
 
 // ── Discipline Categories (stored in IncidentCategory with type="DISCIPLINE") ──
-export const getPaginatedCategories = async (params: ITDataTableFetchParams): Promise<ITDataTableResponse<any>> => {
+export const getPaginatedCategories = async (params: ITDataTableFetchParams): Promise<ITDataTableResponse<IncidentCategory>> => {
   const prismaParams = getPrismaPaginationParams(params);
   const searchVal = String(params.filters?.search || "").trim();
   delete prismaParams.where.search;
@@ -26,11 +29,11 @@ export const getPaginatedCategories = async (params: ITDataTableFetchParams): Pr
   return { rows, total };
 };
 
-export const createCategory = async (data: any) => {
+export const createCategory = async (data: Prisma.IncidentCategoryUncheckedCreateInput) => {
   return prisma.incidentCategory.create({ data: { ...data, type: "DISCIPLINE" } });
 };
 
-export const updateCategory = async (id: string, data: any) => {
+export const updateCategory = async (id: string, data: Prisma.IncidentCategoryUncheckedUpdateInput) => {
   return prisma.incidentCategory.update({ where: { id }, data });
 };
 
@@ -39,7 +42,7 @@ export const deleteCategory = async (id: string) => {
 };
 
 // ── Discipline Types (stored in IncidentType, category must be type="DISCIPLINE") ──
-export const getPaginatedTypes = async (params: ITDataTableFetchParams): Promise<ITDataTableResponse<any>> => {
+export const getPaginatedTypes = async (params: ITDataTableFetchParams): Promise<ITDataTableResponse<IncidentType>> => {
   const prismaParams = getPrismaPaginationParams(params);
   const searchVal = String(params.filters?.search || "").trim();
   delete prismaParams.where.search;
@@ -57,11 +60,11 @@ export const getPaginatedTypes = async (params: ITDataTableFetchParams): Promise
   return { rows, total };
 };
 
-export const createType = async (data: any) => {
+export const createType = async (data: Prisma.IncidentTypeUncheckedCreateInput) => {
   return prisma.incidentType.create({ data });
 };
 
-export const updateType = async (id: string, data: any) => {
+export const updateType = async (id: string, data: Prisma.IncidentTypeUncheckedUpdateInput) => {
   return prisma.incidentType.update({ where: { id }, data });
 };
 
@@ -70,27 +73,27 @@ export const deleteType = async (id: string) => {
 };
 
 // ── Guard Discipline (Notices) ──
-const OPERATIONAL_ROLE_NAMES = ["GUARD", "SHIFT", "MAINT"];
+
 
 export const getPaginatedDisciplines = async (params: ITDataTableFetchParams, userId: string, userRole: string, userClientId: string | null): Promise<ITDataTableResponse<any>> => {
   const prismaParams = getPrismaPaginationParams(params);
   const searchVal = String(params.filters?.search || "").trim();
   delete prismaParams.where.search;
 
-  const where: any = { deletedAt: null };
+  const where: Prisma.GuardDisciplineWhereInput = { deletedAt: null };
 
   if (params.filters?.clientId) {
-    where.clientId = params.filters.clientId;
-  } else if (userRole === "RESDN" && userClientId) {
+    where.clientId = params.filters.clientId as string;
+  } else if (userRole === ROLE_CLIENT && userClientId) {
     where.clientId = userClientId;
   }
 
   if (params.filters?.status) {
-    where.status = params.filters.status;
+    where.status = params.filters.status as GuardDisciplineStatus;
   }
 
   if (params.filters?.guardId) {
-    where.guardId = params.filters.guardId;
+    where.guardId = params.filters.guardId as string;
   }
 
   if (searchVal.length > 0) {
@@ -133,13 +136,13 @@ export const getPaginatedDisciplines = async (params: ITDataTableFetchParams, us
   return { rows, total };
 };
 
-export const createDiscipline = async (data: any, createdById: string) => {
+export const createDiscipline = async (data: ICreateDiscipline, createdById: string) => {
   const guard = await prisma.user.findUnique({
     where: { id: data.guardId },
     include: { role: true },
   });
 
-  if (!guard || !OPERATIONAL_ROLE_NAMES.includes(guard.role.name)) {
+  if (!guard || !OPERATIONAL_ROLES.includes(guard.role.name)) {
     throw new AppError("El usuario seleccionado no es un guardia operativo", 400);
   }
 

@@ -3,6 +3,7 @@ import { ITDataTableFetchParams, ITDataTableResponse } from "@src/core/dto/datat
 import { getPrismaPaginationParams } from "@src/core/utils/prisma-pagination.utils";
 
 import { IScheduleResponse } from "./schedule.response";
+import { createAuditLog } from "../audit/audit.service";
 
 export const getDataTableSchedules = async (params: ITDataTableFetchParams): Promise<ITDataTableResponse<IScheduleResponse>> => {
     const prismaParams = getPrismaPaginationParams(params || { page: 1, limit: 10, filters: {} });
@@ -41,10 +42,20 @@ export const createSchedule = async (data: {
     name: string;
     startTime: string;
     endTime: string;
-}) => {
-    return prismaClient.schedule.create({
+}, userId: string) => {
+    const schedule = await prismaClient.schedule.create({
         data
     });
+
+    await createAuditLog({
+        userId,
+        module: "SCHEDULES",
+        action: "CREATE",
+        resourceId: schedule.id,
+        details: { name: schedule.name },
+    });
+
+    return schedule;
 };
 
 export const updateSchedule = async (id: string, data: {
@@ -52,17 +63,35 @@ export const updateSchedule = async (id: string, data: {
     startTime?: string;
     endTime?: string;
     active?: boolean;
-}) => {
-    return prismaClient.schedule.update({
+}, userId: string) => {
+    const schedule = await prismaClient.schedule.update({
         where: { id },
         data
     });
+
+    await createAuditLog({
+        userId,
+        module: "SCHEDULES",
+        action: "UPDATE",
+        resourceId: id,
+    });
+
+    return schedule;
 };
 
-export const deleteSchedule = async (id: string) => {
-    return prismaClient.schedule.delete({
+export const deleteSchedule = async (id: string, userId: string) => {
+    const schedule = await prismaClient.schedule.delete({
         where: { id }
     });
+
+    await createAuditLog({
+        userId,
+        module: "SCHEDULES",
+        action: "DELETE",
+        resourceId: id,
+    });
+
+    return schedule;
 };
 
 export const getUsersBySchedule = async (scheduleId: string) => {

@@ -72,3 +72,10 @@ export const resetPasswordSchema = z.object({
   }),
 });
 
+
+export const fcmTokenSchema = z.object({
+  body: z.object({
+    token: z.string().min(1, "El token de notificaciones es requerido"),
+    platform: z.string().optional(),
+  }),
+});

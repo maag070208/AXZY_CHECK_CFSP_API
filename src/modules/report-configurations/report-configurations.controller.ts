@@ -25,7 +25,7 @@ export const createConfiguration = asyncHandler(async (req: Request, res: Respon
   const data: CreateReportConfigurationDTO = req.body;
   const result = await createReportConfiguration(data);
 
-  if (result.success) {
+  if (result.success && result.data) {
     await createAuditLog({
       userId: res.locals.user?.id || "SYSTEM",
       module: "REPORT_CONFIGURATIONS",
@@ -45,7 +45,7 @@ export const updateConfiguration = asyncHandler(async (req: Request, res: Respon
 
   const result = await updateReportConfiguration(id, data);
 
-  if (result.success) {
+  if (result.success && result.data) {
     await createAuditLog({
       userId: res.locals.user?.id || "SYSTEM",
       module: "REPORT_CONFIGURATIONS",

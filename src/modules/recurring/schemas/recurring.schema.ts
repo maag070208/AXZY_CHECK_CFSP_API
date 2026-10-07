@@ -42,3 +42,7 @@ export const RecurringGuardIdParamSchema = z.object({
   }),
 });
 
+
+export type IRecurringCreateRequest = z.infer<typeof createRecurringSchema>["body"];
+export type IRecurringUpdateRequest = z.infer<typeof updateRecurringSchema>["body"];
+export type IRecurringLocation = z.infer<typeof recurringLocationSchema>;

@@ -1,4 +1,5 @@
 
+import { getErrorMessage } from "@src/core/utils/error.utils";
 import { prismaClient } from "@src/core/config/database";
 import { TResult } from '@src/core/dto/TResult';
 import { OPERATIONAL_ROLES, ROUND_STATUS_COMPLETED } from "@src/core/config/constants";
@@ -28,7 +29,7 @@ const getGuards = (guardId?: string, clientId?: string) => {
     });
 };
 
-export const getGuardGeneralStats = async (filters: IGuardReportFilters): Promise<TResult<any>> => {
+export const getGuardGeneralStats = async (filters: IGuardReportFilters): Promise<TResult<IGuardGeneralStats | null>> => {
     try {
         const { startDate, endDate, guardId, clientId } = filters;
         const start = getStartOfDay(startDate);
@@ -114,12 +115,12 @@ export const getGuardGeneralStats = async (filters: IGuardReportFilters): Promis
             },
             messages: []
         };
-    } catch (error: any) {
-        return { success: false, data: null, messages: [error.message] };
+    } catch (error: unknown) {
+        return { success: false, data: null, messages: [getErrorMessage(error)] };
     }
 };
 
-export const getTopPerformanceGuards = async (filters: IGuardReportFilters): Promise<TResult<any>> => {
+export const getTopPerformanceGuards = async (filters: IGuardReportFilters): Promise<TResult<IGuardPerformanceRow[]>> => {
     try {
         const { startDate, endDate, clientId } = filters;
         const start = getStartOfDay(startDate);
@@ -149,17 +150,17 @@ export const getTopPerformanceGuards = async (filters: IGuardReportFilters): Pro
                 guardId: g.userId,
                 name: guard?.name || 'Unknown',
                 lastName: guard?.lastName || '',
-                totalScans: (g as any)._count?._all || (g as any)._count?.userId || 0
+                totalScans: g._count._all || 0
             };
         });
 
         return { success: true, data: result, messages: [] };
-    } catch (error: any) {
-        return { success: false, data: [], messages: [error.message] };
+    } catch (error: unknown) {
+        return { success: false, data: [], messages: [getErrorMessage(error)] };
     }
 };
 
-export const getWorkloadComparison = async (filters: IGuardReportFilters): Promise<TResult<any>> => {
+export const getWorkloadComparison = async (filters: IGuardReportFilters): Promise<TResult<IWorkloadRow[]>> => {
     try {
         const { startDate, endDate, clientId } = filters;
         const start = getStartOfDay(startDate);
@@ -227,16 +228,16 @@ export const getWorkloadComparison = async (filters: IGuardReportFilters): Promi
         }).sort((a, b) => b.workload - a.workload);
 
         return { success: true, data: result, messages: [] };
-    } catch (error: any) {
-        return { success: false, data: [], messages: [error.message] };
+    } catch (error: unknown) {
+        return { success: false, data: [], messages: [getErrorMessage(error)] };
     }
 };
 
-export const getActivityDistribution = async (filters: IGuardReportFilters): Promise<TResult<any>> => {
+export const getActivityDistribution = async (filters: IGuardReportFilters): Promise<TResult<IGuardGeneralStats | null>> => {
     return getGuardGeneralStats(filters);
 };
 
-export const getGuardDetailedReport = async (filters: IGuardReportFilters): Promise<TResult<any>> => {
+export const getGuardDetailedReport = async (filters: IGuardReportFilters): Promise<TResult<IGuardDetailedRow[]>> => {
     try {
         const { startDate, endDate, guardId, clientId } = filters;
         const start = getStartOfDay(startDate);
@@ -275,7 +276,7 @@ export const getGuardDetailedReport = async (filters: IGuardReportFilters): Prom
 
         const reportData = guards.map(guard => {
             const guardRounds = allRounds.filter(r => r.guardId === guard.id);
-            const guardScansCount = (scansGroupBy.find(s => s.userId === guard.id) as any)?._count?._all || 0;
+            const guardScansCount = scansGroupBy.find(s => s.userId === guard.id)?._count?._all || 0;
             const guardKardex = allKardex.filter(k => k.userId === guard.id);
 
             let totalRoundDurationMs = 0;
@@ -289,9 +290,9 @@ export const getGuardDetailedReport = async (filters: IGuardReportFilters): Prom
                     completedRoundsCount++;
                 }
 
-                if ((round as any).client) {
+                if (round.client) {
                     const roundEnd = round.endTime || new Date();
-                    const configIds = (round as any).client.locations.map((l: any) => l.id);
+                    const configIds = round.client.locations.map((l) => l.id);
                     
                     const scannedInRound = guardKardex.filter(k => 
                         k.timestamp >= round.startTime && 
@@ -327,12 +328,12 @@ export const getGuardDetailedReport = async (filters: IGuardReportFilters): Prom
         });
 
         return { success: true, data: reportData, messages: [] };
-    } catch (error: any) {
-        return { success: false, data: [], messages: [error.message] };
+    } catch (error: unknown) {
+        return { success: false, data: [], messages: [getErrorMessage(error)] };
     }
 };
 
-export const getGuardDetailBreakdown = async (filters: IGuardReportFilters): Promise<TResult<any>> => {
+export const getGuardDetailBreakdown = async (filters: IGuardReportFilters): Promise<TResult<IGuardBreakdown | null>> => {
     try {
         const { startDate, endDate, guardId, clientId } = filters;
         if (!guardId) throw new Error("GuardId is required");
@@ -359,11 +360,11 @@ export const getGuardDetailBreakdown = async (filters: IGuardReportFilters): Pro
             })
         ]);
 
-        const missedPoints: any[] = [];
-        const incompleteRounds: any[] = [];
+        const missedPoints: IMissedPoint[] = [];
+        const incompleteRounds: IIncompleteRound[] = [];
 
         for (const round of rounds) {
-            if (!(round as any).client) continue;
+            if (!round.client) continue;
 
             const roundEnd = round.endTime || new Date();
             const scannedIds = new Set(
@@ -372,7 +373,7 @@ export const getGuardDetailBreakdown = async (filters: IGuardReportFilters): Pro
                     .map(k => k.locationId)
             );
 
-            const roundMissed = (round as any).client.locations.filter((l: any) => !scannedIds.has(l.id));
+            const roundMissed = round.client.locations.filter((l) => !scannedIds.has(l.id));
 
             if (roundMissed.length > 0) {
                 if (round.status === ROUND_STATUS_COMPLETED) {
@@ -381,11 +382,11 @@ export const getGuardDetailBreakdown = async (filters: IGuardReportFilters): Pro
                         startTime: round.startTime,
                         endTime: round.endTime,
                         missedCount: roundMissed.length,
-                        totalLocations: (round as any).client.locations.length
+                        totalLocations: round.client.locations.length
                     });
                 }
 
-                roundMissed.forEach((l: any) => {
+                roundMissed.forEach((l) => {
                     missedPoints.push({
                         roundId: round.id,
                         startTime: round.startTime,
@@ -398,12 +399,16 @@ export const getGuardDetailBreakdown = async (filters: IGuardReportFilters): Pro
         }
 
         return { success: true, data: { missedPoints, incompleteRounds }, messages: [] };
-    } catch (error: any) {
-        return { success: false, data: null, messages: [error.message] };
+    } catch (error: unknown) {
+        return { success: false, data: null, messages: [getErrorMessage(error)] };
     }
 };
 
 import { AdministrativeReportParams } from "./report.dto";
+import {
+  IGuardGeneralStats, IGuardPerformanceRow, IWorkloadRow, IGuardDetailedRow, IGuardBreakdown,
+  IMissedPoint, IIncompleteRound,
+} from "./report.response";
 import { generateAdministrativeMatrixPDFBuffer, MatrixLocationRow } from "./report.pdf.service";
 import dayjs from "dayjs";
 import timezone from "dayjs/plugin/timezone";
@@ -487,7 +492,7 @@ export interface IIncidentReport {
  */
 export const getIncidentReport = async (
     filters: IIncidentReportFilters,
-): Promise<TResult<IIncidentReport>> => {
+): Promise<TResult<IIncidentReport | null>> => {
     try {
         const { startDate, endDate, clientId } = filters;
         const start = getStartOfDay(startDate);
@@ -563,11 +568,11 @@ export const getIncidentReport = async (
             },
             messages: [],
         };
-    } catch (error: any) {
+    } catch (error: unknown) {
         return {
             success: false,
-            data: null as any,
-            messages: [error?.message || "Error al generar reporte de incidencias"],
+            data: null,
+            messages: [getErrorMessage(error) || "Error al generar reporte de incidencias"],
         };
     }
 };

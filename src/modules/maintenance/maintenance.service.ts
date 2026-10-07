@@ -1,3 +1,5 @@
+import { AuthenticatedUser } from "@src/core/types/auth.types";
+import { Prisma } from "@prisma/client";
 import { prismaClient } from "@src/core/config/database";
 import {
   ITDataTableFetchParams,
@@ -17,7 +19,7 @@ import { now } from "@src/core/utils/date-time.utils";
 
 export const getDataTableMaintenances = async (
   params: ITDataTableFetchParams,
-  user?: any,
+  user?: AuthenticatedUser,
 ): Promise<ITDataTableResponse<IMaintenanceResponse>> => {
   const prismaParams = getPrismaPaginationParams(params);
 
@@ -87,7 +89,7 @@ export const createMaintenance = async (data: {
   typeId?: string;
   category?: string;
   description?: string;
-  media?: any;
+  media?: Prisma.InputJsonValue;
   latitude?: number;
   longitude?: number;
   clientId?: string;
@@ -172,7 +174,7 @@ export const getMaintenances = async (filters: {
   title?: string;
   clientId?: string;
 }) => {
-  const whereClause: any = {};
+  const whereClause: Prisma.MaintenanceWhereInput = {};
 
   if (filters.startDate && filters.endDate) {
     whereClause.createdAt = {
@@ -266,7 +268,7 @@ export const deleteMaintenance = async (id: string) => {
   });
 };
 
-export const updateMaintenanceMedia = async (id: string, media: any) => {
+export const updateMaintenanceMedia = async (id: string, media: Prisma.InputJsonValue) => {
   return prismaClient.maintenance.update({
     where: { id },
     data: { media },

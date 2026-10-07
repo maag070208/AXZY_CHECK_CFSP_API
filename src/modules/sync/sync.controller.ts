@@ -29,7 +29,7 @@ const validateAppVersion = async (req: Request) => {
       try {
         const logs = JSON.parse(logsConfig.value);
         if (Array.isArray(logs)) {
-          const matchedLog = logs.find((l: any) => l.version === expectedVersion);
+          const matchedLog = logs.find((l) => l.version === expectedVersion);
           changelog = matchedLog?.changes || [];
         }
       } catch (e) {

@@ -1,3 +1,4 @@
+import { AttendanceStatus } from "@src/core/config/constants";
 import { IAgendaItem, IAgendaSummary } from "../shift-plans/shift-plan.dto";
 
 /**
@@ -179,4 +180,41 @@ export interface ILiveDashboard {
     /** Compromisos accionables ahora (en ventana o vencidos). */
     pending: IAgendaItem[];
   };
+}
+
+// ── Asistencia del día (`GET /dashboard/attendance`) ──
+
+export interface IAttendanceItem {
+  guardId: string;
+  name: string;
+  lastName: string | null;
+  role: 'GUARD' | 'SHIFT' | 'MAINT';
+  clientId: string | null;
+  clientName: string | null;
+  scheduleId: string | null;
+  scheduleName: string | null;
+  /** Inicio programado del turno (ISO). */
+  scheduledStart: string;
+  /** Primera entrada registrada del día (ISO), o null. */
+  checkInAt: string | null;
+  status: AttendanceStatus;
+  /** Minutos de retardo (positivo = tarde). `null` si aún no entra o falta. */
+  minutesLate: number | null;
+}
+
+export interface IAttendanceTotals {
+  expected: number;
+  onTime: number;
+  late: number;
+  absent: number;
+  pending: number;
+}
+
+export interface IAttendanceReport {
+  generatedAt: string;
+  /** Fecha de inicio del turno evaluada (YYYY-MM-DD). */
+  shiftDate: string;
+  scope: 'ALL' | 'CLIENT';
+  totals: IAttendanceTotals;
+  items: IAttendanceItem[];
 }

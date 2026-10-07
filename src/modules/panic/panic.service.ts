@@ -1,8 +1,13 @@
+import { AuthenticatedUser } from "@src/core/types/auth.types";
+import { PanicAlert, Prisma } from "@prisma/client";
 import { prismaClient } from "@src/core/config/database";
 import { logger } from "@src/core/utils/logger";
 import { now } from "@src/core/utils/date-time.utils";
 import { ROLE_GUARD, ROLE_CLIENT } from "@src/core/config/constants";
 import { publishActivity, publishToClient } from "@src/core/utils/ably-publisher";
+import { getFirebaseApp } from "@src/core/utils/firebase.utils";
+import { AppError } from "@src/core/errors/AppError";
+import { createAuditLog } from "../audit/audit.service";
 import {
   IPanicAlert,
   IPanicAlertCreate,
@@ -13,33 +18,13 @@ import {
 import { ITDataTableFetchParams } from "@src/core/dto/datatable.dto";
 import { getPrismaPaginationParams } from "@src/core/utils/prisma-pagination.utils";
 
-let firebaseApp: any = null;
-const getFirebase = () => {
-  if (!firebaseApp) {
-    try {
-      const admin = require("firebase-admin");
-      const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT
-        ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
-        : require("@src/../axzyfansalcheck-firebase-adminsdk-fbsvc-a3b898be27.json");
-      firebaseApp = admin.apps.length
-        ? admin.apps[0]
-        : admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount),
-          });
-    } catch (e) {
-      console.warn("[PanicFCM] Firebase Admin no configurado:", e);
-    }
-  }
-  return firebaseApp;
-};
-
 const PANIC_INCLUDE = {
   guard: { select: { id: true, name: true, lastName: true, username: true } },
   client: { select: { id: true, name: true } },
   resolvedBy: { select: { id: true, name: true, lastName: true } },
 };
 
-const toDto = (a: any): IPanicAlert => ({
+const toDto = (a: Prisma.PanicAlertGetPayload<{ include: typeof PANIC_INCLUDE }>): IPanicAlert => ({
   id: a.id,
   guardId: a.guardId,
   guard: a.guard,
@@ -62,7 +47,7 @@ const toDto = (a: any): IPanicAlert => ({
  * Construye el where clause base filtrado por clientId cuando
  * el usuario es RESDN/cliente. ADMIN ve todo.
  */
-const buildClientFilter = (user: any) => {
+const buildClientFilter = (user: AuthenticatedUser) => {
   if (user?.role === ROLE_CLIENT && user.clientId) {
     return { clientId: user.clientId };
   }
@@ -84,7 +69,7 @@ export const createPanicAlert = async (
   });
 
   if (!guard) {
-    throw new Error("Guardia no encontrado");
+    throw new AppError("Guardia no encontrado", 404);
   }
 
   const clientId = input.clientId ?? guard.clientId ?? null;
@@ -104,6 +89,14 @@ export const createPanicAlert = async (
   });
 
   const dto = toDto(alert);
+
+  await createAuditLog({
+    userId: guard.id,
+    module: "PANIC",
+    action: "CREATE",
+    resourceId: alert.id,
+  });
+
   const guardName = `${guard.name} ${guard.lastName ?? ""}`.trim();
   const lat = input.triggerLatitude;
   const lng = input.triggerLongitude;
@@ -115,7 +108,7 @@ export const createPanicAlert = async (
   // Fire-and-forget
   setImmediate(async () => {
     try {
-      const fcm = getFirebase();
+      const fcm = getFirebaseApp();
       if (fcm) {
         const peerGuards = await prismaClient.user.findMany({
           where: {
@@ -157,7 +150,7 @@ export const createPanicAlert = async (
                 channelId: "fansal-panic",
                 color: "#DC2626",
                 sound: "default",
-                vibrate: [0, 200, 100, 200, 100, 200],
+                vibrateTimingsMillis: [0, 200, 100, 200, 100, 200],
               },
             },
             apns: {
@@ -251,20 +244,20 @@ export const createPanicAlert = async (
  */
 export const getDataTablePanicAlerts = async (
   params: ITDataTableFetchParams,
-  user: any,
+  user: AuthenticatedUser,
 ): Promise<IPaginatedPanicAlerts> => {
   const prismaParams = getPrismaPaginationParams(params);
   const clientFilter = buildClientFilter(user);
 
-  const filters: any = {
+  const filters: Prisma.PanicAlertWhereInput = {
     ...prismaParams.where,
     ...clientFilter,
   };
 
   // Filtros específicos de PanicAlerts
-  if (params.filters?.status) filters.status = params.filters.status;
-  if (params.filters?.guardId) filters.guardId = params.filters.guardId;
-  if (params.filters?.clientId) filters.clientId = params.filters.clientId;
+  if (params.filters?.status) filters.status = params.filters.status as PanicAlertStatus;
+  if (params.filters?.guardId) filters.guardId = params.filters.guardId as string;
+  if (params.filters?.clientId) filters.clientId = params.filters.clientId as string;
   if (params.filters?.search) {
     const q = String(params.filters.search).trim();
     if (q.length > 0) {
@@ -295,7 +288,7 @@ export const getDataTablePanicAlerts = async (
 
 export const getPanicAlertById = async (
   id: string,
-  user: any,
+  user: AuthenticatedUser,
 ): Promise<IPanicAlert | null> => {
   const alert = await prismaClient.panicAlert.findFirst({
     where: {
@@ -310,14 +303,14 @@ export const getPanicAlertById = async (
 export const resolvePanicAlert = async (
   id: string,
   input: IPanicAlertResolve,
-  user: any,
+  user: AuthenticatedUser,
 ): Promise<IPanicAlert> => {
   // Validar que la alerta existe y que el usuario tiene scope
   const existing = await prismaClient.panicAlert.findFirst({
     where: { id, ...buildClientFilter(user) },
   });
   if (!existing) {
-    throw new Error("Alerta de pánico no encontrada");
+    throw new AppError("Alerta de pánico no encontrada", 404);
   }
 
   const updated = await prismaClient.panicAlert.update({
@@ -332,6 +325,13 @@ export const resolvePanicAlert = async (
   });
 
   const dto = toDto(updated);
+
+  await createAuditLog({
+    userId: user.id,
+    module: "PANIC",
+    action: "RESOLVE",
+    resourceId: id,
+  });
 
   // Publicar en Ably para que el dashboard se actualice en vivo
   setImmediate(() => {
@@ -352,7 +352,7 @@ export const resolvePanicAlert = async (
 };
 
 export const getRecentPanicAlerts = async (
-  user: any,
+  user: AuthenticatedUser,
   limit: number = 10,
 ): Promise<IPanicAlert[]> => {
   const alerts = await prismaClient.panicAlert.findMany({
@@ -365,7 +365,7 @@ export const getRecentPanicAlerts = async (
 };
 
 export const countPendingPanicAlerts = async (
-  user: any,
+  user: AuthenticatedUser,
 ): Promise<number> => {
   return prismaClient.panicAlert.count({
     where: { status: "PENDING", ...buildClientFilter(user) },

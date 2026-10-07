@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prismaClient } from "@src/core/config/database";
 import { now } from "@src/core/utils/date-time.utils";
 import { AppError } from "@src/core/errors/AppError";
@@ -17,6 +18,16 @@ export const clockIn = async (guardId: string) => {
 
   if (!user || !OPERATIONAL_ROLES.includes(user.role.name)) {
     throw new AppError("El usuario no es un guardia operativo", 400);
+  }
+
+  // Rechazar entrada duplicada: no puede haber una entrada abierta previa.
+  // Antes se creaba un segundo registro abierto, dejando la prenómina incoherente.
+  const openLog = await prisma.guardLoginLog.findFirst({
+    where: { userId: guardId, logoutAt: null },
+  });
+
+  if (openLog) {
+    throw new AppError("El guardia ya tiene una entrada abierta", 400);
   }
 
   const log = await prisma.guardLoginLog.create({
@@ -74,6 +85,7 @@ export const clockOut = async (guardId: string) => {
 };
 
 const mapGuardLogFilters = (filters: Record<string, any>) => {
+  // Filtro dinámico por clave (search, isOpen, clientId, status…).
   const where: any = {};
 
   for (const [key, value] of Object.entries(filters)) {

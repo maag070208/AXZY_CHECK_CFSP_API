@@ -1,5 +1,8 @@
+import { ILocationUpdateRequest } from "./locations.dto";
+import { Prisma, Location as LocationModel } from "@prisma/client";
 import { prismaClient as prisma } from "@src/core/config/database";
 import { AppError } from "@src/core/errors/AppError";
+import { createAuditLog } from "../audit/audit.service";
 import {
   PDF_COLOR_BLACK,
   PDF_COLOR_SUCCESS,
@@ -15,7 +18,7 @@ import path from "path";
 
 export const getDataTableLocations = async (
   params: ITDataTableFetchParams,
-): Promise<ITDataTableResponse<any>> => {
+): Promise<ITDataTableResponse<LocationModel>> => {
   try {
     const { page, limit, filters } = params;
     const take = Number(limit) || 10;
@@ -55,7 +58,7 @@ export const getDataTableLocations = async (
         }
         query += ` ORDER BY l."createdAt" DESC LIMIT ${take} OFFSET ${skip}`;
 
-        const rows: any = await prisma.$queryRawUnsafe(query);
+        const rows = (await prisma.$queryRawUnsafe(query)) as unknown as LocationModel[];
 
         let countQuery = `
                 SELECT COUNT(*)::int as count FROM "Location" l
@@ -71,7 +74,7 @@ export const getDataTableLocations = async (
           countQuery += ` AND l."zoneId" = '${zoneIdFilter}'`;
         }
 
-        const totalRes: any = await prisma.$queryRawUnsafe(countQuery);
+        const totalRes = (await prisma.$queryRawUnsafe(countQuery)) as unknown as Array<{ count: number }>;
         return { rows, total: totalRes[0]?.count || 0 };
       } catch (rawError) {
         logger.warn("Fuzzy search failed", rawError);
@@ -79,14 +82,14 @@ export const getDataTableLocations = async (
     }
 
     const prismaParams = getPrismaPaginationParams(params);
-    const whereClause: any = {
+    const whereClause: Prisma.LocationWhereInput = {
       ...prismaParams.where,
     };
     if (clientIdFilter) {
-      whereClause.clientId = clientIdFilter;
+      whereClause.clientId = clientIdFilter as string;
     }
     if (zoneIdFilter) {
-      whereClause.zoneId = zoneIdFilter;
+      whereClause.zoneId = zoneIdFilter as string;
     }
 
     const [rows, total] = await Promise.all([
@@ -113,7 +116,7 @@ export const getDataTableLocations = async (
 };
 
 export const getAllLocations = async (clientId?: string) => {
-  const where: any = {};
+  const where: Prisma.LocationWhereInput = {};
   if (clientId) {
     where.clientId = clientId;
   }
@@ -145,7 +148,7 @@ export const createLocation = async (data: {
   aisle?: string;
   spot?: string;
   number?: string;
-}) => {
+}, userId: string) => {
   const active = await prisma.location.findFirst({
     where: {
       zoneId: data.zoneId,
@@ -165,26 +168,54 @@ export const createLocation = async (data: {
     data: { name: `${data.name}__DELETED_${Date.now()}` },
   });
 
-  return await prisma.location.create({ data });
+  const location = await prisma.location.create({ data });
+
+  await createAuditLog({
+    userId,
+    module: "LOCATIONS",
+    action: "CREATE",
+    resourceId: location.id,
+    details: { name: location.name, clientId: location.clientId },
+  });
+
+  return location;
 };
 
-export const updateLocation = async (id: string, data: any) => {
-  return await prisma.location.update({
+export const updateLocation = async (id: string, data: ILocationUpdateRequest, userId: string) => {
+  const location = await prisma.location.update({
     where: { id },
     data,
   });
+
+  await createAuditLog({
+    userId,
+    module: "LOCATIONS",
+    action: "UPDATE",
+    resourceId: id,
+  });
+
+  return location;
 };
 
-export const deleteLocation = async (id: string) => {
+export const deleteLocation = async (id: string, userId: string) => {
   const location = await prisma.location.findUnique({
     where: { id },
   });
 
   if (!location) throw new AppError("Location not found", 404);
 
-  return await prisma.location.delete({
+  const deleted = await prisma.location.delete({
     where: { id },
   });
+
+  await createAuditLog({
+    userId,
+    module: "LOCATIONS",
+    action: "DELETE",
+    resourceId: id,
+  });
+
+  return deleted;
 };
 
 export const getAvailableLocation = async () => {
@@ -205,7 +236,7 @@ export const generateQRPDF = async (ids: string[]) => {
   });
 
   const doc = new PDFDocument({ margin: 0, size: "LETTER" });
-  const buffers: any[] = [];
+  const buffers: Buffer[] = [];
   doc.on("data", (chunk) => buffers.push(chunk));
 
   const qrsPerPage = 6;

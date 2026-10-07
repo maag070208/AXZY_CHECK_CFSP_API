@@ -5,6 +5,7 @@ import { AssignmentStatus } from "@prisma/client";
 import { asyncHandler } from "@src/core/utils/asyncHandler";
 import { AppError } from "@src/core/errors/AppError";
 import { createAuditLog } from "../audit/audit.service";
+import { getAuthUserId } from "@src/core/utils/auth-user.utils";
 
 export const getDataTable = asyncHandler(async (req: Request, res: Response) => {
   const result = await assignmentService.getDataTableAssignments(req.body);
@@ -16,6 +17,15 @@ export const createAssignment = asyncHandler(async (req: Request, res: Response)
     ...req.body,
     assignedBy: res.locals.user.id,
   });
+
+  await createAuditLog({
+    userId: getAuthUserId(res),
+    module: "ASSIGNMENTS",
+    action: "CREATE",
+    resourceId: result.id,
+    details: { guardId: result.guardId, locationId: result.locationId },
+  });
+
   return res.status(201).json(createTResult(result));
 });
 
@@ -46,12 +56,29 @@ export const updateStatus = asyncHandler(async (req: Request, res: Response) => 
   const { id } = req.params;
   const { status } = req.body;
   const result = await assignmentService.updateAssignmentStatus(id, status);
+
+  await createAuditLog({
+    userId: getAuthUserId(res),
+    module: "ASSIGNMENTS",
+    action: "UPDATE_STATUS",
+    resourceId: id,
+    details: { status },
+  });
+
   return res.status(200).json(createTResult(result));
 });
 
 export const toggleTask = asyncHandler(async (req: Request, res: Response) => {
   const { taskId } = req.params;
   const result = await assignmentService.toggleAssignmentTask(taskId);
+
+  await createAuditLog({
+    userId: getAuthUserId(res),
+    module: "ASSIGNMENTS",
+    action: "TOGGLE_TASK",
+    resourceId: taskId,
+  });
+
   return res.status(200).json(createTResult(result));
 });
 
@@ -60,7 +87,7 @@ export const deleteAssignment = asyncHandler(async (req: Request, res: Response)
   await assignmentService.deleteAssignment(id);
 
   await createAuditLog({
-    userId: res.locals.user?.id || "SYSTEM",
+    userId: getAuthUserId(res),
     module: "ASSIGNMENTS",
     action: "DELETE",
     resourceId: id,

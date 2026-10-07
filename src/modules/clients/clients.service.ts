@@ -15,8 +15,8 @@ export const getDataTableClients = async (
   params: ITDataTableFetchParams,
 ): Promise<ITDataTableResponse<IClientResponse>> => {
   const { page = 1, limit = 10, filters } = params;
-  const filter = (filters as any)?.search || (filters as any)?.name || "";
-  const isActive = (filters as any)?.active;
+  const filter = String(filters?.search || filters?.name || "");
+  const isActive = filters?.active;
 
   const where: Prisma.ClientWhereInput = {
     softDelete: false,
@@ -101,7 +101,7 @@ export const createClient = async (data: IClientCreateRequest) => {
 
   return prisma.$transaction(async (tx) => {
     const client = await tx.client.create({
-      data: clientData as any, // Cast because of some Prisma strictness with nested types if any
+      data: clientData as Prisma.ClientUncheckedCreateInput, // Cast porque el DTO trae appUsername/appPassword que no son del modelo
     });
 
     if (appUsername && appPassword) {
@@ -140,7 +140,7 @@ export const updateClient = async (id: string, data: IClientUpdateRequest) => {
   return prisma.$transaction(async (tx) => {
     const client = await tx.client.update({
       where: { id },
-      data: clientData as any,
+      data: clientData as Prisma.ClientUncheckedUpdateInput,
     });
 
     if (appUsername || appPassword) {
@@ -163,7 +163,7 @@ export const updateClient = async (id: string, data: IClientUpdateRequest) => {
         }
 
         if (clientUser) {
-          const updateData: any = {};
+          const updateData: Prisma.UserUpdateInput = {};
           if (appUsername && appUsername !== clientUser.username)
             updateData.username = appUsername;
           if (appPassword)

@@ -1,4 +1,5 @@
 import { prismaClient as prisma } from "@src/core/config/database";
+import { ROLE_ADMIN } from "@src/core/config/constants";
 import { logger } from "@src/core/utils/logger";
 
 export interface IAuditCreate {
@@ -25,7 +26,7 @@ export const createAuditLog = async (data: IAuditCreate) => {
     if (!userExists) {
         // Si es test o el usuario no existe (e.g. login fallido), usamos un usuario del sistema o el primero disponible
         const systemUser = await prisma.user.findFirst({
-            where: { role: { name: 'ADMIN' } },
+            where: { role: { name: ROLE_ADMIN } },
             select: { id: true }
         });
         finalUserId = systemUser?.id || data.userId; // Fallback to original if no admin found (Prisma will fail anyway if invalid)

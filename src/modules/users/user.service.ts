@@ -1,3 +1,5 @@
+import { AuthenticatedUser } from "@src/core/types/auth.types";
+import { Prisma } from "@prisma/client";
 import { prismaClient } from "@src/core/config/database";
 import {
   ITDataTableFetchParams,
@@ -50,7 +52,7 @@ export const getUsers = async (search?: string): Promise<IUserResponse[]> => {
 
 export const getDataTableUsers = async (
   params: ITDataTableFetchParams,
-  user?: any,
+  user?: AuthenticatedUser,
 ): Promise<ITDataTableResponse<IUserResponse>> => {
   const prismaParams = getPrismaPaginationParams(params);
 
@@ -176,7 +178,7 @@ export const addUser = async (data: IUserCreateRequest) => {
       ...userData,
       password: userData.password || "", // Prisma needs string
       roleId: targetRoleId!,
-    } as any,
+    } as Prisma.UserUncheckedCreateInput,
     include: { schedule: true, role: true, client: true },
   });
 };
@@ -211,7 +213,7 @@ export const updateUser = async (id: string, data: IUserUpdateRequest) => {
 
     const updatedUser = await tx.user.update({
       where: { id },
-      data: userData as any,
+      data: userData as Prisma.UserUncheckedUpdateInput,
       include: { schedule: true, role: true, client: true },
     });
 

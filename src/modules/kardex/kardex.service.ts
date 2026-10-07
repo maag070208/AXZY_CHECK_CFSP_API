@@ -1,3 +1,5 @@
+import { createAuditLog } from "../audit/audit.service";
+import { Prisma } from "@prisma/client";
 import { prismaClient } from "@src/core/config/database";
 import { AssignmentStatus, ScanType } from "@prisma/client";
 import {
@@ -11,7 +13,7 @@ export const registerCheck = async (data: {
   userId: string;
   locationId: string;
   notes?: string;
-  media?: any[];
+  media?: Prisma.InputJsonValue;
   latitude?: number;
   longitude?: number;
   assignmentId?: string; // Optional manual override
@@ -59,11 +61,11 @@ export const registerCheck = async (data: {
     });
 
     const isPartOfClient = activeRound?.client?.locations.some(
-      (l: any) => l.id === data.locationId,
+      (l) => l.id === data.locationId,
     );
     const isPartOfRecurring =
       activeRound?.recurringConfiguration?.recurringLocations.some(
-        (rl: any) => rl.locationId === data.locationId,
+        (rl) => rl.locationId === data.locationId,
       );
 
     if (isPartOfClient || isPartOfRecurring) {
@@ -95,6 +97,14 @@ export const registerCheck = async (data: {
     },
   });
 
+  await createAuditLog({
+    userId: data.userId,
+    module: "KARDEX",
+    action: "CREATE",
+    resourceId: newKardex.id,
+    details: { locationId: data.locationId, scanType: finalScanType },
+  });
+
   if (finalScanType === ScanType.RECURRING) {
     const activeRound = await prismaClient.round.findFirst({
       where: { guardId: data.userId, status: ROUND_STATUS_IN_PROGRESS },
@@ -118,7 +128,7 @@ export const registerCheck = async (data: {
       assignment: {
         id: "0",
         status: ASSIGNMENT_STATUS_PENDING,
-        tasks: tasks.map((t: any) => ({
+        tasks: tasks.map((t) => ({
           id: t.id,
           description: t.description,
           completed: false,
@@ -138,15 +148,20 @@ export const updateKardex = async (
   id: string,
   data: {
     notes?: string;
-    media?: any[];
+    media?: Prisma.InputJsonValue;
     latitude?: number;
     longitude?: number;
   },
+  userId: string,
 ) => {
-  return prismaClient.kardex.update({
+  const entry = await prismaClient.kardex.update({
     where: { id },
     data,
   });
+
+  await createAuditLog({ userId, module: "KARDEX", action: "UPDATE", resourceId: id });
+
+  return entry;
 };
 
 export const getKardex = async (filters: {
@@ -155,7 +170,7 @@ export const getKardex = async (filters: {
   startDate?: string;
   endDate?: string;
 }) => {
-  const where: any = {};
+  const where: Prisma.KardexWhereInput = {};
 
   if (filters.userId) where.userId = filters.userId;
   if (filters.locationId) where.locationId = filters.locationId;
@@ -227,7 +242,7 @@ export const getKardexById = async (id: string) => {
         assignment: {
           id: "0",
           status: ASSIGNMENT_STATUS_PENDING,
-          tasks: recurringTask.tasks.map((t: any) => ({
+          tasks: recurringTask.tasks.map((t) => ({
             id: t.id,
             description: t.description,
             completed: false,
@@ -244,14 +259,20 @@ export const getKardexById = async (id: string) => {
 export const getDataTableKardex = async (params: {
   page: number;
   limit: number;
-  filters: any;
+  filters: {
+    userId?: string;
+    locationId?: string;
+    clientId?: string;
+    search?: string;
+    date?: string[];
+  };
   sort?: { key: string; order: "asc" | "desc" };
 }) => {
   const { page, limit, filters, sort } = params;
   const skip = (page - 1) * limit;
   const take = limit;
 
-  const where: any = {};
+  const where: Prisma.KardexWhereInput = {};
 
   if (filters.userId) {
     where.userId = filters.userId;
@@ -287,7 +308,7 @@ export const getDataTableKardex = async (params: {
     }
   }
 
-  const orderBy: any = [];
+  const orderBy: Array<Prisma.KardexOrderByWithRelationInput> = [];
   if (sort && sort.key) {
     if (sort.key === "user") {
       orderBy.push({ user: { name: sort.order } });
@@ -351,13 +372,17 @@ export const getDataTableKardex = async (params: {
   };
 };
 
-export const deleteKardex = async (id: string) => {
-  return prismaClient.kardex.delete({
+export const deleteKardex = async (id: string, userId: string) => {
+  const entry = await prismaClient.kardex.delete({
     where: { id },
   });
+
+  await createAuditLog({ userId, module: "KARDEX", action: "DELETE", resourceId: id });
+
+  return entry;
 };
 
-export const updateKardexMedia = async (id: string, media: any[]) => {
+export const updateKardexMedia = async (id: string, media: Prisma.InputJsonValue) => {
   return prismaClient.kardex.update({
     where: { id },
     data: { media },

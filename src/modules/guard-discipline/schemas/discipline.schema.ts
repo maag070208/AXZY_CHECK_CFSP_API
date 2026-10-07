@@ -81,3 +81,5 @@ export const resolveDisciplineSchema = z.object({
     status: z.enum(["RESOLVED", "DISMISSED"]),
   }),
 });
+
+export type ICreateDiscipline = z.infer<typeof createDisciplineSchema>["body"];

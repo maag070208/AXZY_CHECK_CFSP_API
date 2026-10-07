@@ -2,8 +2,12 @@ import { getDueNotifications, markAsSent, disableCompleted, computeNextSend } fr
 import { prismaClient as prisma } from "@src/core/config/database";
 import { logger } from "@src/core/utils/logger";
 import * as Ably from "ably";
+import type { Message } from "firebase-admin/messaging";
+import { ScheduledNotification } from "@prisma/client";
+import { env } from "@src/core/config/env.config";
+import { getFirebaseApp } from "@src/core/utils/firebase.utils";
 
-const ABLY_KEY = process.env.ABLY_API_KEY || "_iYGPA.fJVkAw:ix6oVHub7TpqllbX6JMdmfJgDoqKKEIoZ5wJNRo6Zlc";
+
 
 let intervalId: NodeJS.Timeout | null = null;
 
@@ -58,8 +62,8 @@ async function processDueNotifications() {
   }
 }
 
-async function sendNotificationDirect(notif: any) {
-  const ably = new Ably.Rest({ key: ABLY_KEY });
+async function sendNotificationDirect(notif: ScheduledNotification) {
+  const ably = new Ably.Rest({ key: env.ABLY_API_KEY });
   const ch = ably.channels.get(notif.channel || "global");
   await ch.publish("notification", {
     title: notif.title,
@@ -88,15 +92,14 @@ async function sendNotificationDirect(notif: any) {
 
   if (notif.userId) {
     try {
-      const admin = require("firebase-admin");
-      const fcm = admin.apps.length ? admin.apps[0] : null;
+      const fcm = getFirebaseApp();
       if (fcm) {
         const user = await prisma.user.findUnique({
           where: { id: notif.userId },
           select: { fcmToken: true },
         });
         if (user?.fcmToken) {
-          const payload: any = {
+          const payload: Message = {
             token: user.fcmToken,
             data: { type: notif.type, persistent: String(notif.persistent || false), channel: notif.channel || "global" },
             android: { priority: "high" },
@@ -104,7 +107,7 @@ async function sendNotificationDirect(notif: any) {
           };
           if (!notif.persistent) {
             payload.notification = { title: notif.title || "Notificación", body: notif.message };
-            payload.android.notification = { channelId: "fansal-default", color: "#10b981" };
+            payload.android = { ...payload.android, notification: { channelId: "fansal-default", color: "#10b981" } };
           }
           await fcm.messaging().send(payload);
         }

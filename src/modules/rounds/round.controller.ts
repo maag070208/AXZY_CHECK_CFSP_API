@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { ROLE_CLIENT } from "@src/core/config/constants";
 import * as roundService from "./round.service";
 import { createTResult } from "@src/core/mappers/tresult.mapper";
 import { StorageService } from "../storage/storage.service";
@@ -31,7 +32,7 @@ export const startRound = asyncHandler(async (req: Request, res: Response) => {
     userId: String(targetGuardId),
     module: "ROUNDS",
     action: "START",
-    resourceId: (result.data as any)?.id,
+    resourceId: result.data?.id,
     details: { clientId, recurringConfigurationId }
   });
 
@@ -104,7 +105,7 @@ export const deleteRound = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const user = res.locals.user;
 
-  if (user?.role === "RESDN") {
+  if (user?.role === ROLE_CLIENT) {
     throw new AppError("No tienes permiso para eliminar rondas", 403);
   }
 

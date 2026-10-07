@@ -75,7 +75,7 @@ export const getCatalog = async (key: string) => {
       default:
         throw new Error(`Catalog key "${key}" not found`);
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error(`[CatalogService] Error fetching catalog "${key}":`, error);
     throw error;
   }

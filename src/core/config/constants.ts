@@ -145,3 +145,25 @@ export const DASHBOARD_STALE_ROUND_MINUTES = 30;
 export const DASHBOARD_ABANDONED_ROUND_HOURS = 12;
 /** Días máximos hacia atrás para leer escaneos de rondas activas. */
 export const DASHBOARD_MAX_KARDEX_LOOKBACK_DAYS = 7;
+
+/** Estados calculados de asistencia del personal (check-in vs. horario). */
+export const ATTENDANCE_STATUS = {
+  /** Llegó dentro de la tolerancia (o antes). */
+  ON_TIME: "ON_TIME",
+  /** Llegó después de la tolerancia. */
+  LATE: "LATE",
+  /** Pasó la tolerancia y no registró entrada. */
+  ABSENT: "ABSENT",
+  /** Todavía no empieza su turno. */
+  PENDING: "PENDING",
+} as const;
+export type AttendanceStatus = (typeof ATTENDANCE_STATUS)[keyof typeof ATTENDANCE_STATUS];
+
+/** Horas antes del inicio del turno en que una entrada cuenta para ese turno. */
+export const ATTENDANCE_EARLY_WINDOW_HOURS = 4;
+
+// Notifications
+export const NOTIFICATION_CHANNEL_DEFAULT = "global";
+export const NOTIFICATION_TYPE_DEFAULT = "info";
+export const NOTIFICATION_MAX_USERS_BROADCAST = 500;
+export const NOTIFICATION_MAX_INBOX = 100;

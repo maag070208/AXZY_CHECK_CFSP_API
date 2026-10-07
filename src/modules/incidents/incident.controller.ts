@@ -59,7 +59,7 @@ export const createIncident = asyncHandler(async (req: Request, res: Response) =
 export const getIncidents = asyncHandler(async (req: Request, res: Response) => {
   const { startDate, endDate, guardId, category, title } = req.query;
 
-  const filters: any = {};
+  const filters: Parameters<typeof incidentService.getIncidents>[0] = {};
   if (startDate) filters.startDate = new Date(String(startDate));
   if (endDate) filters.endDate = new Date(String(endDate));
   if (guardId) filters.guardId = guardId as string;
@@ -136,8 +136,8 @@ export const deleteMedia = asyncHandler(async (req: Request, res: Response) => {
     }
   }
 
-  const media = incident.media as any[];
-  const updatedMedia = media.filter((m: any) => {
+  const media = incident.media as Array<{ key?: string; url?: string }>;
+  const updatedMedia = media.filter((m: { key?: string; url?: string }) => {
     if (!m) return false;
     const mKey =
       m.key || (typeof m.url === "string" ? m.url.split("/").pop() : null);

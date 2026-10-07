@@ -22,7 +22,7 @@ export const generateAdministrativeMatrixPDFBuffer = async (
     layout: "landscape",
     bufferPages: true,
   });
-  const buffers: any[] = [];
+  const buffers: Buffer[] = [];
   doc.on("data", buffers.push.bind(buffers));
 
   const C_DARK = "#1e293b";

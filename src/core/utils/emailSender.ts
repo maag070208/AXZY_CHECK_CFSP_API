@@ -1,10 +1,41 @@
-import { PrismaClient } from "@prisma/client";
 import { resend, transporter } from "../config/mail";
+import { prismaClient as prisma } from "../config/database";
 import { logger } from "./logger";
 
-const prisma = new PrismaClient();
+/** Adjunto de evidencia (URL + tipo) tal como llega del reporte. */
+interface IEmailMedia {
+  url?: string;
+  type?: string;
+}
 
-export const sendIncidentEmail = async (incident: any, guard: any) => {
+/** Datos mínimos de una incidencia para el correo. */
+interface IIncidentEmailData {
+  id?: string;
+  title: string;
+  description?: string | null;
+  /** Campo `Json?` de Prisma: se normaliza dentro de la función. */
+  media?: unknown;
+  category?: { name?: string; value?: string } | null;
+}
+
+/** Datos mínimos de un mantenimiento para el correo. */
+interface IMaintenanceEmailData {
+  title: string;
+  description?: string | null;
+  /** Campo `Json?` de Prisma: se normaliza dentro de la función. */
+  media?: unknown;
+  type?: { name?: string; value?: string } | null;
+  categoryRel?: { name?: string; value?: string } | null;
+  category?: string | null;
+}
+
+/** Persona que reporta (guardia). */
+interface IEmailReporter {
+  name: string;
+  lastName?: string | null;
+}
+
+export const sendIncidentEmail = async (incident: IIncidentEmailData, guard: IEmailReporter) => {
   try {
     // 1. Get recipients from SysConfig
     const config = await prisma.sysConfig.findUnique({
@@ -22,13 +53,12 @@ export const sendIncidentEmail = async (incident: any, guard: any) => {
 
     // 2. Prepare Media Links
     let mediaLinks = "<p><em>No hay evidencia adjunta.</em></p>";
-    if (
-      incident.media &&
-      Array.isArray(incident.media) &&
-      incident.media.length > 0
-    ) {
+    const incidentMedia = Array.isArray(incident.media)
+      ? (incident.media as IEmailMedia[])
+      : [];
+    if (incidentMedia.length > 0) {
       mediaLinks = "<ul>";
-      incident.media.forEach((m: any) => {
+      incidentMedia.forEach((m) => {
         const url = m.url;
         const type = m.type === "VIDEO" ? "Video" : "Foto";
         mediaLinks += `<li><a href="${url}" target="_blank">${type} - Ver evidencia</a></li>`;
@@ -123,7 +153,7 @@ export const sendIncidentEmail = async (incident: any, guard: any) => {
   }
 };
 
-export const sendMaintenanceEmail = async (maintenance: any, guard: any) => {
+export const sendMaintenanceEmail = async (maintenance: IMaintenanceEmailData, guard: IEmailReporter) => {
   try {
     const config = await prisma.sysConfig.findUnique({
       where: { key: "MAINTENANCE_EMAIL" },
@@ -138,13 +168,12 @@ export const sendMaintenanceEmail = async (maintenance: any, guard: any) => {
     const subject = `🔧 Nuevo Reporte de Mantenimiento: ${maintenance.title}`;
 
     let mediaLinks = "<p><em>No hay evidencia adjunta.</em></p>";
-    if (
-      maintenance.media &&
-      Array.isArray(maintenance.media) &&
-      maintenance.media.length > 0
-    ) {
+    const maintenanceMedia = Array.isArray(maintenance.media)
+      ? (maintenance.media as IEmailMedia[])
+      : [];
+    if (maintenanceMedia.length > 0) {
       mediaLinks = "<ul>";
-      maintenance.media.forEach((m: any) => {
+      maintenanceMedia.forEach((m) => {
         const url = m.url;
         const type = m.type === "VIDEO" ? "Video" : "Foto";
         mediaLinks += `<li><a href="${url}" target="_blank">${type} - Ver evidencia</a></li>`;
@@ -232,7 +261,7 @@ export const sendMaintenanceEmail = async (maintenance: any, guard: any) => {
   }
 };
 
-export const sendIncidentWhatsApp = async (incident: any, guard: any) => {
+export const sendIncidentWhatsApp = async (incident: IIncidentEmailData, guard: IEmailReporter) => {
   try {
     const config = await prisma.sysConfig.findUnique({
       where: { key: "INCIDENT_WHATSAPP" },
@@ -250,7 +279,7 @@ export const sendIncidentWhatsApp = async (incident: any, guard: any) => {
   }
 };
 
-export const sendMaintenanceWhatsApp = async (maintenance: any, guard: any) => {
+export const sendMaintenanceWhatsApp = async (maintenance: IMaintenanceEmailData, guard: IEmailReporter) => {
   try {
     const config = await prisma.sysConfig.findUnique({
       where: { key: "MAINTENANCE_WHATSAPP" },

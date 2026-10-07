@@ -10,3 +10,9 @@ export const SendNotificationSchema = z.object({
     persistent: z.boolean().default(false),
   }),
 });
+
+export const NotificationIdParamSchema = z.object({
+  params: z.object({
+    id: z.string().uuid("ID de notificación inválido"),
+  }),
+});
