@@ -1,7 +1,7 @@
 import request from "supertest";
 import { app } from "@src/index";
 import { prismaClient } from "@src/core/config/database";
-import { ROLE_GUARD } from "@src/core/config/constants";
+import { ROLE_CLIENT, ROLE_GUARD } from "@src/core/config/constants";
 
 jest.mock("@src/modules/common/middlewares/auth.middleware", () => ({
   authenticate: (req: any, res: any, next: any) => {
@@ -15,17 +15,7 @@ jest.mock("@src/modules/common/middlewares/auth.middleware", () => ({
   authorize: () => (req: any, res: any, next: any) => next(),
 }));
 
-jest.mock("@src/core/middlewares/token-validator.middleware", () => ({
-  __esModule: true,
-  default: (req: any, res: any, next: any) => {
-    const user = req.headers["user"]
-      ? JSON.parse(req.headers["user"])
-      : { id: "admin-id", role: "ADMIN" };
-    req.user = user;
-    res.locals.user = user;
-    next();
-  },
-}));
+jest.setTimeout(30000);
 
 describe("Rutas de Configuración de Rondas (Recurrencia) - Integración Total", () => {
   let createdClientId: string;
@@ -259,6 +249,210 @@ describe("Rutas de Configuración de Rondas (Recurrencia) - Integración Total",
         const found = response.body.data.find((r: any) => r.id === activeRoundId);
         expect(found).toBeDefined();
         expect(found.status).toBe("COMPLETED");
+    });
+  });
+});
+
+/**
+ * Consultas de configuración de rondas recurrentes (integración contra
+ * Postgres real, datos creados directamente con Prisma).
+ */
+describe("Consultas de configuración de rondas (Integración)", () => {
+  let clienteAId: string;
+  let clienteBId: string;
+  let locationAId: string;
+  let locationBId: string;
+  let guardaAId: string;
+  let guardaBId: string;
+  let guardaSinClienteId: string;
+  let configAId: string;
+  let configSinGuardiaId: string;
+  let configInactivaId: string;
+  let configDescartadaId: string;
+  let configBId: string;
+
+  const adminHeader = () => JSON.stringify({ id: "admin-id", role: "ADMIN" });
+  const clienteAHeader = () =>
+    JSON.stringify({ id: "cliente-a", name: "Cliente A", username: "cliente.a", role: ROLE_CLIENT, clientId: clienteAId });
+
+  const ids = (res: { body: { data: { id: string }[] } }) => res.body.data.map((c) => c.id);
+
+  beforeAll(async () => {
+    const stamp = Date.now();
+    const guardRole = await prismaClient.role.findUnique({ where: { name: ROLE_GUARD }, select: { id: true } });
+    if (!guardRole) throw new Error("Se requiere el rol GUARD en la base de pruebas");
+
+    const clienteA = await prismaClient.client.create({ data: { name: `Cliente Recurrente A ${stamp}` } });
+    const clienteB = await prismaClient.client.create({ data: { name: `Cliente Recurrente B ${stamp}` } });
+    clienteAId = clienteA.id;
+    clienteBId = clienteB.id;
+
+    const locationA = await prismaClient.location.create({ data: { name: `Punto A ${stamp}`, clientId: clienteAId } });
+    const locationB = await prismaClient.location.create({ data: { name: `Punto B ${stamp}`, clientId: clienteBId } });
+    locationAId = locationA.id;
+    locationBId = locationB.id;
+
+    const crearGuardia = async (sufijo: string, clientId: string | null) => {
+      const guardia = await prismaClient.user.create({
+        data: {
+          name: "Guardia",
+          lastName: sufijo,
+          username: `guardia.recurrente.${sufijo}.${stamp}`.toLowerCase(),
+          password: "x",
+          roleId: guardRole.id,
+          clientId,
+        },
+      });
+      return guardia.id;
+    };
+    guardaAId = await crearGuardia("a", clienteAId);
+    guardaBId = await crearGuardia("b", clienteBId);
+    guardaSinClienteId = await crearGuardia("sc", null);
+
+    const configA = await prismaClient.recurringConfiguration.create({
+      data: {
+        title: `Ronda A ${stamp}`,
+        clientId: clienteAId,
+        guards: { connect: [{ id: guardaAId }] },
+        recurringLocations: {
+          create: [{ locationId: locationAId, tasks: { create: [{ description: "Revisar cerradura", reqPhoto: true }] } }],
+        },
+      },
+    });
+    configAId = configA.id;
+
+    const configSinGuardia = await prismaClient.recurringConfiguration.create({
+      data: { title: `Ronda sin guardia ${stamp}`, clientId: clienteAId },
+    });
+    configSinGuardiaId = configSinGuardia.id;
+
+    const configInactiva = await prismaClient.recurringConfiguration.create({
+      data: { title: `Ronda inactiva ${stamp}`, clientId: clienteAId, active: false, guards: { connect: [{ id: guardaAId }] } },
+    });
+    configInactivaId = configInactiva.id;
+
+    const configDescartada = await prismaClient.recurringConfiguration.create({
+      data: { title: `Ronda descartada ${stamp}`, clientId: clienteAId, softDelete: true, guards: { connect: [{ id: guardaAId }] } },
+    });
+    configDescartadaId = configDescartada.id;
+
+    const configB = await prismaClient.recurringConfiguration.create({
+      data: { title: `Ronda B ${stamp}`, clientId: clienteBId, guards: { connect: [{ id: guardaBId }] } },
+    });
+    configBId = configB.id;
+  });
+
+  afterAll(async () => {
+    const configIds = [configAId, configSinGuardiaId, configInactivaId, configDescartadaId, configBId];
+    await prismaClient.recurringTask
+      .deleteMany({ where: { recurringLocation: { recurringConfigurationId: { in: configIds } } } })
+      .catch(() => {});
+    await prismaClient.recurringLocation.deleteMany({ where: { recurringConfigurationId: { in: configIds } } }).catch(() => {});
+    await prismaClient.recurringConfiguration.deleteMany({ where: { id: { in: configIds } } }).catch(() => {});
+    await prismaClient.user
+      .deleteMany({ where: { id: { in: [guardaAId, guardaBId, guardaSinClienteId] } } })
+      .catch(() => {});
+    await prismaClient.location.deleteMany({ where: { id: { in: [locationAId, locationBId] } } }).catch(() => {});
+    await prismaClient.client.deleteMany({ where: { id: { in: [clienteAId, clienteBId] } } }).catch(() => {});
+  });
+
+  describe("GET /api/v1/recurring", () => {
+    it("debe listar las configuraciones activas con sus puntos, tareas y guardias", async () => {
+      const res = await request(app).get("/api/v1/recurring").set("user", adminHeader());
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.messages).toEqual(["Success"]);
+      expect(Array.isArray(res.body.data)).toBe(true);
+
+      const todos = ids(res);
+      expect(todos).toContain(configAId);
+      expect(todos).toContain(configBId);
+      // La configuración con borrado lógico no se expone.
+      expect(todos).not.toContain(configDescartadaId);
+      // `getAllRecurring` sólo filtra por softDelete: las inactivas sí aparecen.
+      expect(todos).toContain(configInactivaId);
+
+      const mia = res.body.data.find((c: { id: string }) => c.id === configAId);
+      expect(mia.title).toContain("Ronda A");
+      expect(mia.recurringLocations).toHaveLength(1);
+      expect(mia.recurringLocations[0].locationId).toBe(locationAId);
+      expect(mia.recurringLocations[0].location.client.id).toBe(clienteAId);
+      expect(mia.recurringLocations[0].tasks).toHaveLength(1);
+      expect(mia.recurringLocations[0].tasks[0].description).toBe("Revisar cerradura");
+      expect(mia.recurringLocations[0].tasks[0].reqPhoto).toBe(true);
+      expect(mia.guards.map((g: { id: string }) => g.id)).toEqual([guardaAId]);
+    });
+
+    it("un usuario cliente sólo ve las configuraciones de su propia empresa", async () => {
+      const admin = await request(app).get("/api/v1/recurring").set("user", adminHeader());
+      const res = await request(app).get("/api/v1/recurring").set("user", clienteAHeader());
+
+      expect(res.status).toBe(200);
+      // Aislamiento multi-cliente: nunca se expone la configuración de otro cliente.
+      expect(ids(res)).not.toContain(configBId);
+      expect(ids(res)).toContain(configAId);
+      expect(res.body.data.length).toBeLessThan(admin.body.data.length);
+    });
+  });
+
+  describe("GET /api/v1/recurring/guard/:guardId", () => {
+    it("debe devolver sólo las configuraciones activas asignadas al guardia", async () => {
+      const res = await request(app).get(`/api/v1/recurring/guard/${guardaAId}`).set("user", adminHeader());
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.messages).toEqual(["Success"]);
+      expect(ids(res)).toEqual([configAId]);
+
+      const mia = res.body.data[0];
+      expect(mia.guards.map((g: { id: string }) => g.id)).toContain(guardaAId);
+      expect(mia.recurringLocations[0].tasks).toHaveLength(1);
+    });
+
+    it("no debe devolver configuraciones inactivas ni de otros clientes", async () => {
+      const res = await request(app).get(`/api/v1/recurring/guard/${guardaBId}`).set("user", adminHeader());
+
+      expect(res.status).toBe(200);
+      expect(ids(res)).toEqual([configBId]);
+      expect(ids(res)).not.toContain(configInactivaId);
+      expect(ids(res)).not.toContain(configSinGuardiaId);
+      expect(ids(res)).not.toContain(configDescartadaId);
+    });
+
+    it("un usuario cliente no puede consultar guardias de otra empresa", async () => {
+      const res = await request(app)
+        .get(`/api/v1/recurring/guard/${guardaBId}`)
+        .set("user", clienteAHeader());
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual([]);
+    });
+
+    it("debe devolver una lista vacía para un guardia sin cliente asignado", async () => {
+      const res = await request(app).get(`/api/v1/recurring/guard/${guardaSinClienteId}`).set("user", adminHeader());
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toEqual([]);
+    });
+
+    it("debe devolver una lista vacía cuando el guardia no existe (sin 404)", async () => {
+      const res = await request(app)
+        .get("/api/v1/recurring/guard/00000000-0000-0000-0000-000000000000")
+        .set("user", adminHeader());
+
+      // La ruta no define 404: un recurso inexistente responde 200 con [].
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual([]);
+    });
+
+    it("debe rechazar un guardId que no es UUID", async () => {
+      const res = await request(app).get("/api/v1/recurring/guard/no-es-uuid").set("user", adminHeader());
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.messages.join(" ")).toContain("params.guardId");
     });
   });
 });

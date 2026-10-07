@@ -18,15 +18,20 @@ import { now } from "@src/core/utils/date-time.utils";
 import { IIncidentResponse } from "./incident.response";
 
 import { ROLE_CLIENT } from "@src/core/config/constants";
+import { resolveClientScope } from "@src/core/utils/client-scope.utils";
 
 export const getDataTableIncidents = async (
   params: ITDataTableFetchParams,
   user?: AuthenticatedUser,
 ): Promise<ITDataTableResponse<IIncidentResponse>> => {
   const prismaParams = getPrismaPaginationParams(params);
+  // Las bajas lógicas no deben aparecer en el listado.
+  prismaParams.where.deletedAt = null;
 
-  if (user?.role === ROLE_CLIENT && user.clientId) {
-    prismaParams.where.clientId = user.clientId;
+  // Aislamiento multi-cliente (RESDN sin cliente asignado → 403, nunca "ve todo").
+  const scopeClientId = user ? resolveClientScope(user) : undefined;
+  if (scopeClientId) {
+    prismaParams.where.clientId = scopeClientId;
   }
 
   // Handle combined search (if any)
@@ -157,7 +162,7 @@ export const createIncident = async (data: {
 
 export const getIncidentsByGuard = async (guardId: string) => {
   return prismaClient.incident.findMany({
-    where: { guardId },
+    where: { guardId, deletedAt: null },
     orderBy: { createdAt: "desc" },
   });
 };
@@ -170,7 +175,7 @@ export const getIncidents = async (filters: {
   title?: string;
   clientId?: string;
 }) => {
-  const whereClause: Prisma.IncidentWhereInput = {};
+  const whereClause: Prisma.IncidentWhereInput = { deletedAt: null };
 
   if (filters.startDate && filters.endDate) {
     whereClause.createdAt = {
@@ -246,20 +251,24 @@ export const getPendingIncidentsCount = async () => {
   return prismaClient.incident.count({
     where: {
       status: INCIDENT_STATUS_PENDING,
+      deletedAt: null,
     },
   });
 };
 
 export const getIncidentById = async (id: string) => {
-  return prismaClient.incident.findUnique({
-    where: { id },
+  return prismaClient.incident.findFirst({
+    where: { id, deletedAt: null },
     include: { guard: true },
   });
 };
 
 export const deleteIncident = async (id: string) => {
-  return prismaClient.incident.delete({
+  // Baja lógica: deja "lápida" (`deletedAt`) para que el borrado llegue a los
+  // dispositivos en el siguiente pull. Un borrado físico no se propaga.
+  return prismaClient.incident.update({
     where: { id },
+    data: { deletedAt: new Date() },
   });
 };
 

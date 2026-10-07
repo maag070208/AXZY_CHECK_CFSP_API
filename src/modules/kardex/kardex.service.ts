@@ -170,7 +170,7 @@ export const getKardex = async (filters: {
   startDate?: string;
   endDate?: string;
 }) => {
-  const where: Prisma.KardexWhereInput = {};
+  const where: Prisma.KardexWhereInput = { deletedAt: null };
 
   if (filters.userId) where.userId = filters.userId;
   if (filters.locationId) where.locationId = filters.locationId;
@@ -208,8 +208,8 @@ export const getKardex = async (filters: {
 };
 
 export const getKardexById = async (id: string) => {
-  const kardex = await prismaClient.kardex.findUnique({
-    where: { id },
+  const kardex = await prismaClient.kardex.findFirst({
+    where: { id, deletedAt: null },
     include: {
       user: {
         select: {
@@ -272,7 +272,7 @@ export const getDataTableKardex = async (params: {
   const skip = (page - 1) * limit;
   const take = limit;
 
-  const where: Prisma.KardexWhereInput = {};
+  const where: Prisma.KardexWhereInput = { deletedAt: null };
 
   if (filters.userId) {
     where.userId = filters.userId;
@@ -373,8 +373,11 @@ export const getDataTableKardex = async (params: {
 };
 
 export const deleteKardex = async (id: string, userId: string) => {
-  const entry = await prismaClient.kardex.delete({
+  // Baja lógica: deja "lápida" (`deletedAt`) para que el borrado se propague
+  // a los dispositivos en el siguiente pull.
+  const entry = await prismaClient.kardex.update({
     where: { id },
+    data: { deletedAt: new Date() },
   });
 
   await createAuditLog({ userId, module: "KARDEX", action: "DELETE", resourceId: id });

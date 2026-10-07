@@ -28,6 +28,7 @@ import {
 } from "@src/core/config/constants";
 import { IAuthUser } from "@src/core/dto/auth-user.dto";
 import { AppError } from "@src/core/errors/AppError";
+import { getErrorMessage } from "@src/core/utils/error.utils";
 import { logger } from "@src/core/utils/logger";
 import { createAuditLog } from "../audit/audit.service";
 import { createShiftHandoverSchema } from "../shift-handovers/schemas/shift-handover.schema";
@@ -163,7 +164,7 @@ type CustomPush = (
  * (validaciones, puntualidad, puntaje): se aplican con las mismas funciones
  * del endpoint web. Solo los registra supervisión; no se editan después.
  */
-const CUSTOM_PUSH: Record<string, CustomPush> = {
+const CUSTOM_PUSH: Record<string, CustomPush | undefined> = {
   shiftHandover: async (tx, record, user, now) => {
     if (await tx.shiftHandover.findUnique({ where: { id: record.id }, select: { id: true } })) return;
     const body = validateBody<Parameters<typeof prepareShiftHandover>[0]>(
@@ -350,98 +351,354 @@ const pickFields = (record: SyncRecord, fields: string[]): Record<string, unknow
   return data;
 };
 
+/** Registro que el servidor NO aceptó, con el motivo exacto (para poder descartarlo o corregirlo). */
+export interface IPushRejection {
+  table: string;
+  id: string;
+  action: "create" | "update" | "delete";
+  reason: string;
+}
+
+export interface ISyncPushResult {
+  /** `false` ⇒ no se aplicó NADA y el cliente debe reintentar. */
+  applied: boolean;
+  summary: Record<string, { created: number; updated: number; deleted: number }>;
+  /** Tablas que el dispositivo no debe empujar (antes se descartaban en silencio). */
+  ignoredTables: string[];
+  rejected: IPushRejection[];
+}
+
+/** Campos obligatorios (no-FK) que sólo se exigen cuando el registro se va a CREAR. */
+const REQUIRED_ON_CREATE: Record<string, string[]> = {
+  incident: ["title"],
+  maintenance: ["title"],
+};
+
+/** Integridad referencial y campos obligatorios por tabla. */
+const FK_RULES: Record<string, Array<{ field: string; model: string; label: string; required?: boolean }>> = {
+  round: [
+    { field: "guardId", model: "user", label: "guardia", required: true },
+    { field: "clientId", model: "client", label: "cliente" },
+    { field: "recurringConfigurationId", model: "recurringConfiguration", label: "ronda recurrente" },
+  ],
+  kardex: [
+    { field: "userId", model: "user", label: "usuario", required: true },
+    { field: "locationId", model: "location", label: "punto de control", required: true },
+    { field: "assignmentId", model: "assignment", label: "asignación" },
+  ],
+  incident: [
+    { field: "guardId", model: "user", label: "guardia", required: true },
+    { field: "categoryId", model: "incidentCategory", label: "categoría" },
+    { field: "typeId", model: "incidentType", label: "tipo" },
+    { field: "clientId", model: "client", label: "cliente" },
+  ],
+  maintenance: [
+    { field: "guardId", model: "user", label: "guardia", required: true },
+    { field: "categoryId", model: "incidentCategory", label: "categoría" },
+    { field: "typeId", model: "incidentType", label: "tipo" },
+    { field: "clientId", model: "client", label: "cliente" },
+  ],
+  shiftHandover: [
+    { field: "clientId", model: "client", label: "cliente", required: true },
+    { field: "scheduleId", model: "schedule", label: "horario", required: true },
+  ],
+  uniformCheck: [
+    { field: "guardId", model: "user", label: "guardia", required: true },
+  ],
+};
+
+/** Nombres legibles para los mensajes de rechazo. */
+const TABLE_LABELS: Record<string, string> = {
+  round: "la ronda",
+  kardex: "el registro de bitácora",
+  incident: "la incidencia",
+  maintenance: "el mantenimiento",
+  shiftHandover: "la entrega de turno",
+  uniformCheck: "la revisión de uniforme",
+};
+
 /**
- * @description Aplica en una sola transacción lo que el dispositivo creó o
- * modificó offline. Solo acepta las tablas de `PUSHABLE_MODELS`, con sus
- * campos permitidos y a nombre del propio usuario si es personal operativo.
- * - Conserva la fecha real de creación del dispositivo (`createdAt`).
- * - `updatedAt` lo pone el servidor (ahora), así otros dispositivos lo
- *   reciben en su siguiente pull sin importar cuándo sincronizaron.
- * - Un "updated" de algo que el servidor no tiene se crea (semántica de
- *   WatermelonDB) en lugar de abortar toda la sincronización.
- * - Reenviar el mismo lote es idempotente (upsert por id).
+ * Cómo se elimina cada tabla al sincronizar, replicando EXACTAMENTE lo que hace
+ * el endpoint online del módulo.
+ *
+ * Es crítico: la extensión de Prisma sólo oculta automáticamente los modelos
+ * `Client/Zone/User/Location/RecurringConfiguration`, y los servicios de
+ * kardex/incident/maintenance NO filtran `deletedAt`. Si aquí se hiciera baja
+ * lógica, el registro borrado offline seguiría apareciendo en los listados.
  */
-export const pushChanges = async (params: SyncPushParams) => {
+const DELETE_STRATEGY: Record<string, "soft" | "hard"> = {
+  round: "soft",
+  kardex: "soft",
+  incident: "soft",
+  maintenance: "soft",
+};
+
+/**
+ * Verifica que las referencias del registro existan y que sus campos
+ * obligatorios estén presentes. Devuelve el motivo del rechazo o `null`.
+ * Se ejecuta ANTES de escribir: así un registro inválido no deja la
+ * transacción en estado abortado (Postgres no permite continuar tras un error).
+ */
+const findRecordProblem = async (
+  table: string,
+  record: SyncRecord,
+  db: TDynamicPrisma,
+  willCreate: boolean,
+): Promise<string | null> => {
+  for (const rule of FK_RULES[table] ?? []) {
+    const value = record[rule.field];
+    if (value === undefined || value === null || value === "") {
+      if (rule.required) return `Falta ${rule.field} (${rule.label})`;
+      continue;
+    }
+    if (typeof value !== "string") return `${rule.field} debe ser un id válido`;
+    const found = await db[rule.model].findUnique({ where: { id: value }, select: { id: true } });
+    if (!found) return `El ${rule.label} indicado en ${rule.field} no existe en el servidor`;
+  }
+
+  if (willCreate) {
+    for (const field of REQUIRED_ON_CREATE[table] ?? []) {
+      const value = record[field];
+      if (value === undefined || value === null || value === "") return `Falta el campo obligatorio ${field}`;
+    }
+  }
+
+  return null;
+};
+
+/** Valida la forma de un registro de tabla "custom" con el mismo Zod del endpoint web. */
+const validateCustomShape = (table: string, record: SyncRecord): string | null => {
+  try {
+    if (table === "shiftHandover") {
+      validateBody<Parameters<typeof prepareShiftHandover>[0]>(
+        createShiftHandoverSchema.shape.body,
+        {
+          clientId: record.clientId,
+          scheduleId: record.scheduleId,
+          shiftDate: typeof record.shiftDate === "string" ? record.shiftDate.slice(0, 10) : record.shiftDate,
+          credentialsCount: record.credentialsCount ?? null,
+          tarjetonesCount: record.tarjetonesCount ?? null,
+          novedades: record.novedades ?? null,
+          checklist: parseJsonField(record.checklist) ?? [],
+          reportedToAdmin: !!record.reportedToAdmin,
+          elements: parseJsonField(record.elements) ?? [],
+        },
+        "La entrega de turno",
+      );
+    } else if (table === "uniformCheck") {
+      validateBody<Parameters<typeof prepareUniformCheck>[0]>(
+        createUniformCheckSchema.shape.body,
+        {
+          guardId: record.guardId,
+          shiftDate: typeof record.shiftDate === "string" ? record.shiftDate.slice(0, 10) : undefined,
+          items: parseJsonField(record.items) ?? [],
+          notes: record.notes ?? null,
+        },
+        "La revisión de uniforme",
+      );
+    }
+    return null;
+  } catch (e) {
+    return getErrorMessage(e);
+  }
+};
+
+/**
+ * @description Aplica lo que el dispositivo creó o modificó offline.
+ *
+ * Garantías del contrato (cola offline):
+ * - **Atómico**: o se aplica el lote completo o nada. Nunca se escribe a medias.
+ * - **Idempotente**: reenviar el mismo lote no duplica (upsert por id).
+ * - **Diagnosticable**: si algo no se puede aplicar, se devuelve el detalle por
+ *   registro (`rejected` con tabla/id/acción/motivo) para que la APP pueda
+ *   corregirlo o descartarlo, en lugar de bloquear la cola con un error opaco.
+ * - **Sin descartes silenciosos**: las tablas que el dispositivo no administra
+ *   se reportan (`ignoredTables`) y tampoco se aplican.
+ * - Conserva la fecha real de creación del dispositivo (`createdAt`).
+ * - `updatedAt` lo pone el servidor, así otros dispositivos lo reciben en su
+ *   siguiente pull sin importar cuándo sincronizaron.
+ * - Un "updated" de algo que el servidor no tiene se crea (semántica de
+ *   WatermelonDB) en lugar de romper la sincronización.
+ */
+export const pushChanges = async (params: SyncPushParams): Promise<ISyncPushResult> => {
   const { changes, user } = params;
   const isOperational = OPERATIONAL_ROLES.includes(user.role);
   const now = new Date();
+  const db = prismaClient as unknown as TDynamicPrisma;
 
-  const ignored = Object.keys(changes).filter((table) => !PUSHABLE_MODELS[table] && !CUSTOM_PUSH[table]);
-  if (ignored.length > 0) {
-    logger.warn(`[sync] Tablas no permitidas ignoradas en push de ${user.id}: ${ignored.join(", ")}`);
-  }
+  const ignoredTables = Object.keys(changes).filter((table) => !PUSHABLE_MODELS[table] && !CUSTOM_PUSH[table]);
+  const rejected: IPushRejection[] = [];
 
-  const summary: Record<string, { created: number; updated: number; deleted: number }> = {};
+  /** Escrituras a ejecutar si TODA la validación pasa. */
+  const upserts: Array<{ table: string; record: SyncRecord; willCreate: boolean }> = [];
+  const deletions: Array<{ table: string; id: string }> = [];
 
-  await prismaClient.$transaction(
-    async (tx) => {
-      const db = tx as unknown as TDynamicPrisma;
-      for (const table of PUSH_ORDER) {
-        const change = changes[table];
-        if (!change) continue;
+  for (const table of PUSH_ORDER) {
+    const change = changes[table];
+    if (!change) continue;
+    const custom: CustomPush | undefined = CUSTOM_PUSH[table];
 
-        const custom = CUSTOM_PUSH[table];
-        if (custom) {
-          const records = [...(change.created ?? []), ...(change.updated ?? [])];
-          if (records.length > 0 && !SUPERVISION_ROLES.includes(user.role)) {
-            throw new AppError(`Tu rol no puede registrar ${table}`, 403);
+    // ── Tablas custom (entrega de turno / uniforme) ──
+    if (custom) {
+      const records = [...(change.created ?? []), ...(change.updated ?? [])];
+      if (records.length > 0 && !SUPERVISION_ROLES.includes(user.role)) {
+        for (const record of records) {
+          rejected.push({
+            table,
+            id: String(record.id ?? "(sin id)"),
+            action: "create",
+            reason: `Tu rol no puede registrar ${TABLE_LABELS[table] ?? table}`,
+          });
+        }
+      } else {
+        for (const record of records) {
+          const id = String(record.id ?? "(sin id)");
+          const shapeProblem = validateCustomShape(table, record);
+          if (shapeProblem) {
+            rejected.push({ table, id, action: "create", reason: shapeProblem });
+            continue;
           }
-          for (const record of records) await custom(tx, record, user, now);
-          summary[table] = { created: records.length, updated: 0, deleted: 0 };
+          const fkProblem = await findRecordProblem(table, record, db, true);
+          if (fkProblem) {
+            rejected.push({ table, id, action: "create", reason: fkProblem });
+            continue;
+          }
+          upserts.push({ table, record, willCreate: true });
+        }
+      }
+
+      // El borrado de estas tablas no está soportado: se reporta en vez de perderse.
+      for (const id of change.deleted ?? []) {
+        rejected.push({
+          table,
+          id: String(id),
+          action: "delete",
+          reason: `La eliminación de ${TABLE_LABELS[table] ?? table} no se admite desde el dispositivo`,
+        });
+      }
+      continue;
+    }
+
+    // ── Tablas de escritura directa ──
+    const { ownerField, fields } = PUSHABLE_MODELS[table];
+    const seenInBatch = new Set<string>();
+
+    for (const action of ["create", "update"] as const) {
+      const records = (action === "create" ? change.created : change.updated) ?? [];
+      for (const record of records) {
+        if (!record.id) {
+          rejected.push({ table, id: "(sin id)", action, reason: "El registro no trae id" });
+          continue;
+        }
+        const id = String(record.id);
+
+        // Duplicados dentro del mismo lote: evita ambigüedad y escrituras repetidas.
+        if (seenInBatch.has(id)) {
+          rejected.push({ table, id, action, reason: "El registro aparece más de una vez en el mismo lote" });
+          continue;
+        }
+        seenInBatch.add(id);
+
+        const existing = await db[table].findUnique({
+          where: { id: record.id },
+          select: { [ownerField]: true },
+        });
+
+        if (isOperational) {
+          const owner = existing ? existing[ownerField] : record[ownerField];
+          if (owner !== user.id) {
+            rejected.push({
+              table,
+              id,
+              action,
+              reason: `No puedes sincronizar ${TABLE_LABELS[table] ?? table} de otro usuario`,
+            });
+            continue;
+          }
+        }
+
+        const problem = await findRecordProblem(table, record, db, !existing);
+        if (problem) {
+          rejected.push({ table, id, action, reason: problem });
           continue;
         }
 
-        const { ownerField, fields, createDefaults = {} } = PUSHABLE_MODELS[table];
-        const assertOwner = (record: SyncRecord, existingOwner?: unknown) => {
-          if (!isOperational) return;
-          const owner = existingOwner ?? record[ownerField];
-          if (owner !== user.id) {
-            throw new AppError(`No puedes sincronizar registros de otro usuario (${table})`, 403);
-          }
-        };
+        upserts.push({ table, record, willCreate: !existing });
+      }
+    }
 
-        for (const record of change.created ?? []) {
-          const existing = await db[table].findUnique({ where: { id: record.id }, select: { [ownerField]: true } });
-          assertOwner(record, existing?.[ownerField]);
-          const data = pickFields(record, fields);
-          if (existing) {
-            await db[table].update({ where: { id: record.id }, data });
-          } else {
-            await db[table].create({
-              data: { ...data, ...createDefaults, id: record.id, createdAt: deviceCreatedAt(record.createdAt, now) },
-            });
-          }
+    // Deduplicado: un mismo id repetido en `deleted` no debe provocar un falso rechazo.
+    for (const rawId of new Set(change.deleted ?? [])) {
+      const id = String(rawId);
+      const found = await db[table].findUnique({ where: { id }, select: { [ownerField]: true } });
+
+      // Ya no existe (p. ej. reenvío tras un fallo de red): la baja es idempotente.
+      if (!found) continue;
+
+      if (isOperational && found[ownerField] !== user.id) {
+        rejected.push({
+          table,
+          id,
+          action: "delete",
+          reason: `No puedes eliminar ${TABLE_LABELS[table] ?? table} de otro usuario`,
+        });
+        continue;
+      }
+      deletions.push({ table, id });
+    }
+  }
+
+  // Nada se aplica si hay rechazos o tablas no permitidas: el cliente reintenta
+  // y, si algún registro es irrecuperable, puede descartarlo con la información
+  // exacta que devolvemos.
+  if (rejected.length > 0 || ignoredTables.length > 0) {
+    if (ignoredTables.length > 0) {
+      logger.warn(`[sync] Tablas no permitidas en push de ${user.id}: ${ignoredTables.join(", ")}`);
+    }
+    logger.warn(`[sync] Push rechazado para ${user.id}: ${rejected.length} registro(s) inválido(s)`);
+    return { applied: false, summary: {}, ignoredTables, rejected };
+  }
+
+  // ── Aplicación: una sola transacción ──
+  const summary: Record<string, { created: number; updated: number; deleted: number }> = {};
+  const bump = (table: string, key: "created" | "updated" | "deleted") => {
+    summary[table] = summary[table] ?? { created: 0, updated: 0, deleted: 0 };
+    summary[table][key] += 1;
+  };
+
+  await prismaClient.$transaction(
+    async (tx) => {
+      const txDb = tx as unknown as TDynamicPrisma;
+
+      for (const { table, record, willCreate } of upserts) {
+        const custom: CustomPush | undefined = CUSTOM_PUSH[table];
+        if (custom) {
+          await custom(tx, record, user, now);
+          bump(table, "created");
+          continue;
         }
 
-        for (const record of change.updated ?? []) {
-          const existing = await db[table].findUnique({ where: { id: record.id }, select: { [ownerField]: true } });
-          assertOwner(record, existing?.[ownerField]);
-          const data = pickFields(record, fields);
-          if (existing) {
-            await db[table].update({ where: { id: record.id }, data });
-          } else {
-            await db[table].create({
-              data: { ...data, ...createDefaults, id: record.id, createdAt: deviceCreatedAt(record.createdAt, now) },
-            });
-          }
+        const { fields, createDefaults = {} } = PUSHABLE_MODELS[table];
+        const data = pickFields(record, fields);
+        if (willCreate) {
+          await txDb[table].create({
+            data: { ...data, ...createDefaults, id: record.id, createdAt: deviceCreatedAt(record.createdAt, now) },
+          });
+          bump(table, "created");
+        } else {
+          await txDb[table].update({ where: { id: record.id }, data });
+          bump(table, "updated");
         }
+      }
 
-        const deleted = change.deleted ?? [];
-        if (deleted.length > 0) {
-          if (isOperational) {
-            const owned = await db[table].count({ where: { id: { in: deleted }, [ownerField]: user.id } });
-            if (owned !== deleted.length) {
-              throw new AppError(`No puedes eliminar registros de otro usuario (${table})`, 403);
-            }
-          }
-          await db[table].updateMany({ where: { id: { in: deleted } }, data: { deletedAt: now } });
+      for (const { table, id } of deletions) {
+        // Misma semántica que el borrado online del módulo (ver DELETE_STRATEGY).
+        if (DELETE_STRATEGY[table] === "soft") {
+          await txDb[table].update({ where: { id }, data: { deletedAt: now } });
+        } else {
+          await txDb[table].delete({ where: { id } });
         }
-
-        summary[table] = {
-          created: change.created?.length ?? 0,
-          updated: change.updated?.length ?? 0,
-          deleted: deleted.length,
-        };
+        bump(table, "deleted");
       }
     },
     { timeout: 30000 },
@@ -451,10 +708,10 @@ export const pushChanges = async (params: SyncPushParams) => {
     userId: user.id,
     module: "SYNC",
     action: "PUSH",
-    details: { tablesModified: Object.keys(summary), ignoredTables: ignored, summary },
+    details: { tablesModified: Object.keys(summary), ignoredTables, summary },
   });
 
-  return { success: true };
+  return { applied: true, summary, ignoredTables: [], rejected: [] };
 };
 
 export const hasChangesSince = async (params: SyncPullParams): Promise<boolean> => {

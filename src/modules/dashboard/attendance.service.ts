@@ -4,9 +4,9 @@ import {
   ATTENDANCE_STATUS,
   AttendanceStatus,
   OPERATIONAL_ROLES,
-  ROLE_CLIENT,
 } from "@src/core/config/constants";
 import { IAuthUser } from "@src/core/dto/auth-user.dto";
+import { resolveClientScope } from "@src/core/utils/client-scope.utils";
 import {
   getShiftInstance,
   shiftDateWeekday,
@@ -38,8 +38,9 @@ export const getAttendance = async (
   const now = new Date();
   const shiftDate = requestedDate || todayShiftDate();
 
-  const scopedClientId =
-    user?.role === ROLE_CLIENT && user.clientId ? user.clientId : requestedClientId;
+  // Un usuario de cliente SIEMPRE queda acotado a su empresa (ignora el query);
+  // sin cliente asignado recibe 403 en lugar de ver la asistencia de otra empresa.
+  const scopedClientId = resolveClientScope(user, requestedClientId);
 
   const plans = await prisma.shiftPlan.findMany({
     where: {

@@ -208,13 +208,17 @@ export const getRecurringById = async (id: string) => {
     });
 };
 
-export const getRecurringByGuard = async (guardId: string) => {
+export const getRecurringByGuard = async (guardId: string, clientId?: string | null) => {
     const guard = await prisma.user.findUnique({
         where: { id: guardId },
         select: { clientId: true },
     });
 
     if (!guard?.clientId) return [];
+
+    // Aislamiento multi-cliente: un usuario de cliente sólo consulta guardias
+    // de su propia empresa (si no, se devuelve vacío y no se filtra información).
+    if (clientId !== undefined && guard.clientId !== clientId) return [];
 
     return prisma.recurringConfiguration.findMany({
         where: {
@@ -239,10 +243,15 @@ export const getRecurringByGuard = async (guardId: string) => {
     });
 };
 
-export const getAllRecurring = async () => {
+export const getAllRecurring = async (clientId?: string | null) => {
     return prisma.recurringConfiguration.findMany({
         where: {
             softDelete: false,
+            // Aislamiento multi-cliente: `undefined` = sin filtro (ADMIN);
+            // `null` = usuario de cliente sin cliente asignado → no ve nada.
+            ...(clientId !== undefined
+                ? { clientId: clientId ?? { in: [] } }
+                : {}),
         },
         include: {
             recurringLocations: {

@@ -1,7 +1,7 @@
 import request from "supertest";
 import { app } from "@src/index";
 import { prismaClient } from "@src/core/config/database";
-import { ROLE_ADMIN, ROLE_GUARD } from "@src/core/config/constants";
+import { ROLE_ADMIN, ROLE_CLIENT, ROLE_GUARD } from "@src/core/config/constants";
 
 jest.mock("@src/modules/common/middlewares/auth.middleware", () => ({
   authenticate: (req: any, res: any, next: any) => {
@@ -208,6 +208,152 @@ describe("Rutas de Asignaciones (Integración)", () => {
       expect(db).not.toBeNull();
       expect(db!.deletedAt).not.toBeNull();
       assignmentId = "";
+    });
+  });
+
+  describe("GET /api/v1/assignments y /api/v1/assignments/all", () => {
+    let clienteBId: string;
+    let locationBId: string;
+    let asignacionAId: string;
+    let asignacionBId: string;
+
+    const clienteAHeader = () => JSON.stringify({ id: adminUserId, role: ROLE_CLIENT, clientId });
+    const ids = (res: { body: { data: { id: string }[] } }) => res.body.data.map((a) => a.id).sort();
+
+    beforeAll(async () => {
+      const clienteB = await prismaClient.client.create({ data: { name: `Cliente B Asig ${Date.now()}` } });
+      clienteBId = clienteB.id;
+
+      const locationB = await prismaClient.location.create({
+        data: { name: `Punto B Asig ${Date.now()}`, clientId: clienteBId },
+      });
+      locationBId = locationB.id;
+
+      const asignacionA = await prismaClient.assignment.create({
+        data: {
+          guardId: guardUserId,
+          locationId,
+          assignedBy: adminUserId,
+          notes: "Asignación del cliente A",
+          tasks: { create: [{ description: "Tarea del punto A", reqPhoto: true }] },
+        },
+      });
+      asignacionAId = asignacionA.id;
+
+      const asignacionB = await prismaClient.assignment.create({
+        data: {
+          guardId: guardUserId,
+          locationId: locationBId,
+          assignedBy: adminUserId,
+          notes: "Asignación del cliente B",
+        },
+      });
+      asignacionBId = asignacionB.id;
+    });
+
+    afterAll(async () => {
+      const propias = [asignacionAId, asignacionBId];
+      await prismaClient.assignmentTask.deleteMany({ where: { assignmentId: { in: propias } } }).catch(() => {});
+      await prismaClient.assignment.deleteMany({ where: { id: { in: propias } } }).catch(() => {});
+      await prismaClient.location.delete({ where: { id: locationBId } }).catch(() => {});
+      await prismaClient.client.delete({ where: { id: clienteBId } }).catch(() => {});
+    });
+
+    it("debe listar las asignaciones activas con sus relaciones", async () => {
+      const res = await request(app).get("/api/v1/assignments").set("user", adminHeader());
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.messages).toEqual(["Success"]);
+      expect(Array.isArray(res.body.data)).toBe(true);
+
+      const mia = res.body.data.find((a: { id: string }) => a.id === asignacionAId);
+      expect(mia).toBeDefined();
+      expect(mia.status).toBe("PENDING");
+      expect(mia.guardId).toBe(guardUserId);
+      expect(mia.guard.id).toBe(guardUserId);
+      expect(mia.location.id).toBe(locationId);
+      expect(mia.location.clientId).toBe(clientId);
+      expect(mia.assignedBy).toBe(adminUserId);
+      expect(mia.notes).toBe("Asignación del cliente A");
+      expect(mia.deletedAt).toBeNull();
+      expect(mia.tasks).toHaveLength(1);
+      expect(mia.tasks[0].description).toBe("Tarea del punto A");
+      expect(mia.tasks[0].completed).toBe(false);
+      expect(Array.isArray(mia.kardex)).toBe(true);
+    });
+
+    it("debe filtrar por guardia, estado e id", async () => {
+      const porGuardia = await request(app).get(`/api/v1/assignments?guardId=${guardUserId}`).set("user", adminHeader());
+      expect(porGuardia.status).toBe(200);
+      expect(porGuardia.body.data.length).toBeGreaterThan(0);
+      expect(porGuardia.body.data.every((a: { guardId: string }) => a.guardId === guardUserId)).toBe(true);
+      expect(ids(porGuardia)).toEqual(expect.arrayContaining([asignacionAId, asignacionBId]));
+
+      const porEstado = await request(app).get("/api/v1/assignments?status=PENDING").set("user", adminHeader());
+      expect(porEstado.status).toBe(200);
+      expect(porEstado.body.data.every((a: { status: string }) => a.status === "PENDING")).toBe(true);
+
+      const porId = await request(app).get(`/api/v1/assignments?id=${asignacionAId}`).set("user", adminHeader());
+      expect(porId.status).toBe(200);
+      expect(porId.body.data).toHaveLength(1);
+      expect(porId.body.data[0].id).toBe(asignacionAId);
+    });
+
+    it("debe devolver el mismo listado en / y en /all", async () => {
+      const raiz = await request(app).get("/api/v1/assignments").set("user", adminHeader());
+      const todas = await request(app).get("/api/v1/assignments/all").set("user", adminHeader());
+
+      expect(todas.status).toBe(200);
+      expect(todas.body.success).toBe(true);
+      expect(todas.body.messages).toEqual(["Success"]);
+      expect(ids(todas)).toEqual(ids(raiz));
+      expect(ids(todas)).toContain(asignacionAId);
+      expect(ids(todas)).toContain(asignacionBId);
+    });
+
+    it("debe rechazar un guardId que no es UUID", async () => {
+      const res = await request(app).get("/api/v1/assignments?guardId=no-es-uuid").set("user", adminHeader());
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.messages.join(" ")).toContain("query.guardId");
+    });
+
+    it("debe rechazar un estado que no existe", async () => {
+      const res = await request(app).get("/api/v1/assignments?status=NO_EXISTE").set("user", adminHeader());
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.messages.join(" ")).toContain("query.status");
+    });
+
+    it("debe devolver una lista vacía cuando el id no existe (sin 404)", async () => {
+      const res = await request(app)
+        .get("/api/v1/assignments?id=00000000-0000-0000-0000-000000000000")
+        .set("user", adminHeader());
+
+      // La ruta no define 404: un recurso inexistente responde 200 con [].
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual([]);
+    });
+
+    it("un usuario cliente sólo ve las asignaciones de sus propias ubicaciones", async () => {
+      const admin = await request(app).get("/api/v1/assignments").set("user", adminHeader());
+      const res = await request(app).get("/api/v1/assignments").set("user", clienteAHeader());
+
+      // Aislamiento multi-cliente: el alcance se resuelve por la ubicación
+      // relacionada (la asignación B pertenece al cliente B).
+      expect(res.status).toBe(200);
+      expect(ids(res)).not.toContain(asignacionBId);
+      expect(res.body.data.length).toBeLessThan(admin.body.data.length);
+      // Todas las asignaciones visibles pertenecen al cliente del usuario.
+      for (const asignacion of res.body.data as Array<{ location: { clientId: string } }>) {
+        expect(asignacion.location.clientId).toBe(clientId);
+      }
+
+      const todas = await request(app).get("/api/v1/assignments/all").set("user", clienteAHeader());
+      expect(ids(todas)).not.toContain(asignacionBId);
     });
   });
 });

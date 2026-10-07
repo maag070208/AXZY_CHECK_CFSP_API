@@ -6,6 +6,7 @@ import { logger } from "@src/core/utils/logger";
 import { asyncHandler } from "@src/core/utils/asyncHandler";
 import { AppError } from "@src/core/errors/AppError";
 import { createAuditLog } from "../audit/audit.service";
+import { mediaHasKey, removeMediaByKey } from "@src/core/utils/media.utils";
 
 const storageService = new StorageService();
 
@@ -127,6 +128,11 @@ export const deleteMedia = asyncHandler(async (req: Request, res: Response) => {
     throw new AppError("Incidencia o media no encontrada", 404);
   }
 
+  // El key debe pertenecer al media de la incidencia: evita borrar objetos ajenos del bucket.
+  if (!mediaHasKey(incident.media, String(key))) {
+    throw new AppError("El archivo indicado no pertenece a esta incidencia", 404);
+  }
+
   const bucketName = process.env.AWS_BUCKET_NAME;
   if (bucketName) {
     try {
@@ -136,14 +142,15 @@ export const deleteMedia = asyncHandler(async (req: Request, res: Response) => {
     }
   }
 
-  const media = incident.media as Array<{ key?: string; url?: string }>;
-  const updatedMedia = media.filter((m: { key?: string; url?: string }) => {
-    if (!m) return false;
-    const mKey =
-      m.key || (typeof m.url === "string" ? m.url.split("/").pop() : null);
-    return mKey !== String(key);
+  await incidentService.updateIncidentMedia(id, removeMediaByKey(incident.media, String(key)));
+
+  await createAuditLog({
+    userId: res.locals.user?.id,
+    module: "INCIDENTS",
+    action: "DELETE_MEDIA",
+    resourceId: id,
+    details: { key: String(key) },
   });
-  await incidentService.updateIncidentMedia(id, updatedMedia);
 
   return res.status(200).json(createTResult(true));
 });

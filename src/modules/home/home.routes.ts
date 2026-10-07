@@ -1,6 +1,6 @@
 import { Router } from "express";
 import * as homeController from "./home.controller";
-import authenticate from "@src/core/middlewares/token-validator.middleware";
+import { authenticate } from "../common/middlewares/auth.middleware";
 
 const router = Router();
 

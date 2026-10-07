@@ -6,8 +6,8 @@ import {
   ROUND_STATUS_IN_PROGRESS,
   INCIDENT_STATUS_PENDING,
   MAINTENANCE_STATUS_PENDING,
-  ROLE_CLIENT,
 } from "@src/core/config/constants";
+import { resolveClientScope } from "@src/core/utils/client-scope.utils";
 import { IDashboardStats } from "./home.dto";
 
 export const getDashboardStats = async (
@@ -15,8 +15,10 @@ export const getDashboardStats = async (
 ): Promise<TResult<IDashboardStats>> => {
   try {
     const where: { clientId?: string } = {};
-    if (user.role === ROLE_CLIENT && user.clientId) {
-      where.clientId = user.clientId;
+    // Aislamiento multi-cliente (RESDN sin cliente asignado → 403, nunca "ve todo").
+    const scopeClientId = resolveClientScope(user);
+    if (scopeClientId) {
+      where.clientId = scopeClientId;
     }
 
     const [

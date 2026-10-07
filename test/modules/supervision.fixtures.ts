@@ -90,10 +90,3 @@ export const authMiddlewareMock = () => {
   };
 };
 
-export const tokenValidatorMock = () => ({
-  __esModule: true,
-  default: (req: { headers: Record<string, string> }, res: { locals: Record<string, unknown> }, next: () => void) => {
-    if (req.headers["user"]) res.locals.user = JSON.parse(req.headers["user"]);
-    next();
-  },
-});

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import * as dashboardController from "./dashboard.controller";
-import authenticate from "@src/core/middlewares/token-validator.middleware";
+import { authenticate } from "../common/middlewares/auth.middleware";
 import { validate } from "@src/core/middlewares/validate.middleware";
 import { attendanceQuerySchema } from "./schemas/dashboard.schema";
 

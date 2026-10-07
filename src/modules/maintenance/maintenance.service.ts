@@ -22,9 +22,13 @@ export const getDataTableMaintenances = async (
   user?: AuthenticatedUser,
 ): Promise<ITDataTableResponse<IMaintenanceResponse>> => {
   const prismaParams = getPrismaPaginationParams(params);
+  // Las bajas lógicas no deben aparecer en el listado.
+  prismaParams.where.deletedAt = null;
 
-  if (user?.role === ROLE_CLIENT && user.clientId) {
-    prismaParams.where.clientId = user.clientId;
+  // Aislamiento multi-cliente (RESDN sin cliente asignado → 403, nunca "ve todo").
+  const scopeClientId = user ? resolveClientScope(user) : undefined;
+  if (scopeClientId) {
+    prismaParams.where.clientId = scopeClientId;
   }
   
   // Handle combined search
@@ -81,6 +85,7 @@ import {
   sendMaintenanceWhatsApp,
 } from "@src/core/utils/emailSender";
 import { logger } from "@src/core/utils/logger";
+import { resolveClientScope } from "@src/core/utils/client-scope.utils";
 
 export const createMaintenance = async (data: {
   guardId: string;
@@ -161,7 +166,7 @@ export const createMaintenance = async (data: {
 
 export const getMaintenancesByGuard = async (guardId: string) => {
   return prismaClient.maintenance.findMany({
-    where: { guardId },
+    where: { guardId, deletedAt: null },
     orderBy: { createdAt: "desc" },
   });
 };
@@ -174,7 +179,7 @@ export const getMaintenances = async (filters: {
   title?: string;
   clientId?: string;
 }) => {
-  const whereClause: Prisma.MaintenanceWhereInput = {};
+  const whereClause: Prisma.MaintenanceWhereInput = { deletedAt: null };
 
   if (filters.startDate && filters.endDate) {
     whereClause.createdAt = {
@@ -248,13 +253,14 @@ export const getPendingMaintenancesCount = async () => {
   return prismaClient.maintenance.count({
     where: {
       status: MAINTENANCE_STATUS_PENDING,
+      deletedAt: null,
     },
   });
 };
 
 export const getMaintenanceById = async (id: string) => {
-  return prismaClient.maintenance.findUnique({
-    where: { id },
+  return prismaClient.maintenance.findFirst({
+    where: { id, deletedAt: null },
     include: {
       guard: true,
       resolvedBy: true,
@@ -263,8 +269,11 @@ export const getMaintenanceById = async (id: string) => {
 };
 
 export const deleteMaintenance = async (id: string) => {
-  return prismaClient.maintenance.delete({
+  // Baja lógica: deja "lápida" (`deletedAt`) para que el borrado se propague
+  // a los dispositivos en el siguiente pull.
+  return prismaClient.maintenance.update({
     where: { id },
+    data: { deletedAt: new Date() },
   });
 };
 

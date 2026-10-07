@@ -133,16 +133,27 @@ describe("Sincronización offline (Integración)", () => {
         deleted: [],
       },
     });
-    expect(res.status).toBe(403);
-    expect(await prismaClient.kardex.count({ where: { id: mine } })).toBe(0); // transacción completa revertida
+    // El lote es atómico: no se aplica NADA (ni siquiera el registro legítimo).
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(await prismaClient.kardex.count({ where: { id: mine } })).toBe(0);
+
+    // Pero el rechazo es diagnosticable: se indica el registro exacto y el motivo.
+    const rechazados = res.body.data.rejected as Array<{ table: string; id: string; action: string; reason: string }>;
+    expect(rechazados).toHaveLength(1);
+    expect(rechazados[0].table).toBe("kardex");
+    expect(rechazados[0].action).toBe("create");
+    expect(rechazados[0].reason).toContain("otro usuario");
   });
 
-  it("un guardia no debe poder modificar usuarios ni escalar su rol", async () => {
+  it("un guardia no debe poder modificar usuarios ni escalar su rol (tabla no permitida)", async () => {
     const adminRole = await prismaClient.role.findUnique({ where: { name: "ADMIN" } });
     const res = await push(fx.guardHeader, {
       user: { created: [], updated: [{ id: fx.guardId, roleId: adminRole?.id }], deleted: [] },
     });
-    expect(res.status).toBe(200);
+    // Antes se descartaba en silencio (200). Ahora se reporta y no se aplica.
+    expect(res.status).toBe(400);
+    expect(res.body.data.ignoredTables).toContain("user");
     const guard = await prismaClient.user.findUnique({ where: { id: fx.guardId }, include: { role: true } });
     expect(guard?.role.name).toBe("GUARD");
   });
@@ -192,18 +203,25 @@ describe("Sincronización offline (Integración)", () => {
     const res = await push(fx.guardHeader, {
       uniformCheck: { created: [{ id: crypto.randomUUID(), guardId: other.guardId, items: "[]" }], updated: [], deleted: [] },
     });
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(400);
+    expect(res.body.data.rejected[0].reason).toContain("Tu rol no puede registrar");
+    expect(await prismaClient.uniformCheck.count({ where: { guardId: other.guardId } })).toBe(0);
   });
 
-  it("una entrega offline inválida debe rechazarse con un mensaje claro", async () => {
+  it("una entrega offline inválida debe rechazarse indicando el registro exacto", async () => {
+    const idInvalido = crypto.randomUUID();
     const res = await push(fx.adminHeader, {
       shiftHandover: {
-        created: [{ id: crypto.randomUUID(), clientId: fx.clientId, scheduleId: fx.scheduleId, shiftDate: "2026-09-11", elements: "[]" }],
+        created: [{ id: idInvalido, clientId: fx.clientId, scheduleId: fx.scheduleId, shiftDate: "2026-09-11", elements: "[]" }],
         updated: [], deleted: [],
       },
     });
     expect(res.status).toBe(400);
-    expect(res.body.messages[0]).toContain("capturada offline no es válida");
+    expect(res.body.success).toBe(false);
+    const rechazado = res.body.data.rejected.find((r: { id: string }) => r.id === idInvalido);
+    expect(rechazado).toBeDefined();
+    expect(rechazado.reason).toContain("entrega de turno");
+    expect(await prismaClient.shiftHandover.count({ where: { id: idInvalido } })).toBe(0);
   });
 
   it("las bajas lógicas de ubicaciones deben llegar como eliminadas", async () => {

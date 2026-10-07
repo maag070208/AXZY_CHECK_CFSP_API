@@ -144,11 +144,17 @@ export const getAssignmentsByGuard = async (guardId: string) => {
 };
 
 // Get all assignments (filtering optional)
-export const getAllAssignments = async (filters: { guardId?: string; status?: AssignmentStatus; id?: string }) => {
+export const getAllAssignments = async (filters: { guardId?: string; status?: AssignmentStatus; id?: string; clientId?: string | null }) => {
   const where: Prisma.AssignmentWhereInput = { deletedAt: null };
   if (filters.id) where.id = filters.id;
   if (filters.guardId) where.guardId = filters.guardId;
   if (filters.status) where.status = filters.status;
+  // Aislamiento multi-cliente: `Assignment` no tiene `clientId` propio, el alcance
+  // se resuelve por la ubicación (punto de control) a la que pertenece.
+  // `undefined` = sin filtro (ADMIN); `null` = cliente sin asignar → no ve nada.
+  if (filters.clientId !== undefined) {
+    where.location = { clientId: filters.clientId ?? { in: [] } };
+  }
 
   return prisma.assignment.findMany({
     where,

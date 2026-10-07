@@ -2,6 +2,20 @@ import { createTResult } from "@src/core/mappers/tresult.mapper";
 import { Request, Response } from "express";
 import * as recurringService from "./recurring.service";
 import { asyncHandler } from "@src/core/utils/asyncHandler";
+import { AuthenticatedUser } from "@src/core/types/auth.types";
+import { ROLE_CLIENT } from "@src/core/config/constants";
+
+/**
+ * Alcance por cliente para las consultas:
+ * - `undefined` → sin restricción (ADMIN y roles internos).
+ * - `string`    → sólo ese cliente (usuario RESDN con cliente asignado).
+ * - `null`      → usuario de cliente sin cliente: no debe ver nada.
+ */
+const clientScopeOf = (res: Response): string | null | undefined => {
+  const user = res.locals.user as AuthenticatedUser | undefined;
+  if (user?.role !== ROLE_CLIENT) return undefined;
+  return user.clientId ?? null;
+};
 
 export const getDataTable = asyncHandler(async (req: Request, res: Response) => {
   const result = await recurringService.getRecurringDataTable(req.body);
@@ -36,12 +50,14 @@ export const getRecurring = asyncHandler(async (req: Request, res: Response) => 
 
 export const getRecurringByGuard = asyncHandler(async (req: Request, res: Response) => {
     const { guardId } = req.params;
-    const result = await recurringService.getRecurringByGuard(guardId);
+    const scope = clientScopeOf(res);
+    const result = await recurringService.getRecurringByGuard(guardId, scope);
     return res.status(200).json(createTResult(result));
 });
 
 export const getAllRecurring = asyncHandler(async (req: Request, res: Response) => {
-    const result = await recurringService.getAllRecurring();
+    const scope = clientScopeOf(res);
+    const result = await recurringService.getAllRecurring(scope);
     return res.status(200).json(createTResult(result));
 });
 

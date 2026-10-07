@@ -2,6 +2,7 @@ import multer from "multer";
 import { Request } from "express";
 import path from "path";
 import fs from "fs";
+import { AppError } from "@src/core/errors/AppError";
 
 // Ensure upload directory exists
 // Storage configuration
@@ -23,7 +24,8 @@ const fileFilter = (req: Request, file: Express.Multer.File, cb: multer.FileFilt
   if (allowedMimes.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error("Tipo de archivo inválido. Solo se permiten imágenes y videos."));
+    // AppError (no Error plano): así el middleware central responde 415 y no 500.
+    cb(new AppError("Tipo de archivo inválido. Solo se permiten imágenes y videos.", 415));
   }
 };
 

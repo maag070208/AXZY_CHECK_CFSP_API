@@ -10,6 +10,8 @@ import {
   updateKardexMedia,
 } from "./kardex.service";
 import { StorageService } from "../storage/storage.service";
+import { createAuditLog } from "../audit/audit.service";
+import { mediaHasKey, removeMediaByKey } from "@src/core/utils/media.utils";
 import { logger } from "@src/core/utils/logger";
 import { asyncHandler } from "@src/core/utils/asyncHandler";
 import { getAuthUserId } from "@src/core/utils/auth-user.utils";
@@ -117,6 +119,11 @@ export const deleteMedia = asyncHandler(async (req: Request, res: Response) => {
     throw new AppError("Registro o media no encontrada", 404);
   }
 
+  // El key debe pertenecer al media del registro: evita borrar objetos ajenos del bucket.
+  if (!mediaHasKey(entry.media, String(key))) {
+    throw new AppError("El archivo indicado no pertenece a este registro", 404);
+  }
+
   const bucketName = process.env.AWS_BUCKET_NAME;
   if (bucketName) {
     try {
@@ -126,14 +133,15 @@ export const deleteMedia = asyncHandler(async (req: Request, res: Response) => {
     }
   }
 
-  const media = entry.media as Array<{ key?: string; url?: string }>;
-  const updatedMedia = media.filter((m: { key?: string; url?: string }) => {
-    if (!m) return false;
-    const mKey =
-      m.key || (typeof m.url === "string" ? m.url.split("/").pop() : null);
-    return mKey !== String(key);
+  await updateKardexMedia(id, removeMediaByKey(entry.media, String(key)));
+
+  await createAuditLog({
+    userId: res.locals.user?.id,
+    module: "KARDEX",
+    action: "DELETE_MEDIA",
+    resourceId: id,
+    details: { key: String(key) },
   });
 
-  await updateKardexMedia(id, updatedMedia);
   return res.status(200).json(createTResult(true));
 });

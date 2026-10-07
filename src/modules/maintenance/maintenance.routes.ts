@@ -13,7 +13,7 @@ import { DataTableFetchParamsSchema } from "../../core/dto/datatable.schema";
 const router = Router();
 
 router.post("/", authenticate, validate(CreateMaintenanceSchema), maintenanceController.createMaintenance);
-router.post("/datatable", validate(DataTableFetchParamsSchema), maintenanceController.getDataTable);
+router.post("/datatable", authenticate, validate(DataTableFetchParamsSchema), maintenanceController.getDataTable);
 router.get("/", authenticate, validate(GetMaintenancesQuerySchema), maintenanceController.getMaintenances);
 router.get("/pending-count", authenticate, maintenanceController.getPendingCount);
 router.put("/:id/resolve", authenticate, validate(MaintenanceIdParamSchema), maintenanceController.resolveMaintenance);

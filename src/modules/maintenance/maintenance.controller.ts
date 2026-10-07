@@ -4,6 +4,7 @@ import * as maintenanceService from "./maintenance.service";
 import { asyncHandler } from "@src/core/utils/asyncHandler";
 import { AppError } from "@src/core/errors/AppError";
 import { createAuditLog } from "../audit/audit.service";
+import { mediaHasKey, removeMediaByKey } from "@src/core/utils/media.utils";
 
 export const getDataTable = asyncHandler(async (req: Request, res: Response) => {
   const result = await maintenanceService.getDataTableMaintenances(req.body, res.locals.user);
@@ -115,13 +116,19 @@ export const deleteMedia = asyncHandler(async (req: Request, res: Response) => {
     throw new AppError("Mantenimiento o media no encontrada", 404);
   }
 
-  const media = maintenance.media as Array<{ key?: string; url?: string }>;
-  const updatedMedia = media.filter((m: { key?: string; url?: string }) => {
-    if (!m) return false;
-    const mKey = m.key || (typeof m.url === 'string' ? m.url.split('/').pop() : null);
-    return mKey !== String(key);
+  if (!mediaHasKey(maintenance.media, String(key))) {
+    throw new AppError("El archivo indicado no pertenece a este mantenimiento", 404);
+  }
+
+  await maintenanceService.updateMaintenanceMedia(id, removeMediaByKey(maintenance.media, String(key)));
+
+  await createAuditLog({
+    userId: res.locals.user?.id,
+    module: "MAINTENANCE",
+    action: "DELETE_MEDIA",
+    resourceId: id,
+    details: { key: String(key) },
   });
 
-  await maintenanceService.updateMaintenanceMedia(id, updatedMedia);
   return res.status(200).json(createTResult(true));
 });

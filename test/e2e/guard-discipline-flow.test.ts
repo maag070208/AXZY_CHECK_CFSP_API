@@ -15,18 +15,6 @@ jest.mock("@src/modules/common/middlewares/auth.middleware", () => ({
   authorize: () => (req: any, res: any, next: any) => next(),
 }));
 
-jest.mock("@src/core/middlewares/token-validator.middleware", () => ({
-  __esModule: true,
-  default: (req: any, res: any, next: any) => {
-    if (req.headers["user"]) {
-      const user = JSON.parse(req.headers["user"]);
-      req.user = user;
-      res.locals.user = user;
-    }
-    next();
-  },
-}));
-
 jest.setTimeout(60000);
 
 describe("E2E: Flujo completo de Incidencias a Guardias", () => {

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { clockIn, clockOut, getDataTable, remove } from "./guardLog.controller";
 import { authenticate, authorize } from "../common/middlewares/auth.middleware";
 import { validate } from "../../core/middlewares/validate.middleware";
-import { clockInSchema, clockOutSchema } from "./schemas/guardLog.schema";
+import { clockInSchema, clockOutSchema, guardLogIdParamSchema } from "./schemas/guardLog.schema";
 import { DataTableFetchParamsSchema } from "../../core/dto/datatable.schema";
 import { ROLE_ADMIN, ROLE_SHIFT, ROLE_CLIENT } from "../../core/config/constants";
 
@@ -34,6 +34,7 @@ router.delete(
   "/:id",
   authenticate,
   authorize([ROLE_ADMIN, ROLE_SHIFT]),
+  validate(guardLogIdParamSchema),
   remove
 );
 

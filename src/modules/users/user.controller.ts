@@ -194,7 +194,7 @@ export const changePassword = asyncHandler(async (req: Request, res: Response) =
   const { id } = req.params;
   const { oldPassword, newPassword } = req.body;
 
-  const user = await userService.getUserById(id);
+  const user = await userService.getUserWithPasswordById(id);
   if (!user) {
     throw new AppError("Usuario no encontrado", 404);
   }

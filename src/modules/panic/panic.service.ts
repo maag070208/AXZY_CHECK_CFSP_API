@@ -17,6 +17,7 @@ import {
 } from "./panic.dto";
 import { ITDataTableFetchParams } from "@src/core/dto/datatable.dto";
 import { getPrismaPaginationParams } from "@src/core/utils/prisma-pagination.utils";
+import { resolveClientScope } from "@src/core/utils/client-scope.utils";
 
 const PANIC_INCLUDE = {
   guard: { select: { id: true, name: true, lastName: true, username: true } },
@@ -48,10 +49,8 @@ const toDto = (a: Prisma.PanicAlertGetPayload<{ include: typeof PANIC_INCLUDE }>
  * el usuario es RESDN/cliente. ADMIN ve todo.
  */
 const buildClientFilter = (user: AuthenticatedUser) => {
-  if (user?.role === ROLE_CLIENT && user.clientId) {
-    return { clientId: user.clientId };
-  }
-  return {};
+  const clientId = resolveClientScope(user);
+  return clientId ? { clientId } : {};
 };
 
 /**

@@ -74,12 +74,33 @@ export const pull = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const push = asyncHandler(async (req: Request, res: Response) => {
-  await validateAppVersion(req);
-
+  // El push NO se bloquea por versión: la cola offline debe poder drenarse
+  // siempre. Si la APP quedara desactualizada, perdería el trabajo capturado
+  // sin red. El gate de versión sigue aplicándose al `pull`, que es donde la
+  // compatibilidad de esquema importa.
   const { changes, lastPulledAt } = req.body;
   const user = res.locals.user as IAuthUser | undefined;
   if (!user?.id) throw new AppError("No autenticado", 401);
   const result = await syncService.pushChanges({ changes, user, lastPulledAt });
+
+  if (!result.applied) {
+    const partes: string[] = [];
+    if (result.ignoredTables.length > 0) {
+      partes.push(`tablas que el dispositivo no administra: ${result.ignoredTables.join(", ")}`);
+    }
+    if (result.rejected.length > 0) {
+      partes.push(`${result.rejected.length} registro(s) no se pudieron aplicar`);
+    }
+    // 400 + detalle por registro: la APP conserva los cambios locales y puede
+    // reintentar o descartar exactamente los registros señalados.
+    return res.status(400).json(
+      createTResult(
+        { rejected: result.rejected, ignoredTables: result.ignoredTables },
+        [`No se pudo sincronizar: ${partes.join("; ")}`],
+      ),
+    );
+  }
+
   res.json(createTResult(result));
 });
 

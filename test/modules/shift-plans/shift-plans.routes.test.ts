@@ -1,14 +1,13 @@
 import request from "supertest";
 import { app } from "@src/index";
+import { prismaClient } from "@src/core/config/database";
+import { ROLE_CLIENT, ROLE_GUARD } from "@src/core/config/constants";
+import { addDaysToShiftDate, todayShiftDate } from "@src/core/utils/shift-instance.utils";
 import { createSupervisionFixture, ISupervisionFixture } from "../supervision.fixtures";
 
 jest.mock("@src/modules/common/middlewares/auth.middleware", () =>
   require("../supervision.fixtures").authMiddlewareMock(),
 );
-jest.mock("@src/core/middlewares/token-validator.middleware", () =>
-  require("../supervision.fixtures").tokenValidatorMock(),
-);
-
 jest.setTimeout(30000);
 
 interface IAgendaItemBody {
@@ -155,5 +154,190 @@ describe("Programación de turnos y agenda (Integración)", () => {
     expect(again.status).toBe(201);
     expect(again.body.data.id).toBe(planId);
     expect(again.body.data.requireUniform).toBe(false);
+  });
+});
+
+/**
+ * `GET /shift-plans/agenda` (un día concreto).
+ *
+ * Se usa un turno propio 08:00-20:00 con tolerancia 0 para que el estado sea
+ * determinista a cualquier hora: el turno de AYER siempre está terminado
+ * (MISSED) y el de hoy se valida sólo por forma, sin depender del reloj.
+ */
+describe("Agenda diaria de programación (Integración)", () => {
+  let fx: ISupervisionFixture;
+  let scheduleId: string;
+  let guardId: string;
+  let planId: string;
+  let otroClientId: string;
+
+  const otroClienteHeader = () =>
+    JSON.stringify({ id: fx.adminId, name: "Cliente ajeno", username: "ajeno", role: ROLE_CLIENT, clientId: otroClientId });
+  const clienteSinClienteHeader = () =>
+    JSON.stringify({ id: fx.adminId, name: "Cliente", username: "cliente", role: ROLE_CLIENT, clientId: null });
+
+  beforeAll(async () => {
+    fx = await createSupervisionFixture("agenda-diaria");
+    const stamp = Date.now();
+
+    const schedule = await prismaClient.schedule.create({
+      data: { name: `Turno Agenda ${stamp}`, startTime: "08:00", endTime: "20:00" },
+    });
+    scheduleId = schedule.id;
+
+    const guardRole = await prismaClient.role.findUnique({ where: { name: ROLE_GUARD }, select: { id: true } });
+    if (!guardRole) throw new Error("Se requiere el rol GUARD en la base de pruebas");
+
+    const guard = await prismaClient.user.create({
+      data: {
+        name: "Guardia",
+        lastName: `Agenda ${stamp}`,
+        username: `guardia.agenda.${stamp}`.toLowerCase(),
+        password: "x",
+        roleId: guardRole.id,
+        clientId: fx.clientId,
+        scheduleId,
+      },
+    });
+    guardId = guard.id;
+
+    const plan = await prismaClient.shiftPlan.create({
+      data: {
+        clientId: fx.clientId,
+        scheduleId,
+        requireHandover: true,
+        requireUniform: true,
+        toleranceMinutes: 0,
+        daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
+      },
+    });
+    planId = plan.id;
+
+    const otroCliente = await prismaClient.client.create({ data: { name: `Cliente Ajeno ${stamp}` } });
+    otroClientId = otroCliente.id;
+  });
+
+  afterAll(async () => {
+    await prismaClient.shiftPlan.deleteMany({ where: { clientId: fx.clientId } }).catch(() => {});
+    await prismaClient.user.delete({ where: { id: guardId } }).catch(() => {});
+    await prismaClient.schedule.delete({ where: { id: scheduleId } }).catch(() => {});
+    await prismaClient.client.delete({ where: { id: otroClientId } }).catch(() => {});
+    await fx.cleanup();
+  });
+
+  it("debe devolver la agenda de hoy con la entrega y el uniforme del turno", async () => {
+    const res = await request(app)
+      .get(`/api/v1/shift-plans/agenda?clientId=${fx.clientId}`)
+      .set("user", fx.adminHeader);
+
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+    expect(res.body.messages).toEqual(["Success"]);
+
+    const data = res.body.data;
+    expect(data.dates).toEqual([todayShiftDate()]);
+    expect(data.generatedAt).toBeDefined();
+    expect(data.items).toHaveLength(2);
+
+    const entrega = data.items.find((i: { type: string }) => i.type === "HANDOVER");
+    expect(entrega.planId).toBe(planId);
+    expect(entrega.guard).toBeNull();
+    expect(entrega.record).toBeNull();
+    expect(entrega.client.id).toBe(fx.clientId);
+    expect(entrega.schedule.id).toBe(scheduleId);
+    expect(entrega.shiftDate).toBe(todayShiftDate());
+
+    const uniforme = data.items.find((i: { type: string }) => i.type === "UNIFORM");
+    expect(uniforme.planId).toBe(planId);
+    expect(uniforme.guard.id).toBe(guardId);
+    expect(uniforme.schedule.id).toBe(scheduleId);
+
+    expect(data.summary.total).toBe(2);
+    expect(data.handoverSummary.total).toBe(1);
+    expect(data.uniformSummary.total).toBe(1);
+  });
+
+  it("debe marcar como perdidos los compromisos de un turno que ya terminó (ayer)", async () => {
+    const ayer = addDaysToShiftDate(todayShiftDate(), -1);
+    const res = await request(app)
+      .get(`/api/v1/shift-plans/agenda?date=${ayer}&clientId=${fx.clientId}`)
+      .set("user", fx.adminHeader);
+
+    expect(res.status).toBe(200);
+    const data = res.body.data;
+    expect(data.dates).toEqual([ayer]);
+    expect(data.items).toHaveLength(2);
+    expect(data.items.every((i: { status: string }) => i.status === "MISSED")).toBe(true);
+    expect(data.summary).toEqual({
+      total: 2,
+      done: 0,
+      inWindow: 0,
+      overdue: 0,
+      missed: 2,
+      upcoming: 0,
+      compliancePercent: 0,
+    });
+
+    const entrega = data.items.find((i: { type: string }) => i.type === "HANDOVER");
+    expect(entrega.planId).toBe(planId);
+    expect(new Date(entrega.endAt).getTime()).toBeLessThan(Date.now());
+    expect(new Date(entrega.startAt).getTime()).toBeLessThanOrEqual(new Date(entrega.dueAt).getTime());
+  });
+
+  it("un usuario cliente sólo ve la agenda de su cliente", async () => {
+    const propio = await request(app).get("/api/v1/shift-plans/agenda").set("user", fx.clientHeader);
+    expect(propio.status).toBe(200);
+    expect(propio.body.data.dates).toEqual([todayShiftDate()]);
+    expect(propio.body.data.items.length).toBeGreaterThan(0);
+    expect(propio.body.data.items.every((i: { client: { id: string } }) => i.client.id === fx.clientId)).toBe(true);
+    expect(propio.body.data.items.some((i: { planId: string }) => i.planId === planId)).toBe(true);
+
+    // Un cliente distinto (sin programación) no ve nada del cliente de prueba.
+    const ajeno = await request(app).get("/api/v1/shift-plans/agenda").set("user", otroClienteHeader());
+    expect(ajeno.status).toBe(200);
+    expect(ajeno.body.data.items).toHaveLength(0);
+    expect(ajeno.body.data.items.some((i: { planId: string }) => i.planId === planId)).toBe(false);
+
+    // El ADMIN puede filtrar por el cliente ajeno: tampoco aparece el plan.
+    const adminAjeno = await request(app)
+      .get(`/api/v1/shift-plans/agenda?clientId=${otroClientId}`)
+      .set("user", fx.adminHeader);
+    expect(adminAjeno.status).toBe(200);
+    expect(adminAjeno.body.data.items).toHaveLength(0);
+  });
+
+  it("debe rechazar una fecha con formato inválido", async () => {
+    const res = await request(app)
+      .get("/api/v1/shift-plans/agenda?date=01-01-2026")
+      .set("user", fx.adminHeader);
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.messages.join(" ")).toContain("query.date");
+  });
+
+  it("debe rechazar un clientId que no es UUID", async () => {
+    const res = await request(app)
+      .get("/api/v1/shift-plans/agenda?clientId=no-es-uuid")
+      .set("user", fx.adminHeader);
+
+    expect(res.status).toBe(400);
+    expect(res.body.success).toBe(false);
+    expect(res.body.messages.join(" ")).toContain("query.clientId");
+  });
+
+  it("debe negar la agenda a un guardia", async () => {
+    const res = await request(app).get("/api/v1/shift-plans/agenda").set("user", fx.guardHeader);
+
+    expect(res.status).toBe(403);
+    expect(res.body.success).toBe(false);
+  });
+
+  it("debe negar la agenda a un usuario cliente sin cliente asignado", async () => {
+    const res = await request(app).get("/api/v1/shift-plans/agenda").set("user", clienteSinClienteHeader());
+
+    expect(res.status).toBe(403);
+    expect(res.body.success).toBe(false);
+    expect(res.body.messages.join(" ")).toContain("cliente asignado");
   });
 });

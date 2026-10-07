@@ -20,12 +20,11 @@ export const getDataTableLocations = async (
   params: ITDataTableFetchParams,
 ): Promise<ITDataTableResponse<LocationModel>> => {
   try {
-    const { page, limit, filters } = params;
-    const take = Number(limit) || 10;
-    const skip = (Math.max(1, Number(page)) - 1) * take;
-    const searchTerm = filters?.name || "";
+    // Filtros de cliente/zona. El resto (incluido `name`) lo resuelve
+    // `getPrismaPaginationParams`, que devuelve la MISMA forma de respuesta que
+    // consumen WEB/APP (con `client`, `zone` y `_count` anidados).
+    const { filters } = params;
 
-    // Add clientId filter if provided
     let clientIdFilter = undefined;
     if (filters?.clientId) {
       clientIdFilter = filters.clientId;
@@ -33,52 +32,6 @@ export const getDataTableLocations = async (
     let zoneIdFilter = undefined;
     if (filters?.zoneId) {
       zoneIdFilter = filters.zoneId;
-    }
-
-    if (searchTerm) {
-      const search = `%${searchTerm}%`;
-      try {
-        await prisma.$executeRaw`CREATE EXTENSION IF NOT EXISTS unaccent;`.catch(
-          () => {},
-        );
-
-        let query = `
-                SELECT l.*, c.name as "clientName" FROM "Location" l
-                LEFT JOIN "Client" c ON c.id = l."clientId"
-                WHERE (
-                    unaccent(l."name") ILIKE unaccent(${search}) OR
-                    unaccent(l."reference") ILIKE unaccent(${search})
-                )
-            `;
-        if (clientIdFilter) {
-          query += ` AND l."clientId" = '${clientIdFilter}'`;
-        }
-        if (zoneIdFilter) {
-          query += ` AND l."zoneId" = '${zoneIdFilter}'`;
-        }
-        query += ` ORDER BY l."createdAt" DESC LIMIT ${take} OFFSET ${skip}`;
-
-        const rows = (await prisma.$queryRawUnsafe(query)) as unknown as LocationModel[];
-
-        let countQuery = `
-                SELECT COUNT(*)::int as count FROM "Location" l
-                WHERE (
-                    unaccent(l."name") ILIKE unaccent(${search}) OR
-                    unaccent(l."reference") ILIKE unaccent(${search})
-                )
-            `;
-        if (clientIdFilter) {
-          countQuery += ` AND l."clientId" = '${clientIdFilter}'`;
-        }
-        if (zoneIdFilter) {
-          countQuery += ` AND l."zoneId" = '${zoneIdFilter}'`;
-        }
-
-        const totalRes = (await prisma.$queryRawUnsafe(countQuery)) as unknown as Array<{ count: number }>;
-        return { rows, total: totalRes[0]?.count || 0 };
-      } catch (rawError) {
-        logger.warn("Fuzzy search failed", rawError);
-      }
     }
 
     const prismaParams = getPrismaPaginationParams(params);

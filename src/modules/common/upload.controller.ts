@@ -5,6 +5,7 @@ import { prismaClient as prisma } from "@src/core/config/database";
 import { logger } from "@src/core/utils/logger";
 import { asyncHandler } from "@src/core/utils/asyncHandler";
 import { AppError } from "@src/core/errors/AppError";
+import { createAuditLog } from "../audit/audit.service";
 
 const storageService = new StorageService();
 
@@ -83,6 +84,14 @@ export const uploadFile = asyncHandler(async (req: Request, res: Response) => {
   // AWS S3 Public URL format: https://bucket.s3.region.amazonaws.com/key
   const region = process.env.AWS_REGION || "us-east-2";
   const fullUrl = `https://${bucketName}.s3.${region}.amazonaws.com/${key}`;
+
+  await createAuditLog({
+    userId: user.id,
+    module: "UPLOADS",
+    action: "UPLOAD",
+    resourceId: result.key,
+    details: { key: result.key, mimetype: req.file.mimetype, size: req.file.size },
+  });
 
   // Return the URL and metadata
   return res.status(200).json(

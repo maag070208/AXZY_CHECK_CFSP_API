@@ -31,9 +31,6 @@ export const SCAN_TYPE_ASSIGNMENT = "ASSIGNMENT";
 export const SCAN_TYPE_RECURRING = "RECURRING";
 export const SCAN_TYPE_FREE = "FREE";
 
-// External Keys
-export const GOOGLE_MAPS_KEY = "AIzaSyBEcey4scuaufZ6TD4oOZZKjO-CIOVXa8w";
-
 // Category Types
 export const CATEGORY_TYPE_INCIDENT = "INCIDENT";
 export const CATEGORY_TYPE_MAINTENANCE = "MAINTENANCE";

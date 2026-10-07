@@ -3,18 +3,30 @@ import { app } from "@src/index";
 import { prismaClient } from "@src/core/config/database";
 import { ROLE_ADMIN, ROLE_GUARD, ROLE_SHIFT, ROLE_MAINTENANCE } from "@src/core/config/constants";
 
-jest.mock("@src/modules/common/middlewares/auth.middleware", () => ({
-  authenticate: (req: any, res: any, next: any) => {
-    if (req.headers["user"]) {
-      req.user = JSON.parse(req.headers["user"]);
-      res.locals.user = req.user;
-    }
-    next();
-  },
-  authorize: () => (req: any, res: any, next: any) => next(),
-}));
+/**
+ * Se conserva el mock canónico del proyecto para `authenticate` (usuario por header)
+ * y se deja `authorize` REAL: es la única forma de verificar el 403 de las rutas
+ * protegidas por rol (datatable y DELETE exigen ADMIN o SHIFT). Es el mismo patrón
+ * que usa `test/modules/supervision.fixtures.ts`.
+ */
+jest.mock("@src/modules/common/middlewares/auth.middleware", () => {
+  const actual = jest.requireActual("@src/modules/common/middlewares/auth.middleware");
+  return {
+    ...actual,
+    authenticate: (req: any, res: any, next: any) => {
+      if (req.headers["user"]) {
+        req.user = JSON.parse(req.headers["user"]);
+        res.locals.user = req.user;
+      }
+      next();
+    },
+  };
+});
 
 jest.setTimeout(30000);
+
+/** UUID válido que no existe en la base: sirve para probar recursos inexistentes. */
+const UUID_INEXISTENTE = "00000000-0000-4000-8000-000000000000";
 
 describe("Rutas de Prenómina (GuardLoginLog)", () => {
   let adminUserId: string;
@@ -24,6 +36,9 @@ describe("Rutas de Prenómina (GuardLoginLog)", () => {
   let guardRoleId: string;
   let adminRoleId: string;
   let createdLogId: string;
+  let adminHeader: string;
+  let guardHeader: string;
+  let shiftHeader: string;
 
   beforeAll(async () => {
     const adminRole = await prismaClient.role.findUnique({ where: { name: ROLE_ADMIN } });
@@ -76,9 +91,17 @@ describe("Rutas de Prenómina (GuardLoginLog)", () => {
       },
     });
     maintUserId = maintRes.id;
+
+    adminHeader = JSON.stringify({ id: adminUserId, role: ROLE_ADMIN });
+    guardHeader = JSON.stringify({ id: guardUserId, role: ROLE_GUARD });
+    shiftHeader = JSON.stringify({ id: shiftUserId, role: ROLE_SHIFT });
   });
 
   afterAll(async () => {
+    // La auditoría referencia a los usuarios por FK: se limpia primero.
+    await prismaClient.auditLog.deleteMany({
+      where: { module: "GUARD_LOGS", userId: { in: [guardUserId, shiftUserId, maintUserId] } },
+    }).catch(() => {});
     await prismaClient.guardLoginLog.deleteMany({
       where: { userId: { in: [guardUserId, shiftUserId, maintUserId] } },
     }).catch(() => {});
@@ -92,7 +115,7 @@ describe("Rutas de Prenómina (GuardLoginLog)", () => {
     it("debe crear un registro de entrada para un guardia", async () => {
       const res = await request(app)
         .post("/api/v1/guard-logs/clock-in")
-        .set("user", JSON.stringify({ id: guardUserId }))
+        .set("user", guardHeader)
         .send({ guardId: guardUserId });
 
       expect(res.status).toBe(201);
@@ -106,7 +129,7 @@ describe("Rutas de Prenómina (GuardLoginLog)", () => {
     it("debe fallar si el guardia ya tiene una entrada abierta", async () => {
       const res = await request(app)
         .post("/api/v1/guard-logs/clock-in")
-        .set("user", JSON.stringify({ id: guardUserId }))
+        .set("user", guardHeader)
         .send({ guardId: guardUserId });
 
       expect(res.status).toBe(400);
@@ -117,7 +140,7 @@ describe("Rutas de Prenómina (GuardLoginLog)", () => {
     it("debe fallar si el usuario no es un rol operativo", async () => {
       const res = await request(app)
         .post("/api/v1/guard-logs/clock-in")
-        .set("user", JSON.stringify({ id: adminUserId }))
+        .set("user", adminHeader)
         .send({ guardId: adminUserId });
 
       expect(res.status).toBe(400);
@@ -128,7 +151,7 @@ describe("Rutas de Prenómina (GuardLoginLog)", () => {
     it("debe fallar si guardId no es un UUID", async () => {
       const res = await request(app)
         .post("/api/v1/guard-logs/clock-in")
-        .set("user", JSON.stringify({ id: guardUserId }))
+        .set("user", guardHeader)
         .send({ guardId: "no-es-uuid" });
 
       expect(res.status).toBe(400);
@@ -140,7 +163,7 @@ describe("Rutas de Prenómina (GuardLoginLog)", () => {
     it("debe cerrar la entrada abierta del guardia", async () => {
       const res = await request(app)
         .patch("/api/v1/guard-logs/clock-out")
-        .set("user", JSON.stringify({ id: guardUserId }))
+        .set("user", guardHeader)
         .send({ guardId: guardUserId });
 
       expect(res.status).toBe(200);
@@ -152,7 +175,7 @@ describe("Rutas de Prenómina (GuardLoginLog)", () => {
     it("debe fallar si no hay entrada abierta", async () => {
       const res = await request(app)
         .patch("/api/v1/guard-logs/clock-out")
-        .set("user", JSON.stringify({ id: guardUserId }))
+        .set("user", guardHeader)
         .send({ guardId: guardUserId });
 
       expect(res.status).toBe(400);
@@ -177,7 +200,7 @@ describe("Rutas de Prenómina (GuardLoginLog)", () => {
     it("debe retornar todos los registros paginados", async () => {
       const res = await request(app)
         .post("/api/v1/guard-logs/datatable")
-        .set("user", JSON.stringify({ id: adminUserId }))
+        .set("user", adminHeader)
         .send({ page: 1, limit: 10 });
 
       expect(res.status).toBe(200);
@@ -189,7 +212,7 @@ describe("Rutas de Prenómina (GuardLoginLog)", () => {
     it("debe filtrar por rango de fechas", async () => {
       const res = await request(app)
         .post("/api/v1/guard-logs/datatable")
-        .set("user", JSON.stringify({ id: adminUserId }))
+        .set("user", adminHeader)
         .send({
           page: 1,
           limit: 10,
@@ -205,7 +228,7 @@ describe("Rutas de Prenómina (GuardLoginLog)", () => {
     it("debe filtrar por guardia abierto (isOpen=true)", async () => {
       const res = await request(app)
         .post("/api/v1/guard-logs/datatable")
-        .set("user", JSON.stringify({ id: adminUserId }))
+        .set("user", adminHeader)
         .send({
           page: 1,
           limit: 10,
@@ -219,7 +242,7 @@ describe("Rutas de Prenómina (GuardLoginLog)", () => {
     it("debe filtrar por guardia cerrado (isOpen=false)", async () => {
       const res = await request(app)
         .post("/api/v1/guard-logs/datatable")
-        .set("user", JSON.stringify({ id: adminUserId }))
+        .set("user", adminHeader)
         .send({
           page: 1,
           limit: 10,
@@ -233,7 +256,7 @@ describe("Rutas de Prenómina (GuardLoginLog)", () => {
     it("debe buscar por nombre de usuario (search)", async () => {
       const res = await request(app)
         .post("/api/v1/guard-logs/datatable")
-        .set("user", JSON.stringify({ id: adminUserId }))
+        .set("user", adminHeader)
         .send({
           page: 1,
           limit: 10,
@@ -252,7 +275,7 @@ describe("Rutas de Prenómina (GuardLoginLog)", () => {
     it("debe ordenar por loginAt descendente", async () => {
       const res = await request(app)
         .post("/api/v1/guard-logs/datatable")
-        .set("user", JSON.stringify({ id: adminUserId }))
+        .set("user", adminHeader)
         .send({
           page: 1,
           limit: 10,
@@ -269,11 +292,105 @@ describe("Rutas de Prenómina (GuardLoginLog)", () => {
     it("debe fallar si faltan page o limit", async () => {
       const res = await request(app)
         .post("/api/v1/guard-logs/datatable")
-        .set("user", JSON.stringify({ id: adminUserId }))
+        .set("user", adminHeader)
         .send({ filters: {} });
 
       expect(res.status).toBe(400);
       expect(res.body.success).toBe(false);
+    });
+  });
+
+  describe("Eliminación de registros de prenómina", () => {
+    const logsCreados: string[] = [];
+
+    const crearLog = async (userId: string): Promise<string> => {
+      const log = await prismaClient.guardLoginLog.create({
+        data: {
+          userId,
+          loginAt: new Date("2026-07-01T08:00:00Z"),
+          logoutAt: new Date("2026-07-01T17:00:00Z"),
+        },
+      });
+      logsCreados.push(log.id);
+      return log.id;
+    };
+
+    afterAll(async () => {
+      await prismaClient.auditLog.deleteMany({
+        where: { module: "GUARD_LOGS", resourceId: { in: logsCreados } },
+      }).catch(() => {});
+      await prismaClient.guardLoginLog.deleteMany({ where: { id: { in: logsCreados } } }).catch(() => {});
+    });
+
+    it("debe eliminar un registro de prenómina como ADMIN", async () => {
+      const logId = await crearLog(guardUserId);
+
+      const res = await request(app)
+        .delete(`/api/v1/guard-logs/${logId}`)
+        .set("user", adminHeader);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.messages).toEqual(["Success"]);
+      expect(res.body.data).toEqual({ id: logId });
+
+      const enDb = await prismaClient.guardLoginLog.findUnique({ where: { id: logId } });
+      expect(enDb).toBeNull();
+    });
+
+    it("debe permitir la eliminación a un usuario SHIFT", async () => {
+      const logId = await crearLog(shiftUserId);
+
+      const res = await request(app)
+        .delete(`/api/v1/guard-logs/${logId}`)
+        .set("user", shiftHeader);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.messages).toEqual(["Success"]);
+      expect(res.body.data).toEqual({ id: logId });
+
+      const enDb = await prismaClient.guardLoginLog.findUnique({ where: { id: logId } });
+      expect(enDb).toBeNull();
+    });
+
+    it("debe negar la eliminación a un guardia (403)", async () => {
+      const logId = await crearLog(guardUserId);
+
+      const res = await request(app)
+        .delete(`/api/v1/guard-logs/${logId}`)
+        .set("user", guardHeader);
+
+      expect(res.status).toBe(403);
+      expect(res.body.success).toBe(false);
+      expect(res.body.data).toBeNull();
+      expect(res.body.messages[0]).toContain("Permisos insuficientes");
+
+      // El guardia no autorizado no altera la prenómina.
+      const enDb = await prismaClient.guardLoginLog.findUnique({ where: { id: logId } });
+      expect(enDb).not.toBeNull();
+    });
+
+    it("debe responder 404 al eliminar un registro inexistente", async () => {
+      const res = await request(app)
+        .delete(`/api/v1/guard-logs/${UUID_INEXISTENTE}`)
+        .set("user", adminHeader);
+
+      expect(res.status).toBe(404);
+      expect(res.body.success).toBe(false);
+      expect(res.body.data).toBeNull();
+      expect(res.body.messages[0]).toBe("Registro de prenómina no encontrado");
+    });
+
+    it("debe rechazar con 400 un id que no es UUID (validación Zod de params)", async () => {
+      const res = await request(app)
+        .delete("/api/v1/guard-logs/no-es-uuid")
+        .set("user", adminHeader);
+
+      expect(res.status).toBe(400);
+      expect(res.body.success).toBe(false);
+      expect(res.body.data).toBeNull();
+      expect(res.body.messages.join(" ")).toContain("params.id");
     });
   });
 });

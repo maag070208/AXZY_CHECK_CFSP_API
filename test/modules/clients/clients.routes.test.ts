@@ -20,6 +20,11 @@ describe("Rutas de Clientes (Integración)", () => {
   const uniqueName = `Cliente de Prueba ${Date.now()}`;
   let adminUserId: string;
 
+  // Fixtures de la cobertura ampliada (datatable de clientes)
+  const clientsDatatableToken = `DTClientes${Date.now()}`;
+  const clientsDatatableIds: string[] = [];
+  let inactiveClientId: string;
+
   beforeAll(async () => {
     const adminRole = await prismaClient.role.findUnique({ where: { name: "ADMIN" } });
     if (adminRole) {
@@ -34,6 +39,20 @@ describe("Rutas de Clientes (Integración)", () => {
       });
       adminUserId = adminRes.id;
     }
+
+    // Clientes para el datatable: dos activos y uno inactivo, con token único
+    const activeClientA = await prismaClient.client.create({
+      data: { name: `Cliente ${clientsDatatableToken} A` },
+    });
+    const activeClientB = await prismaClient.client.create({
+      data: { name: `Cliente ${clientsDatatableToken} B` },
+    });
+    const inactiveClient = await prismaClient.client.create({
+      data: { name: `Cliente ${clientsDatatableToken} C`, active: false },
+    });
+    clientsDatatableIds.push(activeClientA.id, activeClientB.id, inactiveClient.id);
+    inactiveClientId = inactiveClient.id;
+    createdClientIds.push(...clientsDatatableIds);
   });
 
   afterAll(async () => {
@@ -273,6 +292,97 @@ describe("Rutas de Clientes (Integración)", () => {
       const clientId2 = resCreate2.body.data.id;
       createdClientIds.push(clientId2);
       expect(clientId2).not.toBe(clientId1);
+    });
+  });
+
+  describe("POST /api/v1/clients/datatable", () => {
+    it("debe retornar rows y total paginados para la búsqueda", async () => {
+      const response = await request(app)
+        .post("/api/v1/clients/datatable")
+        .set("user", JSON.stringify({ id: adminUserId }))
+        .send({ page: 1, limit: 2, filters: { search: clientsDatatableToken } });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.messages).toEqual(["Success"]);
+      expect(Array.isArray(response.body.data.rows)).toBe(true);
+      expect(response.body.data.rows).toHaveLength(2);
+      expect(response.body.data.total).toBe(3);
+      expect(response.body.data.rows.every((c: any) => c.name.includes(clientsDatatableToken))).toBe(true);
+      expect(response.body.data.rows[0]._count).toBeDefined();
+      expect(response.body.data.rows[0].password).toBeUndefined();
+    });
+
+    it("debe respetar page para devolver la segunda página", async () => {
+      const response = await request(app)
+        .post("/api/v1/clients/datatable")
+        .set("user", JSON.stringify({ id: adminUserId }))
+        .send({ page: 2, limit: 2, filters: { search: clientsDatatableToken } });
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.rows).toHaveLength(1);
+      expect(response.body.data.total).toBe(3);
+    });
+
+    it("debe filtrar por active=false", async () => {
+      const response = await request(app)
+        .post("/api/v1/clients/datatable")
+        .set("user", JSON.stringify({ id: adminUserId }))
+        .send({ page: 1, limit: 10, filters: { search: clientsDatatableToken, active: "false" } });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.rows).toHaveLength(1);
+      expect(response.body.data.rows[0].id).toBe(inactiveClientId);
+      expect(response.body.data.rows[0].active).toBe(false);
+      expect(response.body.data.total).toBe(1);
+    });
+
+    it("debe retornar rows vacíos cuando la búsqueda no coincide", async () => {
+      const response = await request(app)
+        .post("/api/v1/clients/datatable")
+        .set("user", JSON.stringify({ id: adminUserId }))
+        .send({ page: 1, limit: 10, filters: { search: `NoExiste${clientsDatatableToken}` } });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.data.rows).toEqual([]);
+      expect(response.body.data.total).toBe(0);
+    });
+
+    it("debe retornar 400 si falta page y limit", async () => {
+      const response = await request(app)
+        .post("/api/v1/clients/datatable")
+        .set("user", JSON.stringify({ id: adminUserId }))
+        .send({});
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.messages[0]).toBe("Error de validación");
+      expect(response.body.messages.join(" ")).toContain("page");
+      expect(response.body.messages.join(" ")).toContain("limit");
+    });
+
+    it("debe retornar 400 si page no es numérico", async () => {
+      const response = await request(app)
+        .post("/api/v1/clients/datatable")
+        .set("user", JSON.stringify({ id: adminUserId }))
+        .send({ page: "1", limit: 10 });
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.messages.join(" ")).toContain("page");
+    });
+
+    it("debe retornar 400 si la dirección de ordenamiento es inválida", async () => {
+      const response = await request(app)
+        .post("/api/v1/clients/datatable")
+        .set("user", JSON.stringify({ id: adminUserId }))
+        .send({ page: 1, limit: 10, sort: { key: "name", direction: "ascendente" } });
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.messages.join(" ")).toContain("Dirección de ordenamiento inválida");
     });
   });
 });

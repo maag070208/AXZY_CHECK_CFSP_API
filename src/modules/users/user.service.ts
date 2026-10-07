@@ -11,6 +11,7 @@ import { IUserCreateRequest, IUserUpdateRequest } from "./user.dto";
 import { deleteClientDataCascade } from "../clients/clients.cascade";
 
 import { IUserResponse } from "./user.response";
+import { resolveClientScope } from "@src/core/utils/client-scope.utils";
 
 export const getUsers = async (search?: string): Promise<IUserResponse[]> => {
   const where = {
@@ -56,8 +57,10 @@ export const getDataTableUsers = async (
 ): Promise<ITDataTableResponse<IUserResponse>> => {
   const prismaParams = getPrismaPaginationParams(params);
 
-  if (user?.role === ROLE_CLIENT && user.clientId) {
-    prismaParams.where.clientId = user.clientId;
+  // Aislamiento multi-cliente (RESDN sin cliente asignado → 403, nunca "ve todo").
+  const scopeClientId = user ? resolveClientScope(user) : undefined;
+  if (scopeClientId) {
+    prismaParams.where.clientId = scopeClientId;
   }
 
   // If there's a name filter, convert it to a global OR search (name, lastName, username)
@@ -221,25 +224,44 @@ export const updateUser = async (id: string, data: IUserUpdateRequest) => {
   }, PRISMA_TRANSACTION_OPTIONS);
 };
 
+/**
+ * Selección SEGURA de usuario: nunca incluye el hash de la contraseña.
+ * Úsala para cualquier respuesta de la API.
+ */
+const SAFE_USER_SELECT = {
+  id: true,
+  name: true,
+  lastName: true,
+  username: true,
+  active: true,
+  clientId: true,
+  roleId: true,
+  scheduleId: true,
+  role: { select: { id: true, name: true, value: true } },
+  schedule: { select: { id: true, name: true, startTime: true, endTime: true } },
+  client: { select: { id: true, name: true, active: true } },
+} as const;
+
+/** Usuario por id SIN datos sensibles (respuestas de API). */
 export const getUserById = async (id: string) => {
   return prismaClient.user.findUnique({
     where: {
       id,
     },
-    select: {
-      id: true,
-      name: true,
-      lastName: true,
-      username: true,
-      password: true,
-      active: true,
-      clientId: true,
-      roleId: true,
-      scheduleId: true,
-      role: { select: { id: true, name: true, value: true } },
-      schedule: { select: { id: true, name: true, startTime: true, endTime: true } },
-      client: { select: { id: true, name: true, active: true } },
+    select: SAFE_USER_SELECT,
+  });
+};
+
+/**
+ * Usuario por id INCLUYENDO el hash de la contraseña.
+ * Sólo para flujos de autenticación (p. ej. cambio de contraseña).
+ */
+export const getUserWithPasswordById = async (id: string) => {
+  return prismaClient.user.findUnique({
+    where: {
+      id,
     },
+    select: { ...SAFE_USER_SELECT, password: true },
   });
 };
 

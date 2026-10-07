@@ -17,18 +17,6 @@ jest.mock("@src/modules/common/middlewares/auth.middleware", () => ({
   authorize: () => (req: any, res: any, next: any) => next(),
 }));
 
-jest.mock("@src/core/middlewares/token-validator.middleware", () => ({
-  __esModule: true,
-  default: (req: any, res: any, next: any) => {
-    if (req.headers["user"]) {
-      const user = JSON.parse(req.headers["user"]);
-      req.user = user;
-      res.locals.user = user;
-    }
-    next();
-  },
-}));
-
 import { getRandomEvidence } from "./test.constants";
 
 describe("Flujo Crítico E2E: Cliente -> Zonas -> Ubicaciones -> Guardias -> Recurrencia -> Ejecución de Ronda", () => {

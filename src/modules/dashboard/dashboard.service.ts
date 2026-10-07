@@ -20,21 +20,38 @@ import {
 } from "./dashboard.dto";
 
 /**
- * Construye el where clause base filtrado por clientId cuando
- * el usuario es RESDN/cliente. ADMIN ve todo.
+ * Filtro de cliente para modelos que SÍ tienen `clientId` propio.
+ *
+ * Un usuario RESDN (cliente) queda SIEMPRE acotado a su empresa; si no tiene
+ * `clientId` asignado no debe ver nada (antes veía los datos de TODOS).
  */
 const buildClientFilter = (user: AuthenticatedUser) => {
-  if (user?.role === ROLE_CLIENT && user.clientId) {
-    return { clientId: user.clientId };
-  }
-  return {};
+  if (user?.role !== ROLE_CLIENT) return {};
+  return { clientId: user.clientId ?? { in: [] as string[] } };
 };
 
+/**
+ * Filtro de cliente para `User` (guardias/supervisores): el modelo tiene
+ * `clientId` propio, misma semántica que `buildClientFilter`.
+ */
 const buildGuardFilter = (user: AuthenticatedUser) => {
-  if (user?.role === ROLE_CLIENT && user.clientId) {
-    return { clientId: user.clientId };
-  }
-  return {};
+  if (user?.role !== ROLE_CLIENT) return {};
+  return { clientId: user.clientId ?? { in: [] as string[] } };
+};
+
+/**
+ * Filtro de cliente para modelos SIN `clientId` propio (p. ej. `Assignment`):
+ * el alcance se resuelve por la ubicación (punto de control) relacionada.
+ */
+const buildAssignmentClientFilter = (user: AuthenticatedUser) => {
+  if (user?.role !== ROLE_CLIENT) return {};
+  return { location: { clientId: user.clientId ?? { in: [] as string[] } } };
+};
+
+/** Where para `Client`: un RESDN sólo se cuenta a sí mismo. */
+const buildClientSelfFilter = (user: AuthenticatedUser) => {
+  if (user?.role !== ROLE_CLIENT) return {};
+  return { id: user.clientId ?? { in: [] as string[] } };
 };
 
 /**
@@ -113,12 +130,15 @@ export const getOverview = async (
         role: { name: ROLE_MAINTENANCE },
       },
     }),
-    prisma.client.count({ where: { active: true, softDelete: false } }),
+    prisma.client.count({
+      where: { active: true, softDelete: false, ...buildClientSelfFilter(user) },
+    }),
     prisma.location.count({
       where: { active: true, softDelete: false, ...clientWhere },
     }),
+    // `Assignment` no tiene clientId: el alcance va por la ubicación relacionada.
     prisma.assignment.count({
-      where: { deletedAt: null, ...clientWhere },
+      where: { deletedAt: null, ...buildAssignmentClientFilter(user) },
     }),
     prisma.incident.count({
       where: { status: INCIDENT_STATUS_PENDING, deletedAt: null, ...clientWhere },

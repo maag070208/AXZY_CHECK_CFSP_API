@@ -7,10 +7,6 @@ import { createSupervisionFixture, ISupervisionFixture } from "../supervision.fi
 jest.mock("@src/modules/common/middlewares/auth.middleware", () =>
   require("../supervision.fixtures").authMiddlewareMock(),
 );
-jest.mock("@src/core/middlewares/token-validator.middleware", () =>
-  require("../supervision.fixtures").tokenValidatorMock(),
-);
-
 jest.setTimeout(30000);
 
 describe("Dashboard · Asistencia del día (Integración)", () => {

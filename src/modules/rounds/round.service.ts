@@ -1,4 +1,5 @@
 import { getErrorMessage } from "@src/core/utils/error.utils";
+import { AppError } from "@src/core/errors/AppError";
 import {
   ASSIGNMENT_STATUS_PENDING,
   OPERATIONAL_ROLES,
@@ -98,11 +99,17 @@ export const getDataTableRounds = async (
   }
 
   if (user) {
-    if (user.role === ROLE_CLIENT && user.clientId) {
-      prismaParams.where.OR = [
-        { clientId: user.clientId },
-        { recurringConfiguration: { clientId: user.clientId } },
-      ];
+    if (user.role === ROLE_CLIENT) {
+      // Un usuario de cliente SIEMPRE queda acotado a su empresa: sin clientId
+      // asignado no debe ver ningún recorrido (antes veía todos).
+      if (user.clientId) {
+        prismaParams.where.OR = [
+          { clientId: user.clientId },
+          { recurringConfiguration: { clientId: user.clientId } },
+        ];
+      } else {
+        prismaParams.where.id = "NO_CLIENT";
+      }
     } else if (OPERATIONAL_ROLES.includes(user.role)) {
       if (user.clientId) {
         prismaParams.where.OR = [
@@ -265,11 +272,17 @@ export const getRounds = async (
     if (guardId) where.guardId = guardId;
     if (status) where.status = status as RoundStatus;
     if (user) {
-      if (user.role === ROLE_CLIENT && user.clientId) {
-        where.OR = [
-          { clientId: user.clientId },
-          { recurringConfiguration: { clientId: user.clientId } },
-        ];
+      if (user.role === ROLE_CLIENT) {
+        // Un usuario de cliente SIEMPRE queda acotado a su empresa: sin clientId
+        // asignado no ve ningún recorrido (antes veía todos).
+        if (user.clientId) {
+          where.OR = [
+            { clientId: user.clientId },
+            { recurringConfiguration: { clientId: user.clientId } },
+          ];
+        } else {
+          where.id = "NO_CLIENT";
+        }
       } else if (OPERATIONAL_ROLES.includes(user.role)) {
         if (user.clientId) {
           where.OR = [
@@ -318,7 +331,15 @@ export const getRoundDetail = async (
     if (!round)
       return { success: false, data: null, messages: ["Ronda no encontrada"] };
 
-    if (user?.role === ROLE_CLIENT && user.clientId) {
+    if (user?.role === ROLE_CLIENT) {
+      // Un usuario de cliente sin empresa asignada no puede ver ninguna ronda.
+      if (!user.clientId) {
+        return {
+          success: false,
+          data: null,
+          messages: ["No tienes permiso para ver los detalles de esta ronda."],
+        };
+      }
       const roundClientId =
         round.clientId ||
         round.recurringConfiguration?.clientId ||
@@ -422,7 +443,8 @@ export const generateRoundPDF = async (
 ): Promise<Buffer> => {
   const detailRes = await getRoundDetail(id, user);
   if (!detailRes.success || !detailRes.data) {
-    throw new Error(detailRes.messages?.[0] || "Ronda no encontrada");
+    // AppError: el middleware central responde el código correcto (404) y no un 500.
+    throw new AppError(detailRes.messages?.[0] || "Ronda no encontrada", 404);
   }
 
   const { round, timeline } = detailRes.data;

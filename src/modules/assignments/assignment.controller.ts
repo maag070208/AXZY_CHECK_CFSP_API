@@ -6,6 +6,8 @@ import { asyncHandler } from "@src/core/utils/asyncHandler";
 import { AppError } from "@src/core/errors/AppError";
 import { createAuditLog } from "../audit/audit.service";
 import { getAuthUserId } from "@src/core/utils/auth-user.utils";
+import { AuthenticatedUser } from "@src/core/types/auth.types";
+import { ROLE_CLIENT } from "@src/core/config/constants";
 
 export const getDataTable = asyncHandler(async (req: Request, res: Response) => {
   const result = await assignmentService.getDataTableAssignments(req.body);
@@ -44,10 +46,14 @@ export const getMyAssignments = asyncHandler(async (req: Request, res: Response)
 
 export const getAllAssignments = asyncHandler(async (req: Request, res: Response) => {
   const { guardId, status, id } = req.query;
+  const user = res.locals.user as AuthenticatedUser | undefined;
+  // Un usuario de cliente sólo ve asignaciones de sus propias ubicaciones.
+  const clientScope = user?.role === ROLE_CLIENT ? (user.clientId ?? null) : undefined;
   const result = await assignmentService.getAllAssignments({
     id: id as string,
     guardId: guardId as string,
     status: status as AssignmentStatus,
+    clientId: clientScope,
   });
   return res.status(200).json(createTResult(result));
 });

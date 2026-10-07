@@ -668,7 +668,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultDatatableClient'
+                $ref: '#/components/schemas/TResultZone'
         '400':
           description: 'Datos inválidos'
           content:
@@ -694,7 +694,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultDatatableClient'
+                $ref: '#/components/schemas/TResultListZone'
   /zones/datatable:
     post:
       tags:
@@ -804,7 +804,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultDatatableZone'
+                $ref: '#/components/schemas/TResultListLocation'
     post:
       tags:
         - locations
@@ -821,7 +821,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultListClient'
+                $ref: '#/components/schemas/TResultLocation'
         '400':
           description: 'Datos inválidos'
           content:
@@ -859,25 +859,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/TResultError'
   '/locations/{id}':
-    get:
-      tags:
-        - locations
-      summary: 'Detalle de ubicación'
-      parameters:
-        -
-          in: path
-          name: id
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultListLocation'
     put:
       tags:
         - locations
@@ -901,7 +882,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultListLocation'
+                $ref: '#/components/schemas/TResultLocation'
     delete:
       tags:
         - locations
@@ -921,7 +902,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultDatatableLocation'
+                $ref: '#/components/schemas/TResultLocation'
         '400':
           description: 'Petición inválida o restricción de llave foránea'
           content:
@@ -940,31 +921,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-  /locations/print-bulk-qr:
-    post:
-      tags:
-        - locations
-      summary: 'Generar PDF masivo con códigos QR'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - ids
-              properties:
-                ids:
-                  type: array
-                  items: {type: string, format: uuid}
-      responses:
-        '200':
-          description: 'Archivo PDF'
-          content:
-            application/pdf:
-              schema:
-                type: string
-                format: binary
   /assignments:
     get:
       tags:
@@ -1188,12 +1144,12 @@ paths:
                   format: uuid
                   description: "ID de la configuración recurrente (opcional para rondas\nlibres)"
       responses:
-        '201':
+        '200':
           description: 'Ronda iniciada exitosamente'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultDatatableLocation'
+                $ref: '#/components/schemas/TResultRound'
         '400':
           description: 'Error en la solicitud (ej. ya existe una ronda activa)'
           content:
@@ -1225,7 +1181,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultDatatableLocation'
+                $ref: '#/components/schemas/TResultRound'
   /rounds/current:
     get:
       tags:
@@ -1237,7 +1193,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultDatatableAssignment'
+                $ref: '#/components/schemas/TResultRound'
   /rounds/datatable:
     post:
       tags:
@@ -1364,11 +1320,12 @@ paths:
             format: uuid
       responses:
         '200':
-          description: OK
+          description: 'PDF generado exitosamente'
           content:
-            application/json:
+            application/pdf:
               schema:
-                $ref: '#/components/schemas/TResultDatatableAssignment'
+                type: string
+                format: binary
         '400':
           description: 'Error de paginación o filtros'
           content:
@@ -1427,7 +1384,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultListRound'
+                $ref: '#/components/schemas/TResultCount'
   '/incidents/{id}/resolve':
     put:
       tags:
@@ -1491,7 +1448,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultListRound'
+                $ref: '#/components/schemas/TResult'
   /maintenance:
     get:
       tags:
@@ -1520,7 +1477,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultDatatableRound'
+                $ref: '#/components/schemas/TResultMaintenance'
         '400':
           description: 'Datos inválidos'
           content:
@@ -1538,7 +1495,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultListIncident'
+                $ref: '#/components/schemas/TResultCount'
   '/maintenance/{id}/resolve':
     put:
       tags:
@@ -1602,7 +1559,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultDatatableIncident'
+                $ref: '#/components/schemas/TResult'
         '400':
           description: 'Petición inválida o restricción de llave foránea'
           content:
@@ -1649,7 +1606,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultDatatableIncident'
+                $ref: '#/components/schemas/TResultSchedule'
         '400':
           description: 'Datos inválidos'
           content:
@@ -1723,7 +1680,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultDatatableMaintenance'
+                $ref: '#/components/schemas/TResult'
         '400':
           description: 'Petición inválida o restricción de llave foránea'
           content:
@@ -1753,7 +1710,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultDatatableSchedule'
+                $ref: '#/components/schemas/TResultListKardex'
         '400':
           description: 'Petición inválida'
           content:
@@ -1809,7 +1766,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultDatatableMaintenance'
+                $ref: '#/components/schemas/TResultRecurringConfiguration'
         '400':
           description: 'Datos inválidos'
           content:
@@ -1953,7 +1910,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TResultListKardex'
+                $ref: '#/components/schemas/TResultGuardGeneralStats'
         '400':
           description: 'Petición inválida'
           content:
@@ -2474,6 +2431,13 @@ paths:
             type: string
             pattern: ^\d+$
           description: 'Timestamp numérico de milisegundos para sincronización incremental'
+        -
+          in: query
+          name: reset_models
+          required: false
+          schema:
+            type: string
+          description: 'Lista separada por comas de modelos que el cliente quiere recargar completos (tablas vacías).'
       responses:
         '200':
           description: OK
@@ -2511,29 +2475,37 @@ paths:
                   additionalProperties: {type: object, required: [created, updated, deleted], properties: {created: {type: array, items: {type: object}, description: 'Registros creados localmente en el cliente'}, updated: {type: array, items: {type: object}, description: 'Registros modificados localmente en el cliente'}, deleted: {type: array, items: {type: string}, description: 'IDs de registros eliminados localmente'}}}
       responses:
         '200':
-          description: OK
+          description: 'Lote aplicado por completo'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResult'
+              example:
+                success: true
+                data:
+                  applied: true
+                  summary: {kardex: {created: 2, updated: 0, deleted: 1}}
+                  ignoredTables: []
+                  rejected: []
+                messages:
+                  - Success
         '400':
-          description: 'Petición inválida'
+          description: 'El lote NO se aplicó (es atómico). Incluye el detalle por registro para poder corregirlo o descartarlo.'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: {type: boolean, example: false}
+                  data: {type: object, properties: {rejected: {type: array, description: 'Registros que el servidor no pudo aceptar.', items: {type: object, properties: {table: {type: string, example: kardex}, id: {type: string, format: uuid}, action: {type: string, enum: [create, update, delete]}, reason: {type: string, example: 'El punto de control indicado en locationId no existe en el servidor'}}}}, ignoredTables: {type: array, description: 'Tablas que el dispositivo no administra (se reportan, nunca se descartan en silencio).', items: {type: string, example: zone}}}}
+                  messages: {type: array, items: {type: string}}
+        '401':
+          description: 'No autenticado'
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
-        '404':
-          description: 'No encontrado'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultError'
-        '500':
-          description: 'Error interno del servidor'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TResultError'
+      description: "Envía (push) los cambios capturados offline y los aplica de forma ATÓMICA.\n\nGarantías del contrato para la cola offline:\n- **Atómico**: si algo se rechaza, NO se aplica nada del lote.\n- **Idempotente**: reenviar el mismo lote no duplica registros (upsert por id).\n- **Reintentable**: la APP conserva los cambios locales y puede reintentar.\n- **Diagnosticable**: se devuelve el detalle por registro (`rejected`) con tabla, id, acción y motivo, para corregirlo o descartarlo sin bloquear la cola.\n- **Sin descartes silenciosos**: las tablas que el dispositivo no administra se informan en `ignoredTables`.\n- **No se bloquea por versión**: el gate de versión sólo aplica al `pull`, para que el trabajo capturado sin red nunca quede atrapado.\n\nTablas aceptadas: `round`, `kardex`, `incident`, `maintenance`, `shiftHandover`, `uniformCheck`."
   '/catalog/{key}':
     get:
       tags:
@@ -2854,6 +2826,57 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResult'
+    put:
+      tags:
+        - reports
+      summary: 'Actualizar configuración de reporte'
+      parameters:
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                reportType:
+                  type: string
+                clientId:
+                  type: string
+                  format: uuid
+                  nullable: true
+                configuration:
+                  type: object
+                  additionalProperties: true
+                cronExpression:
+                  type: string
+                active:
+                  type: boolean
+                softDelete:
+                  type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultReportConfiguration'
+        '404':
+          description: 'No encontrado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
   '/rounds/{id}/share':
     get:
       tags:
@@ -4094,6 +4117,96 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/TResultError'
+    put:
+      tags:
+        - scheduled-notifications
+      summary: 'Actualizar notificación programada'
+      parameters:
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                message:
+                  type: string
+                type:
+                  type: string
+                  enum: [info, success, warning, error]
+                persistent:
+                  type: boolean
+                userId:
+                  type: string
+                channel:
+                  type: string
+                scheduledAt:
+                  type: string
+                  format: date-time
+                  nullable: true
+                frequency:
+                  type: string
+                  enum: [ONCE, DAILY, EVERY_2_DAYS, WEEKLY, EVERY_2_WEEKS, MONTHLY]
+                timeOfDay:
+                  type: string
+                  example: '08:30'
+                daysOfWeek:
+                  type: string
+                active:
+                  type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultScheduledNotification'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: 'No encontrado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+    delete:
+      tags:
+        - scheduled-notifications
+      summary: 'Eliminar notificación programada'
+      parameters:
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '404':
+          description: 'No encontrado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
   /scheduled-notifications:
     post:
       tags:
@@ -4150,6 +4263,535 @@ paths:
                 $ref: '#/components/schemas/TResultError'
         '500':
           description: 'Error interno del servidor'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+    put:
+      tags:
+        - subscription
+      summary: 'Actualizar configuración de suscripción'
+      description: 'Actualización parcial: sólo se modifican los campos enviados. Requiere rol ADMIN.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                paid:
+                  type: boolean
+                trialDaysRemaining:
+                  type: integer
+                  minimum: 0
+                showTrialWatermark:
+                  type: boolean
+                showTrialBadge:
+                  type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultSubscriptionConfig'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '403':
+          description: 'Acceso denegado: se requiere rol ADMIN'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /assignments/all:
+    get:
+      tags:
+        - assignments
+      summary: 'Listar todas las asignaciones (alias de /assignments)'
+      parameters:
+        -
+          in: query
+          name: guardId
+          schema:
+            type: string
+            format: uuid
+        -
+          in: query
+          name: status
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListAssignment'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /dashboard/overview:
+    get:
+      tags:
+        - dashboard
+      summary: 'Resumen general del dashboard (KPIs y conteos pendientes)'
+      description: 'Totales de personal, clientes, ubicaciones y asignaciones, más los conteos pendientes. Los usuarios de cliente sólo ven su propia empresa.'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultDashboardOverview'
+        '401':
+          description: 'No autenticado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /dashboard/active-guards:
+    get:
+      tags:
+        - dashboard
+      summary: 'Personal activo con su estado operativo'
+      description: 'Guardias, supervisores y mantenimiento activos, con ronda en curso y última ubicación reportada.'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListActiveGuard'
+        '401':
+          description: 'No autenticado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /dashboard/pending-counts:
+    get:
+      tags:
+        - dashboard
+      summary: 'Conteo de pendientes por módulo'
+      description: 'Incidencias, mantenimientos, disciplina, rondas activas y alertas de pánico pendientes.'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultPendingCounts'
+        '401':
+          description: 'No autenticado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /dashboard/recent-activity:
+    get:
+      tags:
+        - dashboard
+      summary: 'Actividad reciente consolidada'
+      description: 'Incidencias, mantenimientos, disciplina, pánico, rondas y kardex unificados en un solo flujo, del más reciente al más antiguo.'
+      parameters:
+        -
+          in: query
+          name: limit
+          required: false
+          description: 'Número de elementos a devolver (1-50, por defecto 20)'
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListActivityItem'
+        '401':
+          description: 'No autenticado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /dashboard/panic-alerts:
+    get:
+      tags:
+        - dashboard
+      summary: 'Alertas de pánico recientes'
+      parameters:
+        -
+          in: query
+          name: limit
+          required: false
+          description: 'Número de elementos a devolver (1-50, por defecto 10)'
+          schema:
+            type: integer
+            default: 10
+            minimum: 1
+            maximum: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListPanicAlertListItem'
+        '401':
+          description: 'No autenticado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  '/guard-discipline/categories/{id}':
+    put:
+      tags:
+        - guard-discipline
+      summary: 'Actualizar categoría de disciplina'
+      parameters:
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                value:
+                  type: string
+                color:
+                  type: string
+                  nullable: true
+                icon:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultIncidentCategory'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: 'No encontrado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+    delete:
+      tags:
+        - guard-discipline
+      summary: 'Eliminar categoría de disciplina'
+      parameters:
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '404':
+          description: 'No encontrado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  '/guard-discipline/types/{id}':
+    put:
+      tags:
+        - guard-discipline
+      summary: 'Actualizar tipo de disciplina'
+      parameters:
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                categoryId:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                value:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultIncidentType'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: 'No encontrado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+    delete:
+      tags:
+        - guard-discipline
+      summary: 'Eliminar tipo de disciplina'
+      parameters:
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '404':
+          description: 'No encontrado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  '/guard-logs/{id}':
+    delete:
+      tags:
+        - guard-logs
+      summary: 'Eliminar registro de entrada/salida (prenómina)'
+      parameters:
+        -
+          in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '401':
+          description: 'No autorizado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '403':
+          description: 'Acceso denegado: permisos insuficientes'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '404':
+          description: 'No encontrado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  '/locations/by-guard/{guardId}':
+    get:
+      tags:
+        - locations
+      summary: 'Ubicaciones asignadas a un guardia'
+      parameters:
+        -
+          in: path
+          name: guardId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultListLocation'
+        '404':
+          description: 'No encontrado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /report-configurations:
+    post:
+      tags:
+        - reports
+      summary: 'Crear configuración de reporte'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - reportType
+                - configuration
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+                reportType:
+                  type: string
+                clientId:
+                  type: string
+                  format: uuid
+                  nullable: true
+                configuration:
+                  type: object
+                  additionalProperties: true
+                cronExpression:
+                  type: string
+                active:
+                  type: boolean
+      responses:
+        '201':
+          description: Creado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultReportConfiguration'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /reports/incidents/summary:
+    get:
+      tags:
+        - reports
+      summary: 'Resumen analítico de incidencias'
+      description: 'Totales por estado, categoría, guardia y día en un rango de fechas.'
+      parameters:
+        -
+          in: query
+          name: startDate
+          required: false
+          description: 'Fecha inicial (YYYY-MM-DD). Por defecto, hace 29 días.'
+          schema:
+            type: string
+            format: date
+        -
+          in: query
+          name: endDate
+          required: false
+          description: 'Fecha final (YYYY-MM-DD). Por defecto, hoy.'
+          schema:
+            type: string
+            format: date
+        -
+          in: query
+          name: clientId
+          required: false
+          description: 'Filtra por cliente (ignorado para usuarios de cliente)'
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultIncidentReport'
+        '401':
+          description: 'No autenticado'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+  /users/fcm-token:
+    post:
+      tags:
+        - users
+      summary: 'Registrar token FCM del dispositivo'
+      description: 'Asocia el token de notificaciones push del dispositivo al usuario autenticado.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+                platform:
+                  type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResult'
+        '400':
+          description: 'Error de validación'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TResultError'
+        '401':
+          description: 'No autorizado'
           content:
             application/json:
               schema:
@@ -9111,3 +9753,355 @@ components:
             type: string
         data:
           $ref: '#/components/schemas/AttendanceReport'
+    DashboardOverview:
+      type: object
+      properties:
+        totalGuards:
+          type: integer
+        activeGuardsNow:
+          type: integer
+        totalBreakdown:
+          type: object
+          properties:
+            guards:
+              type: integer
+            shift:
+              type: integer
+            maintenance:
+              type: integer
+        activeBreakdown:
+          type: object
+          properties:
+            total:
+              type: integer
+            guards:
+              type: integer
+            shift:
+              type: integer
+            maintenance:
+              type: integer
+        totalClients:
+          type: integer
+        totalLocations:
+          type: integer
+        totalAssignments:
+          type: integer
+        pendingCounts:
+          $ref: '#/components/schemas/PendingCounts'
+        generatedAt:
+          type: string
+          format: date-time
+        scope:
+          type: string
+          enum:
+            - ALL
+            - CLIENT
+    TResultDashboardOverview:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/DashboardOverview'
+        messages:
+          type: array
+          items:
+            type: string
+    ActiveGuard:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        lastName:
+          type: string
+        username:
+          type: string
+        role:
+          type: string
+          enum:
+            - GUARD
+            - SHIFT
+            - MAINT
+        clientId:
+          type: string
+          format: uuid
+          nullable: true
+        clientName:
+          type: string
+          nullable: true
+        isLoggedIn:
+          type: boolean
+        currentRoundId:
+          type: string
+          format: uuid
+          nullable: true
+        currentRoundStartTime:
+          type: string
+          format: date-time
+          nullable: true
+        currentLocationName:
+          type: string
+          nullable: true
+        lastKardexAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastKardexLocation:
+          type: string
+          nullable: true
+    TResultListActiveGuard:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActiveGuard'
+        messages:
+          type: array
+          items:
+            type: string
+    PendingCounts:
+      type: object
+      properties:
+        incidents:
+          type: integer
+        maintenances:
+          type: integer
+        disciplines:
+          type: integer
+        activeRounds:
+          type: integer
+        panicAlerts:
+          type: integer
+    TResultPendingCounts:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/PendingCounts'
+        messages:
+          type: array
+          items:
+            type: string
+    ActivityItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          enum:
+            - incident
+            - maintenance
+            - discipline
+            - panic
+            - round
+            - kardex
+        title:
+          type: string
+        description:
+          type: string
+        guardId:
+          type: string
+          format: uuid
+        guardName:
+          type: string
+        clientId:
+          type: string
+          format: uuid
+          nullable: true
+        clientName:
+          type: string
+          nullable: true
+        status:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+    TResultListActivityItem:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivityItem'
+        messages:
+          type: array
+          items:
+            type: string
+    PanicAlertListItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        resolutionComment:
+          type: string
+          nullable: true
+        guardId:
+          type: string
+          format: uuid
+        guardName:
+          type: string
+        clientId:
+          type: string
+          format: uuid
+          nullable: true
+        clientName:
+          type: string
+          nullable: true
+        latitude:
+          type: number
+          nullable: true
+        longitude:
+          type: number
+          nullable: true
+        status:
+          type: string
+        resolvedById:
+          type: string
+          format: uuid
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+    TResultListPanicAlertListItem:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PanicAlertListItem'
+        messages:
+          type: array
+          items:
+            type: string
+    IncidentReport:
+      type: object
+      properties:
+        total:
+          type: integer
+        pending:
+          type: integer
+        attended:
+          type: integer
+        resolutionRate:
+          type: number
+        byCategory:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+              color:
+                type: string
+                nullable: true
+              count:
+                type: integer
+        byGuard:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              name:
+                type: string
+              count:
+                type: integer
+        byDay:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              count:
+                type: integer
+    TResultIncidentReport:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/IncidentReport'
+        messages:
+          type: array
+          items:
+            type: string
+    CountResult:
+      type: object
+      properties:
+        count:
+          type: integer
+    TResultCount:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/CountResult'
+        messages:
+          type: array
+          items:
+            type: string
+    GuardGeneralStats:
+      type: object
+      properties:
+        totalIncidents:
+          type: integer
+        totalScans:
+          type: integer
+        incompleteRounds:
+          type: integer
+        missedScans:
+          type: integer
+    TResultGuardGeneralStats:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          $ref: '#/components/schemas/GuardGeneralStats'
+        messages:
+          type: array
+          items:
+            type: string
